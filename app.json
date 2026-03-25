@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Bazaar",
+    "slug": "bazaar-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "bazaar",
+    "platforms": ["ios", "android"],
+    "android": {
+      "package": "com.bazaar.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.bazaar.app"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#ffffff"
+        }
+      ]
+    ]
+  }
+}
