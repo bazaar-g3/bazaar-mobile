@@ -1,5 +1,6 @@
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { router } from 'expo-router'
 
 // TODO: reemplazar con la URL del AWS API Gateway en producción
 const API_URL = process.env.EXPO_PUBLIC_API_GATEWAY_URL || 'http://localhost:8001'
@@ -22,8 +23,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem('token')
-      // TODO: redirigir al login con expo-router
+      const token = await AsyncStorage.getItem('token')
+      if (token) {
+        await AsyncStorage.removeItem('token')
+        router.replace('/login')
+      }
     }
     return Promise.reject(error)
   }

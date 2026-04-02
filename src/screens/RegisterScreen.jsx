@@ -6,48 +6,60 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import api from '../services/api'
-import { registerForPushNotifications } from '../services/notifications'
 
-function validate() {
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address'
-  if (!password) return 'Password is required'
-  return null
-}
-
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter()
+  const [fullName, setFullName] = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
 
-  async function handleLogin() {
+  function validate() {
+    if (!fullName.trim()) return 'Name is required'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'The email is not valid'
+    if (password.length < 8)   return 'The password must have at least 8 characters'
+    if (!/[A-Z]/.test(password)) return 'The password must have at least one uppercase letter'
+    if (!/[0-9]/.test(password)) return 'The password must have at least one number'
+    return null
+  }
+
+  async function handleRegister() {
     setError('')
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
     setLoading(true)
     try {
-      const res = await api.post('/auth/login', { email, password })
+      const res = await api.post('/auth/register', { fullName, email, password })
       await AsyncStorage.setItem('token', res.data.access_token)
-      await registerForPushNotifications()
       router.replace('/')
     } catch (err) {
-    if (err.response?.status === 401) {
-      setError('Invalid email or password')
-    } else if (err.response?.status === 422) {
-      setError('Enter a valid email address')
-    } else {
-      setError('Something went wrong. Please try again.')
-    }
-  }finally {
+      if (err.response?.status === 409) {
+        setError('The email is already in use')
+      } else {
+        setError('An error occurred. Please try again.')
+      }
+    } finally {
       setLoading(false)
     }
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Sign In</Text>
+      <Text style={styles.title}>Create account</Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <TextInput
+        style={styles.input}
+        placeholder="Full name"
+        value={fullName}
+        onChangeText={setFullName}
+        autoCapitalize="words"
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -64,15 +76,15 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Sign In</Text>
+          : <Text style={styles.buttonText}>Register</Text>
         }
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push('/register')}>
-        <Text style={styles.link}>Don't have an account? Sign up</Text>
+      <TouchableOpacity onPress={() => router.push('/login')}>
+        <Text style={styles.link}>Already have an account? Sign in</Text>
       </TouchableOpacity>
     </ScrollView>
   )
