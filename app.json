@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "bazaar",
-    "platforms": ["ios", "android"],
+    "platforms": ["ios", "android", "web"],
+    "newArchEnabled": false,
     "android": {
       "package": "com.bazaar.app"
     },
