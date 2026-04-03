@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
-import api from '../services/api'
+import api from '../api/api'
 
 export default function RegisterScreen() {
   const router = useRouter()
