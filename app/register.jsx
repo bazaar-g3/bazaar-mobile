@@ -1,2 +1,2 @@
-import RegisterScreen from '../src/screens/RegisterScreen'
+import RegisterScreen from '../src/pages/RegisterScreen'
 export default RegisterScreen

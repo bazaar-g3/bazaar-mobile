@@ -5,16 +5,16 @@ import {
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import api from '../services/api'
+import api from '../api/api'
 import { registerForPushNotifications } from '../services/notifications'
 
 export default function LoginScreen() {
   const router = useRouter()
   const params = useLocalSearchParams()
-  const [email, setEmail]       = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const successMessage = params.passwordReset === 'success'
     ? 'Your password was updated. Sign in with the new one.'
@@ -41,12 +41,15 @@ export default function LoginScreen() {
       if (!token) {
         throw new Error('Missing access token')
       }
+
       await AsyncStorage.setItem('token', token)
+
       try {
         await registerForPushNotifications()
       } catch (notificationError) {
         console.warn('Push notification registration failed after login', notificationError)
       }
+
       router.replace('/home')
     } catch (err) {
       if (err.response?.status === 401) {
@@ -87,8 +90,7 @@ export default function LoginScreen() {
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Sign In</Text>
-        }
+          : <Text style={styles.buttonText}>Sign In</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/forgot-password')}>
@@ -103,13 +105,13 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:  { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  title:      { fontSize: 28, fontWeight: 'bold', marginBottom: 24, textAlign: 'center' },
-  input:      { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 16 },
-  button:     { backgroundColor: '#007AFF', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 16 },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 24, textAlign: 'center' },
+  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 16 },
+  button: { backgroundColor: '#007AFF', borderRadius: 8, padding: 14, alignItems: 'center', marginBottom: 16 },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  error:      { color: 'red', marginBottom: 16, textAlign: 'center' },
-  success:    { color: '#117a37', marginBottom: 16, textAlign: 'center' },
+  error: { color: 'red', marginBottom: 16, textAlign: 'center' },
+  success: { color: '#117a37', marginBottom: 16, textAlign: 'center' },
   secondaryLink: { color: '#4b5563', textAlign: 'center', marginBottom: 16 },
-  link:       { color: '#007AFF', textAlign: 'center' },
+  link: { color: '#007AFF', textAlign: 'center' },
 })
