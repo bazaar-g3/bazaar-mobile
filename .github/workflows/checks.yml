@@ -1,0 +1,46 @@
+name: Mobile Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+      EXPO_NO_TELEMETRY: 1
+      EXPO_PUBLIC_API_GATEWAY_URL: http://localhost:8001
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint (if script exists)
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.lint ? 0 : 1)"; then
+            npm run lint
+          else
+            echo "No lint script found. Skipping."
+          fi
+
+      - name: Run tests
+        run: npm run test -- --passWithNoTests
+
+      - name: Validate Expo config
+        run: npx expo config --type public > /dev/null
+
+      - name: Build web bundle
+        run: npx expo export --platform web --non-interactive --output-dir dist

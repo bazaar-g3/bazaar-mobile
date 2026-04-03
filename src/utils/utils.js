@@ -1,0 +1,1 @@
+// aca irian funciones sueltas que se usen en varios lados, como formatear fechas, etc.
