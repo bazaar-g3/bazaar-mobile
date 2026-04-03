@@ -16,8 +16,10 @@ function getFirstParamValue(value) {
 export default function ResetPasswordScreen() {
   const router = useRouter()
   const params = useLocalSearchParams()
-  const token = getFirstParamValue(params.token)
+  const initialEmail = getFirstParamValue(params.email) || ''
 
+  const [email, setEmail] = useState(initialEmail)
+  const [otpCode, setOtpCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,7 +27,8 @@ export default function ResetPasswordScreen() {
   const [success, setSuccess] = useState('')
 
   function validate() {
-    if (!token) return 'This recovery link is invalid. Request a new one.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address'
+    if (!/^\d{6}$/.test(otpCode)) return 'Enter the 6-digit recovery code'
     if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
       return PASSWORD_RULES_MESSAGE
     }
@@ -48,7 +51,8 @@ export default function ResetPasswordScreen() {
     setLoading(true)
     try {
       const res = await api.post('/auth/password-recovery/confirm', {
-        token,
+        email: email.trim().toLowerCase(),
+        otpCode,
         newPassword,
       })
 
@@ -56,9 +60,9 @@ export default function ResetPasswordScreen() {
       router.replace({ pathname: '/login', params: { passwordReset: 'success' } })
     } catch (err) {
       if (err.response?.status === 400) {
-        setError('This recovery link is invalid or expired. Request a new one.')
+        setError('This recovery code is invalid or expired. Request a new one.')
       } else if (err.response?.status === 422) {
-        setError(PASSWORD_RULES_MESSAGE)
+        setError('Check the email, code, and password format.')
       } else {
         setError('Something went wrong. Please try again.')
       }
@@ -69,14 +73,30 @@ export default function ResetPasswordScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Reset password</Text>
+      <Text style={styles.title}>Enter recovery code</Text>
       <Text style={styles.description}>
-        Choose a new password for your account. This link can only be used once.
+        Enter the 6-digit code from your email and choose a new password.
       </Text>
 
       {success ? <Text style={styles.success}>{success}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Recovery code"
+        value={otpCode}
+        onChangeText={(value) => setOtpCode(value.replace(/\D/g, '').slice(0, 6))}
+        keyboardType="number-pad"
+        autoCapitalize="none"
+      />
       <TextInput
         style={styles.input}
         placeholder="New password"
@@ -100,7 +120,7 @@ export default function ResetPasswordScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.replace('/forgot-password')}>
-        <Text style={styles.link}>Need another recovery link?</Text>
+        <Text style={styles.link}>Need another recovery code?</Text>
       </TouchableOpacity>
     </ScrollView>
   )

@@ -42,7 +42,11 @@ export default function LoginScreen() {
         throw new Error('Missing access token')
       }
       await AsyncStorage.setItem('token', token)
-      await registerForPushNotifications()
+      try {
+        await registerForPushNotifications()
+      } catch (notificationError) {
+        console.warn('Push notification registration failed after login', notificationError)
+      }
       router.replace('/home')
     } catch (err) {
       if (err.response?.status === 401) {

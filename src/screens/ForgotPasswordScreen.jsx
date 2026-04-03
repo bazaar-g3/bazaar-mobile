@@ -31,9 +31,11 @@ export default function ForgotPasswordScreen() {
     setLoading(true)
     try {
       const res = await api.post('/auth/password-recovery/request', { email })
+      const normalizedEmail = email.trim().toLowerCase()
       setSuccess(
-        res.data.message || 'If the email exists, we will send a password recovery link shortly.'
+        res.data.message || 'If the email exists, we will send a password recovery code shortly.'
       )
+      router.push({ pathname: '/reset-password', params: { email: normalizedEmail } })
     } catch (err) {
       if (err.response?.status === 422) {
         setError('Enter a valid email address')
@@ -49,7 +51,7 @@ export default function ForgotPasswordScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Forgot password</Text>
       <Text style={styles.description}>
-        Enter your email and we will send you a one-time link to reset your password.
+        Enter your email and we will send you a one-time code to reset your password.
       </Text>
 
       {success ? <Text style={styles.success}>{success}</Text> : null}
@@ -67,7 +69,7 @@ export default function ForgotPasswordScreen() {
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Send recovery email</Text>
+          : <Text style={styles.buttonText}>Send recovery code</Text>
         }
       </TouchableOpacity>
 
