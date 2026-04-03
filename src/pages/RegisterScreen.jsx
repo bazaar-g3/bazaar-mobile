@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  View, Text, TextInput, TouchableOpacity,
+  Text, TextInput, TouchableOpacity,
   ActivityIndicator, StyleSheet, ScrollView
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -34,8 +34,12 @@ export default function RegisterScreen() {
     setLoading(true)
     try {
       const res = await api.post('/auth/register', { fullName, email, password })
-      await AsyncStorage.setItem('token', res.data.access_token)
-      router.replace('/')
+      const token = res.data.accessToken ?? res.data.access_token
+      if (!token) {
+        throw new Error('Missing access token')
+      }
+      await AsyncStorage.setItem('token', token)
+      router.replace('/home')
     } catch (err) {
       if (err.response?.status === 409) {
         setError('The email is already in use')
