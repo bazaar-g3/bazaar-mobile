@@ -1,3 +1,3 @@
-import ResetPasswordScreen from '../src/screens/ResetPasswordScreen'
+import ResetPasswordScreen from '../src/pages/ResetPasswordScreen'
 
 export default ResetPasswordScreen

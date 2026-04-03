@@ -4,7 +4,7 @@ import {
   ActivityIndicator, StyleSheet, ScrollView
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import api from '../services/api'
+import api from '../api/api'
 
 export default function ForgotPasswordScreen() {
   const router = useRouter()

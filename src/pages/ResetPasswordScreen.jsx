@@ -4,7 +4,7 @@ import {
   ActivityIndicator, StyleSheet, ScrollView
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import api from '../services/api'
+import api from '../api/api'
 
 const PASSWORD_RULES_MESSAGE =
   'Password must have at least 8 characters, one uppercase letter, and one number.'
