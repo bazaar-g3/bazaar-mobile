@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import api from '../api/api'
 import BazaarLogo from '../../assets/Bazaar-logo.png'
+import VentasTab from './VentasTabScreen'
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?background=007AFF&color=fff&size=128&name='
 
@@ -158,7 +159,7 @@ export default function ProfileScreen() {
 
   const renderMainContent = () => {
     if (activeTab === 'Compras') return <Text style={styles.emptyText}>No tenés compras aún.</Text>
-    if (activeTab === 'Ventas') return <Text style={styles.emptyText}>No tenés ventas aún.</Text>
+    if (activeTab === 'Ventas') return <VentasTab />
     if (activeTab === 'Tarjetas') return <Text style={styles.emptyText}>No tenés tarjetas asociadas.</Text>
 
     return (
