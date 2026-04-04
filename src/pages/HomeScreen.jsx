@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   View,
   Text,
@@ -113,12 +114,48 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>
-            <Text style={{ color: COLORS.primary }}>BA</Text>
-            <Text style={{ color: COLORS.secondary }}>ZA</Text>
-            <Text style={{ color: COLORS.third }}>AR</Text>
-          </Text>
+        <View style={styles.topBar}>
+          <View style={{ width: 40 }} /> 
+
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoText}>
+              <Text style={{ color: COLORS.primary }}>BA</Text>
+              <Text style={{ color: COLORS.secondary }}>ZA</Text>
+              <Text style={{ color: COLORS.third }}>AR</Text>
+            </Text>
+          </View>
+
+          <View style={styles.iconsContainer}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={async () => {
+                const token = await AsyncStorage.getItem('token')
+
+                if (token) {
+                  router.push('/profile')
+                } else {
+                  router.push('/login')
+                }
+              }}
+            >
+              <Text style={styles.icon}>👤</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={async () => {
+                const token = await AsyncStorage.getItem('token')
+
+                if (token) {
+                  router.push('/cart')
+                } else {
+                  router.push('/login')
+                }
+              }}
+            >
+              <Text style={styles.icon}>🛒</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.searchContainer}>
@@ -376,5 +413,21 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: "bold",
     fontSize: 12,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
+  iconsContainer: {
+    flexDirection: "row",
+  },
+  iconButton: {
+    marginLeft: 12,
+    padding: 6,
+  },
+  icon: {
+    fontSize: 22,
   },
 });
