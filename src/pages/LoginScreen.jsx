@@ -82,7 +82,7 @@ export default function LoginScreen() {
     >
       <View style={styles.screen}>
         <Logo />
-        
+
         <View style={styles.card}>
           <Text style={styles.title}>INICIAR SESIÓN</Text>
 
@@ -141,6 +141,16 @@ export default function LoginScreen() {
                 <Ionicons name="person" size={18} color={COLORS.white} />
               </View>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guestButton}
+            onPress={() => router.replace('/home')}
+          >
+            <View style={styles.buttonContent}>
+              <Text style={styles.guestButtonText}>Continuar como invitado</Text>
+              <Ionicons name="arrow-forward" size={18} color={COLORS.primary} />
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push('/register')}>
@@ -279,5 +289,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,
+  },
+  guestButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: 'transparent',
+  },
+  
+  guestButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
 })
