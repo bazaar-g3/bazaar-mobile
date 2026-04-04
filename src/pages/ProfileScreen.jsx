@@ -9,8 +9,9 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
-  Dimensions
 } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import api from '../api/api'
 
@@ -18,7 +19,7 @@ const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?background=007AFF&color=
 
 export default function ProfileScreen() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState('Perfil') // Controla el contenido central
+  const [activeTab, setActiveTab] = useState('Perfil')
 
   // --- Estados de Perfil ---
   const [profile, setProfile] = useState(null)
@@ -28,6 +29,9 @@ export default function ProfileScreen() {
   const [description, setDescription] = useState('')
   const [avatarUri, setAvatarUri] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true)
@@ -46,7 +50,128 @@ export default function ProfileScreen() {
 
   useEffect(() => { loadProfile() }, [loadProfile])
 
-  // --- Renderizado de Contenido Dinámico ---
+  function validate() {
+    const errors = {}
+    if (fullName.trim().length > 0 && fullName.trim().length < 2) {
+      errors.fullName = 'El nombre debe tener al menos 2 caracteres'
+    }
+    if (fullName.trim().length > 50) {
+      errors.fullName = 'El nombre no puede superar los 50 caracteres'
+    }
+    if (description.length > 500) {
+      errors.description = 'La descripción no puede superar los 500 caracteres'
+    }
+    return errors
+  }
+
+  async function handlePickImage() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    })
+    if (!result.canceled && result.assets?.[0]) {
+      setAvatarUri(result.assets[0].uri)
+      setSaveSuccess('')
+    }
+  }
+
+  async function uploadAvatarToBackend(localUri) {
+    const formData = new FormData()
+
+    if (localUri.startsWith('blob:') || localUri.startsWith('data:')) {
+      const blobRes = await fetch(localUri)
+      const blob = await blobRes.blob()
+      // Extensión desde el MIME type del blob, no desde la URI
+      const mimeType = blob.type || 'image/jpeg'
+      const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg'
+      formData.append('avatar', blob, `avatar.${ext}`)
+    } else {
+      // Nativo (iOS / Android)
+      const uriParts = localUri.split('.')
+      const ext = uriParts[uriParts.length - 1]?.toLowerCase() ?? 'jpg'
+      const mimeType = ext === 'png' ? 'image/png'
+        : ext === 'webp' ? 'image/webp'
+          : 'image/jpeg'
+      formData.append('avatar', { uri: localUri, name: `avatar.${ext}`, type: mimeType })
+    }
+
+    const token = await AsyncStorage.getItem('token')
+    const baseUrl = (api.defaults.baseURL ?? 'http://localhost:8001').replace(/\/$/, '')
+
+    const res = await fetch(`${baseUrl}/users/me/avatar`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail ?? 'Error al subir la imagen')
+    return data.avatarUrl
+  }
+
+  async function handleSave() {
+    setSaveError('')
+    setSaveSuccess('')
+
+    const errors = validate()
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({})
+
+    setSaving(true)
+    try {
+      let finalAvatarUrl = profile?.avatarUrl
+
+      // Si la URI es local (blob: en web o file:// en nativo), subir primero
+      const isLocalUri = avatarUri && (
+        avatarUri.startsWith('blob:') ||
+        avatarUri.startsWith('data:') ||
+        avatarUri.startsWith('file')
+      )
+
+      if (isLocalUri) {
+        finalAvatarUrl = await uploadAvatarToBackend(avatarUri)
+      }
+
+      const payload = {
+        fullName: fullName.trim(),
+        description: description.trim(),
+        ...(finalAvatarUrl !== profile?.avatarUrl && { avatarUrl: finalAvatarUrl }),
+      }
+
+      const res = await api.patch('/users/me', payload)
+      setProfile(res.data)
+      setAvatarUri(res.data.avatarUrl)
+      setSaveSuccess('¡Perfil actualizado con éxito!')
+      setEditing(false)
+    } catch (err) {
+      console.error('Error al guardar:', err.response?.data || err.message)
+      const msg = err.response?.data?.detail || err.message || 'Error al actualizar el perfil'
+      setSaveError(typeof msg === 'string' ? msg : 'Error de validación en los datos.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleCancel() {
+    setFullName(profile?.fullName ?? '')
+    setDescription(profile?.description ?? '')
+    setAvatarUri(profile?.avatarUrl ?? null)
+    setFieldErrors({})
+    setSaveError('')
+    setSaveSuccess('')
+    setEditing(false)
+  }
+
   const renderMainContent = () => {
     if (activeTab === 'Compras') return <Text style={styles.emptyText}>No tenés compras aún.</Text>
     if (activeTab === 'Ventas') return <Text style={styles.emptyText}>No tenés ventas aún.</Text>
@@ -57,17 +182,29 @@ export default function ProfileScreen() {
         <View style={styles.headerRow}>
           <Text style={styles.cardTitle}>Información del perfil</Text>
           {!editing && (
-            <TouchableOpacity onPress={() => setEditing(true)}>
+            <TouchableOpacity onPress={() => { setSaveSuccess(''); setEditing(true) }}>
               <Text style={styles.editText}>Editar</Text>
             </TouchableOpacity>
           )}
         </View>
 
+        {/* Mensajes de feedback */}
+        {saveSuccess ? <Text style={styles.successText}>{saveSuccess}</Text> : null}
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
+
+        {/* Avatar con botón de cambio en modo edición */}
         <View style={styles.profileHeader}>
-          <Image
-            source={{ uri: avatarUri || `${PLACEHOLDER_AVATAR}${fullName}` }}
-            style={styles.avatarLarge}
-          />
+          <View>
+            <Image
+              source={{ uri: avatarUri || `${PLACEHOLDER_AVATAR}${encodeURIComponent(fullName || 'U')}` }}
+              style={styles.avatarLarge}
+            />
+            {editing && (
+              <TouchableOpacity style={styles.changePhotoOverlay} onPress={handlePickImage}>
+                <Text style={styles.changePhotoText}>Cambiar{'\n'}foto</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={styles.profileInfoText}>
             <Text style={styles.userName}>{profile?.fullName || 'Usuario'}</Text>
             <Text style={styles.userEmail}>{profile?.email}</Text>
@@ -79,7 +216,15 @@ export default function ProfileScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Nombre y Apellido</Text>
           {editing ? (
-            <TextInput style={styles.input} value={fullName} onChangeText={setFullName} />
+            <>
+              <TextInput
+                style={[styles.input, fieldErrors.fullName && styles.inputError]}
+                value={fullName}
+                onChangeText={(v) => { setFullName(v); setFieldErrors(e => ({ ...e, fullName: undefined })) }}
+                maxLength={50}
+              />
+              {fieldErrors.fullName ? <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text> : null}
+            </>
           ) : (
             <Text style={styles.valueText}>{fullName || 'No definido'}</Text>
           )}
@@ -88,12 +233,17 @@ export default function ProfileScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Descripción</Text>
           {editing ? (
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-            />
+            <>
+              <TextInput
+                style={[styles.input, styles.textArea, fieldErrors.description && styles.inputError]}
+                value={description}
+                onChangeText={(v) => { setDescription(v); setFieldErrors(e => ({ ...e, description: undefined })) }}
+                multiline
+                maxLength={500}
+              />
+              <Text style={styles.charCount}>{description.length}/500</Text>
+              {fieldErrors.description ? <Text style={styles.fieldErrorText}>{fieldErrors.description}</Text> : null}
+            </>
           ) : (
             <Text style={styles.valueText}>{description || 'Sin descripción'}</Text>
           )}
@@ -101,10 +251,17 @@ export default function ProfileScreen() {
 
         {editing && (
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.btnSave} onPress={() => setEditing(false)}>
-              <Text style={styles.btnTextWhite}>Guardar cambios</Text>
+            <TouchableOpacity
+              style={[styles.btnSave, saving && styles.btnDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.btnTextWhite}>Guardar cambios</Text>
+              }
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnCancel} onPress={() => setEditing(false)}>
+            <TouchableOpacity style={styles.btnCancel} onPress={handleCancel} disabled={saving}>
               <Text style={styles.btnTextBlue}>Cancelar</Text>
             </TouchableOpacity>
           </View>
@@ -120,7 +277,7 @@ export default function ProfileScreen() {
       {/* SIDEBAR IZQUIERDA */}
       <View style={styles.sidebar}>
         <Text style={styles.sidebarTitle}>Mi cuenta</Text>
-        {['Compras', 'Ventas', 'Perfil', 'Tarjetas'].map((item) => (
+        {['Perfil', 'Compras', 'Ventas', 'Tarjetas'].map((item) => (
           <TouchableOpacity
             key={item}
             style={[styles.sidebarItem, activeTab === item && styles.sidebarItemActive]}
@@ -146,8 +303,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   mainWrapper: {
     flex: 1,
-    flexDirection: 'row', // Esto crea el layout de columnas
-    backgroundColor: '#EDEDED', // Gris clarito tipo Meli
+    flexDirection: 'row',
+    backgroundColor: '#EDEDED',
   },
   sidebar: {
     width: 240,
@@ -223,6 +380,25 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
   },
+  changePhotoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 30,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  changePhotoText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 11,
+  },
   profileInfoText: {
     marginLeft: 20,
   },
@@ -258,9 +434,32 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 16,
   },
+  inputError: {
+    borderColor: '#ef4444',
+  },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+  },
+  charCount: {
+    textAlign: 'right',
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
+  },
+  fieldErrorText: {
+    color: '#ef4444',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  successText: {
+    color: '#15803d',
+    marginBottom: 12,
+    fontWeight: '500',
+  },
+  errorText: {
+    color: '#dc2626',
+    marginBottom: 12,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -272,6 +471,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 6,
+  },
+  btnDisabled: {
+    opacity: 0.6,
   },
   btnCancel: {
     paddingVertical: 12,
