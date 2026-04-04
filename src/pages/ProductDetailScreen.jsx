@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const mockProducts = [
   {
@@ -154,6 +155,7 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [quantity, setQuantity] = useState(1);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const product = useMemo(() => {
     return mockProducts.find((item) => item.id === String(id));
@@ -169,12 +171,31 @@ export default function ProductDetailScreen() {
     return Math.round(((oldPrice - product.price) / oldPrice) * 100);
   }, [product, oldPrice]);
 
-  const handleAddToCart = () => {
-    Alert.alert("Añadido", `${quantity} unidad(es) agregadas al carrito.`);
+  const requireAuth = async (onSuccess) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        setShowLoginPrompt(true);
+        return;
+      }
+
+      onSuccess();
+    } catch (error) {
+      Alert.alert("Error", "No se pudo verificar la sesión.");
+    }
   };
 
-  const handleBuyNow = () => {
-    Alert.alert("Comprar ahora", "Redirigir a checkout.");
+  const handleAddToCart = async () => {
+    await requireAuth(() => {
+      Alert.alert("Añadido", `${quantity} unidad(es) agregadas al carrito.`);
+    });
+  };
+
+  const handleBuyNow = async () => {
+    await requireAuth(() => {
+      Alert.alert("Comprar ahora", "Redirigir a checkout.");
+    });
   };
 
   if (!product) {
@@ -302,22 +323,56 @@ export default function ProductDetailScreen() {
                 <Text style={styles.cartButtonText}>AÑADIR AL CARRITO</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.buyButton}
-                onPress={handleBuyNow}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.buyButtonText}>COMPRAR AHORA</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.shippingInfo}>
-              <Text style={styles.shippingText}>🚚 Envío gratuito</Text>
-              <Text style={styles.shippingText}>📦 Devolución en 30 días</Text>
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {showLoginPrompt && (
+        <View style={styles.loginPromptOverlay}>
+          <TouchableOpacity
+            style={styles.loginPromptBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowLoginPrompt(false)}
+          />
+          <View style={styles.loginPromptWrapper}>
+            <View style={styles.loginPromptBox}>
+              <Text style={styles.loginPromptTitle}>
+                ⚠️ DEBES INICIAR SESIÓN PARA REALIZAR ESTA ACCIÓN
+              </Text>
+
+              <Text style={styles.loginPromptText}>
+                Iniciá sesión para agregar productos al carrito o comprar ahora.
+              </Text>
+
+              <View style={styles.loginPromptButtons}>
+                <TouchableOpacity
+                  style={styles.loginPromptLoginButton}
+                  onPress={() => {
+                    setShowLoginPrompt(false);
+                    router.push("/login");
+                  }}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.loginPromptLoginButtonText}>
+                    Iniciar sesión
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.loginPromptCancelButton}
+                  onPress={() => setShowLoginPrompt(false)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={styles.loginPromptCancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.loginPromptArrow} />
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -551,17 +606,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 15,
   },
-  buyButton: {
-    backgroundColor: COLORS.secondary,
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-  buyButtonText: {
-    color: COLORS.white,
-    fontWeight: "900",
-    fontSize: 15,
-  },
   shippingInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -608,5 +652,103 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: "800",
     fontSize: 15,
+  },
+
+  loginPromptOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999,
+  },
+  loginPromptBackdrop: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.22)",
+  },
+  loginPromptWrapper: {
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+  loginPromptBox: {
+    width: 320,
+    maxWidth: "92%",
+    backgroundColor: "rgba(34, 93, 98, 0.96)",
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    elevation: 12,
+    alignItems: "center",
+  },
+  loginPromptTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+    lineHeight: 28,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    textShadowColor: "rgba(0,0,0,0.18)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  loginPromptText: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  loginPromptButtons: {
+    width: "100%",
+    gap: 10,
+  },
+  loginPromptLoginButton: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  loginPromptLoginButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  loginPromptCancelButton: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  loginPromptCancelButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  loginPromptArrow: {
+    position: "absolute",
+    bottom: -12,
+    width: 22,
+    height: 22,
+    backgroundColor: "rgba(34, 93, 98, 0.96)",
+    transform: [{ rotate: "45deg" }],
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
   },
 });
