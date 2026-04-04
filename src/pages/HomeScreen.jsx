@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
@@ -13,60 +14,38 @@ import SectionHeader from "../components/SectionHeader";
 import CategoryCard from "../components/CategoryCard";
 import ProductCard from "../components/ProductCard";
 
+// Colores basados en la imagen
+const COLORS = {
+  primary: "#00C2B3", // Turquesa de la barra de categorías
+  secondary: "#FF9800", // Naranja de ofertas
+  dark: "#003238", // Azul muy oscuro para el buscador
+  background: "#F5F7F8",
+  white: "#FFFFFF",
+  text: "#1F1F1F",
+};
+
 const mockCategories = [
-  { id: "1", name: "Tecnología", color: "#EDE0FF", emoji: "💻" },
-  { id: "2", name: "Hogar", color: "#FFE7D6", emoji: "🏠" },
-  { id: "3", name: "Ropa", color: "#DDF4FF", emoji: "👕" },
-  { id: "4", name: "Deportes", color: "#E7F8E7", emoji: "⚽" },
-  { id: "5", name: "Belleza", color: "#FFE0EC", emoji: "💄" },
-  { id: "6", name: "Libros", color: "#FFF1C7", emoji: "📚" },
+  { id: "1", name: "MODA", color: "#FFFFFF", emoji: "👕" },
+  { id: "2", name: "TECNOLOGÍA", color: "#FFFFFF", emoji: "📱" },
+  { id: "3", name: "HOGAR", color: "#FFFFFF", emoji: "🪑" },
+  { id: "4", name: "DEPORTES", color: "#FFFFFF", emoji: "🏈" },
+  { id: "5", name: "LIBROS", color: "#FFFFFF", emoji: "📚" },
 ];
 
-const mockRecentProducts = [
+const mockRecommendedProducts = [
   {
     id: "1",
     name: "Auriculares Bluetooth",
     price: 25000,
-    image: "https://via.placeholder.com/300x200.png?text=Auriculares",
+    image: "https://via.placeholder.com/500x350.png?text=Auriculares",
+  tag: "OFERTA!"
   },
   {
     id: "2",
     name: "Silla Gamer",
     price: 120000,
-    image: "https://via.placeholder.com/300x200.png?text=Silla",
-  },
-  {
-    id: "3",
-    name: "Campera Nike",
-    price: 89000,
-    image: "https://via.placeholder.com/300x200.png?text=Campera",
-  },
-  {
-    id: "4",
-    name: "Mochila Urbana",
-    price: 34000,
-    image: "https://via.placeholder.com/300x200.png?text=Mochila",
-  },
-];
-
-const mockRecommendedProducts = [
-  {
-    id: "5",
-    name: "Mouse Inalámbrico",
-    price: 18000,
-    image: "https://via.placeholder.com/300x200.png?text=Mouse",
-  },
-  {
-    id: "6",
-    name: "Zapatillas Adidas",
-    price: 76000,
-    image: "https://via.placeholder.com/300x200.png?text=Zapatillas",
-  },
-  {
-    id: "7",
-    name: "Lámpara LED",
-    price: 21000,
-    image: "https://via.placeholder.com/300x200.png?text=Lampara",
+    image: "https://via.placeholder.com/500x350.png?text=Silla+Gamer",
+    tag: "OFERTA!"
   },
 ];
 
@@ -76,6 +55,7 @@ export default function HomeScreen() {
 
   const handleSearch = () => {
     const trimmedSearch = search.trim();
+  
     router.push({
       pathname: "/products",
       params: trimmedSearch ? { search: trimmedSearch } : {},
@@ -92,217 +72,184 @@ export default function HomeScreen() {
     });
   };
 
-  const handleProductPress = (product) => {
-    router.push(`/product/${product.id}`);
-  };
-
-  const handleSeeAllCategories = () => {
-    router.push("/products");
-  };
-
-  const handleSeeAllRecommended = () => {
-    router.push({
-      pathname: "/products",
-      params: { section: "recommended" },
-    });
-  };
-
-  const handleSeeAllRecent = () => {
-    router.push({
-      pathname: "/products",
-      params: { sortBy: "recent" },
-    });
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.heroSection}>
-          <Text style={styles.heroGreeting}>Hola 👋</Text>
-          <Text style={styles.heroTitle}>Encontrá eso que estás buscando</Text>
-          <Text style={styles.heroSubtitle}>
-            Comprá, vendé y descubrí oportunidades únicas en Bazaar.
+      {/* HEADER: LOGO Y BUSCADOR */}
+      <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>
+            <Text style={{ color: COLORS.primary }}>BA</Text>
+            <Text style={{ color: COLORS.secondary }}>ZA</Text>
+            <Text style={{ color: "#F44336" }}>AR</Text>
           </Text>
+        </View>
+        <View style={styles.searchContainer}>
+        <SearchBar
+          value={search}
+          onChangeText={setSearch}
+          onSearch={handleSearch}
+          placeholder="Search for products, brands..."
+          containerStyle={styles.customSearchBar}
+        />
+        </View>
+      </View>
 
-          <SearchBar
-            value={search}
-            onChangeText={setSearch}
-            onSearch={handleSearch}
-          />
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        
+        {/* BARRA DE CATEGORÍAS (TURQUESA) */}
+        <View style={styles.categoriesBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {mockCategories.map((cat) => (
+              <TouchableOpacity
+                  key={cat.id}
+                  style={styles.categoryItem}
+                  onPress={() => handleCategoryPress(cat)}
+                >
+                <View style={styles.categoryCircle}>
+                  <Text style={{ fontSize: 24 }}>{cat.emoji}</Text>
+                </View>
+                <Text style={styles.categoryLabel}>{cat.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         <View style={styles.content}>
-          <TouchableOpacity style={styles.bannerCard} activeOpacity={0.9}>
-            <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTag}>Descubrí Bazaar</Text>
-              <Text style={styles.bannerTitle}>Productos nuevos todos los días</Text>
-              <Text style={styles.bannerSubtitle}>
-                Explorá categorías, encontrá ofertas y conectate con vendedores.
-              </Text>
-            </View>
-            <Text style={styles.bannerEmoji}>✨</Text>
-          </TouchableOpacity>
-
+          {/* PRODUCTOS RECOMENDADOS */}
           <View style={styles.section}>
-            <SectionHeader
-              title="Categorías"
-              actionText="Ver más"
-              onPressAction={handleSeeAllCategories}
-            />
-            <ScrollView
-              horizontal
+            <Text style={styles.sectionTitle}>PRODUCTOS <Text style={{color: COLORS.primary}}>RECOMENDADOS</Text></Text>
+            <ScrollView 
+              horizontal 
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesRow}
-            >
-              {mockCategories.map((category) => (
-                <CategoryCard
-                  key={category.id}
-                  category={category}
-                  onPress={handleCategoryPress}
-                />
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.section}>
-            <SectionHeader
-              title="Recomendados para vos"
-              actionText="Ver todos"
-              onPressAction={handleSeeAllRecommended}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
+              contentContainerStyle={styles.recommendedList}
             >
               {mockRecommendedProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onPress={handleProductPress}
                   variant="horizontal"
+                  onPress={() => router.push(`/product/${product.id}`)}
                 />
               ))}
             </ScrollView>
           </View>
 
-          <View style={styles.section}>
-            <SectionHeader
-              title="Publicados recientemente"
-              actionText="Ver todos"
-              onPressAction={handleSeeAllRecent}
-            />
-            <View style={styles.grid}>
-              {mockRecentProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onPress={handleProductPress}
-                  variant="grid"
-                />
-              ))}
+          {/* SECCIÓN DE OFERTAS (BANNER NARANJA) */}
+          <Text style={styles.sectionTitle}>SECCIÓN DE <Text style={{color: COLORS.secondary}}>OFERTAS Y DESCUENTOS</Text></Text>
+          <TouchableOpacity style={styles.promoBanner} activeOpacity={0.9}>
+            <View style={styles.promoTextContainer}>
+              <Text style={styles.promoTag}>¡OFERTA ESPECIAL DE LA SEMANA!</Text>
+              <Text style={styles.promoTitle}>30% DTO.</Text>
+              <Text style={styles.promoSubtitle}>Licuadora Ninja Pro{"\n"}¡Solo por tiempo limitado!</Text>
+              <View style={styles.promoButton}>
+                <Text style={styles.promoButtonText}>COMPRAR AHORA</Text>
+              </View>
             </View>
-          </View>
+            <Text style={{fontSize: 60}}>🥤</Text> 
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const COLORS = {
-  background: "#FFF8F3",
-  purple: "#6C3BFF",
-  text: "#1F1F1F",
-  textSecondary: "#6B6B6B",
-};
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.purple,
+    backgroundColor: COLORS.white,
+  },
+  header: {
+    paddingTop: 10,
+    backgroundColor: COLORS.white,
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  searchContainer: {
+    backgroundColor: COLORS.dark,
+    padding: 15,
   },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  heroSection: {
-    backgroundColor: COLORS.purple,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 34,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+  categoriesBar: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 15,
   },
-  heroGreeting: {
-    fontSize: 16,
-    color: "#E8DCFF",
-    marginBottom: 6,
-    fontWeight: "600",
+  categoryItem: {
+    alignItems: "center",
+    marginHorizontal: 15,
   },
-  heroTitle: {
-    fontSize: 30,
-    lineHeight: 36,
-    color: "#FFFFFF",
-    fontWeight: "800",
-    marginBottom: 8,
+  categoryCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
   },
-  heroSubtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: "#E8DCFF",
-    marginBottom: 22,
+  categoryLabel: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "bold",
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 32,
+    padding: 16,
   },
-  bannerCard: {
-    backgroundColor: "#FFE7D6",
-    borderRadius: 24,
-    padding: 18,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 28,
-  },
-  bannerTextContainer: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  bannerTag: {
-    color: "#FF6B3D",
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  bannerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    lineHeight: 26,
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "800",
-    marginBottom: 6,
+    textAlign: "center",
+    marginVertical: 15,
+    color: "#444",
   },
-  bannerSubtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+  recommendedList: {
+    paddingBottom: 10,
   },
-  bannerEmoji: {
-    fontSize: 34,
-  },
-  section: {
-    marginBottom: 28,
-  },
-  categoriesRow: {
-    paddingRight: 10,
-  },
-  horizontalList: {
-    paddingRight: 6,
-  },
-  grid: {
+  promoBanner: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 20,
+    padding: 20,
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
+  },
+  promoTextContainer: {
+    flex: 1,
+  },
+  promoTag: {
+    color: COLORS.dark,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  promoTitle: {
+    fontSize: 40,
+    fontWeight: "900",
+    color: COLORS.dark,
+  },
+  promoSubtitle: {
+    fontSize: 14,
+    color: COLORS.dark,
+    marginBottom: 10,
+  },
+  promoButton: {
+    backgroundColor: COLORS.dark,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+  },
+  promoButtonText: {
+    color: COLORS.white,
+    fontWeight: "bold",
+    fontSize: 12,
   },
 });
