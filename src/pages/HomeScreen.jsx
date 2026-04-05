@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -8,11 +9,16 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/ProductCard";
 import Logo from "../components/Logo";
 import { COLORS } from "../constants/colors";
+import {
+  getCatalogErrorMessage,
+  listRecentProducts,
+  mapCatalogProductToCard,
+} from "../services/catalog";
 
 const mockCategories = [
   { id: "1", name: "MODA", emoji: "👕" },
@@ -39,47 +45,42 @@ const mockRecommendedProducts = [
   },
 ];
 
-const mockRecentProducts = [
-  {
-    id: "3",
-    name: "Campera Nike",
-    price: 89000,
-    oldPrice: 115700,
-    image: "https://via.placeholder.com/300x200.png?text=Campera",
-  },
-  {
-    id: "4",
-    name: "Mochila Urbana",
-    price: 34000,
-    oldPrice: 44200,
-    image: "https://via.placeholder.com/300x200.png?text=Mochila",
-  },
-  {
-    id: "5",
-    name: "Mouse Inalámbrico",
-    price: 18000,
-    oldPrice: 23400,
-    image: "https://via.placeholder.com/300x200.png?text=Mouse",
-  },
-  {
-    id: "6",
-    name: "Zapatillas Adidas",
-    price: 76000,
-    oldPrice: 98800,
-    image: "https://via.placeholder.com/300x200.png?text=Zapatillas",
-  },
-  {
-    id: "7",
-    name: "Lámpara LED",
-    price: 21000,
-    oldPrice: 27300,
-    image: "https://via.placeholder.com/300x200.png?text=Lampara",
-  },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
+  const { refreshCatalog } = useLocalSearchParams();
   const [search, setSearch] = useState("");
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
+  const [recentProductsError, setRecentProductsError] = useState("");
+
+  const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog;
+
+  const loadRecentCatalogProducts = useCallback(async () => {
+    setLoadingRecentProducts(true);
+    setRecentProductsError("");
+
+    try {
+      const products = await listRecentProducts();
+      setRecentProducts(
+        products.map((product) =>
+          mapCatalogProductToCard(product, { tag: "NUEVO" })
+        )
+      );
+    } catch (error) {
+      setRecentProductsError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar las publicaciones recientes por el momento."
+        )
+      );
+    } finally {
+      setLoadingRecentProducts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecentCatalogProducts();
+  }, [loadRecentCatalogProducts, refreshCatalogKey]);
 
   const handleSearch = () => {
     const trimmedSearch = search.trim();
@@ -100,6 +101,20 @@ export default function HomeScreen() {
     });
   };
 
+  const handlePublishPress = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (token) {
+      router.push({
+        pathname: "/publish-product",
+        params: { from: "home" },
+      });
+      return;
+    }
+
+    router.push("/login");
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -109,6 +124,13 @@ export default function HomeScreen() {
           <Logo />
 
           <View style={styles.iconsContainer}>
+            <TouchableOpacity
+              style={styles.publishButton}
+              onPress={handlePublishPress}
+            >
+              <Text style={styles.publishButtonText}>+ Publicar producto</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.iconButton}
               onPress={async () => {
@@ -197,20 +219,42 @@ export default function HomeScreen() {
               PRODUCTOS <Text style={styles.sectionAccent}>RECIENTES</Text>
             </Text>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.recentList}
-            >
-              {mockRecentProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={{ ...product, tag: "NUEVO" }}
-                  variant="horizontal"
-                  onPress={() => router.push(`/product/${product.id}`)}
-                />
-              ))}
-            </ScrollView>
+            {loadingRecentProducts ? (
+              <View style={styles.sectionStatusCard}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.sectionStatusText}>
+                  Cargando publicaciones recientes...
+                </Text>
+              </View>
+            ) : recentProductsError ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionErrorText}>{recentProductsError}</Text>
+                <TouchableOpacity onPress={loadRecentCatalogProducts}>
+                  <Text style={styles.sectionRetryText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : recentProducts.length === 0 ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionStatusText}>
+                  Todavía no hay publicaciones recientes disponibles.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recentList}
+              >
+                {recentProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="horizontal"
+                    onPress={() => router.push(`/product/${product.id}`)}
+                  />
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           <Text style={styles.sectionTitle}>
@@ -252,10 +296,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   leftSpacer: {
-    width: 40,
+    width: 1,
   },
   iconsContainer: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    flexShrink: 1,
+  },
+  publishButton: {
+    borderWidth: 1,
+    borderColor: "#B9D8D4",
+    backgroundColor: "#F2FBFA",
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginRight: 4,
+    flexShrink: 1,
+  },
+  publishButtonText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 12,
   },
   iconButton: {
     marginLeft: 12,
@@ -321,6 +383,31 @@ const styles = StyleSheet.create({
   },
   recentList: {
     paddingBottom: 10,
+  },
+  sectionStatusCard: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#DCE7EA",
+    borderRadius: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    gap: 10,
+  },
+  sectionStatusText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    textAlign: "center",
+  },
+  sectionErrorText: {
+    color: COLORS.error,
+    fontSize: 14,
+    textAlign: "center",
+  },
+  sectionRetryText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 14,
   },
   promoBanner: {
     backgroundColor: COLORS.secondary,
