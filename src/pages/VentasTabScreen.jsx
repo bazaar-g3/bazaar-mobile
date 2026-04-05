@@ -1,27 +1,58 @@
-import { useState, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+    ActivityIndicator,
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    Alert,
+    Image,
 } from 'react-native'
-
-//PUBLICACIONES MOCK
-const MOCK_PUBLICACIONES = [
-    { id: 1, titulo: 'Zapatillas Nike Air Max 90 - Talle 42', precio: 85000, estado: 'activa', stock: 3, vendidos: 12, imagen: '👟' },
-    { id: 2, titulo: 'Campera de cuero marrón - Talle M', precio: 120000, estado: 'activa', stock: 1, vendidos: 4, imagen: '🧥' },
-    { id: 3, titulo: 'Mochila urbana impermeable 30L', precio: 45000, estado: 'inactiva', stock: 0, vendidos: 8, imagen: '🎒' },
-    { id: 4, titulo: 'Auriculares Bluetooth Sony WH-1000XM5', precio: 230000, estado: 'activa', stock: 5, vendidos: 2, imagen: '🎧' },
-    { id: 5, titulo: 'Mesa de madera ratán 4 sillas', precio: 310000, estado: 'inactiva', stock: 0, vendidos: 1, imagen: '🪑' },
-]
+import {
+    getCatalogErrorMessage,
+    isRemoteImage,
+    listSellerProducts,
+    mapCatalogProductToVentasItem,
+} from '../services/catalog'
 
 const FILTROS = ['activa', 'inactiva']
 
-export default function VentasTab() {
+export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     const [busqueda, setBusqueda] = useState('')
     const [filtrosActivos, setFiltrosActivos] = useState(['activa', 'inactiva'])
+    const [publicaciones, setPublicaciones] = useState([])
+    const [loadingPublicaciones, setLoadingPublicaciones] = useState(true)
+    const [publicacionesError, setPublicacionesError] = useState('')
+
+    const loadPublicaciones = useCallback(async () => {
+        if (!sellerId) {
+            setPublicaciones([])
+            setLoadingPublicaciones(false)
+            return
+        }
+
+        setLoadingPublicaciones(true)
+        setPublicacionesError('')
+
+        try {
+            const products = await listSellerProducts({
+                sellerId,
+                onlyAvailable: false,
+            })
+
+            setPublicaciones(products.map(mapCatalogProductToVentasItem))
+        } catch (error) {
+            setPublicacionesError(
+                getCatalogErrorMessage(error, 'No pudimos cargar tus publicaciones.')
+            )
+        } finally {
+            setLoadingPublicaciones(false)
+        }
+    }, [sellerId])
+
+    useEffect(() => {
+        loadPublicaciones()
+    }, [loadPublicaciones, refreshKey])
 
     function toggleFiltro(filtro) {
         setFiltrosActivos(prev =>
@@ -32,19 +63,15 @@ export default function VentasTab() {
     }
 
     const publicacionesFiltradas = useMemo(() => {
-        return MOCK_PUBLICACIONES.filter(p => {
+        return publicaciones.filter(p => {
             const coincideBusqueda = p.titulo.toLowerCase().includes(busqueda.toLowerCase())
             const coincideFiltro = filtrosActivos.includes(p.estado)
             return coincideBusqueda && coincideFiltro
         })
-    }, [busqueda, filtrosActivos])
+    }, [busqueda, filtrosActivos, publicaciones])
 
     function handleCrearPublicacion() {
-        Alert.alert(
-            'Próximamente',
-            'La funcionalidad de crear publicaciones estará disponible pronto.',
-            [{ text: 'Entendido' }]
-        )
+        onOpenPublish?.()
     }
 
     return (
@@ -98,8 +125,25 @@ export default function VentasTab() {
                 </View>
             </View>
 
+            {publicacionesError ? (
+                <View style={styles.errorBanner}>
+                    <Text style={styles.errorBannerText}>{publicacionesError}</Text>
+                    <TouchableOpacity onPress={loadPublicaciones}>
+                        <Text style={styles.errorBannerAction}>Reintentar</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : null}
+
             {/* ── Lista o estado vacío ── */}
-            {publicacionesFiltradas.length === 0 ? (
+            {loadingPublicaciones ? (
+                <View style={styles.emptyState}>
+                    <ActivityIndicator size="large" color="#3483FA" />
+                    <Text style={styles.emptyTitulo}>Cargando tus publicaciones...</Text>
+                    <Text style={styles.emptySubtitulo}>
+                        Estamos trayendo la informacion del catalogo real.
+                    </Text>
+                </View>
+            ) : publicacionesFiltradas.length === 0 ? (
                 <View style={styles.emptyState}>
                     <Text style={styles.emptyIcon}>🔍</Text>
                     <Text style={styles.emptyTitulo}>
@@ -135,7 +179,11 @@ export default function VentasTab() {
                             style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}
                         >
                             <View style={[styles.colTitulo, { flex: 4 }]}>
-                                <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+                                {isRemoteImage(pub.imagen) ? (
+                                    <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
+                                ) : (
+                                    <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+                                )}
                                 <Text style={styles.pubTitulo} numberOfLines={2}>{pub.titulo}</Text>
                             </View>
 
@@ -172,7 +220,7 @@ export default function VentasTab() {
             {/* ── Aviso placeholder ── */}
             <View style={styles.aviso}>
                 <Text style={styles.avisoText}>
-                    ⚠️ Esta sección es una vista preliminar. Hay que agregar los endpoits del back de catalooooog.
+                    Las publicaciones se cargan desde el catalogo real. La edicion y la baja quedaran para una proxima etapa.
                 </Text>
             </View>
 
@@ -297,12 +345,39 @@ const styles = StyleSheet.create({
     filaAlterna: {
         backgroundColor: '#fafafa',
     },
+    errorBanner: {
+        backgroundColor: '#fff7ed',
+        borderLeftWidth: 3,
+        borderLeftColor: '#f97316',
+        borderRadius: 6,
+        padding: 12,
+        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 16,
+    },
+    errorBannerText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#9a3412',
+    },
+    errorBannerAction: {
+        color: '#ea580c',
+        fontWeight: '700',
+    },
     colTitulo: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
     },
     pubEmoji: { fontSize: 24 },
+    pubImage: {
+        width: 44,
+        height: 44,
+        borderRadius: 8,
+        backgroundColor: '#e5e7eb',
+    },
     pubTitulo: {
         fontSize: 14,
         color: '#333',
