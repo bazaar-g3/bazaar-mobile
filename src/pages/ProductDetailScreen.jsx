@@ -12,11 +12,12 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../api/api";
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
   getCatalogProduct,
 } from "../services/catalog";
+import { getSessionStatus } from "../services/session";
+import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
 
 const mockProducts = [
   {
@@ -159,13 +160,16 @@ const COLORS = {
 
 export default function ProductDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const id = normalizeRouteParam(params.id);
+  const pendingAction = normalizeRouteParam(params.pendingAction);
+  const pendingQuantity = normalizeRouteParam(params.quantity);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [catalogProduct, setCatalogProduct] = useState(null);
   const [loadingCatalogProduct, setLoadingCatalogProduct] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
 
   const mockProduct = useMemo(() => {
     return mockProducts.find((item) => item.id === String(id));
@@ -231,17 +235,17 @@ export default function ProductDetailScreen() {
 
     async function loadCurrentUser() {
       try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) {
+        const session = await getSessionStatus();
+
+        if (!session.isAuthenticated) {
           if (!cancelled) {
             setCurrentUserId(null);
           }
           return;
         }
 
-        const response = await api.get("/users/me");
         if (!cancelled) {
-          setCurrentUserId(response.data?.id ?? null);
+          setCurrentUserId(session.profile?.id ?? null);
         }
       } catch {
         if (!cancelled) {
@@ -265,7 +269,8 @@ export default function ProductDetailScreen() {
 
   useEffect(() => {
     setSelectedImageIndex(0);
-  }, [product?.id]);
+    setHandledPendingActionKey("");
+  }, [product?.id, pendingAction, pendingQuantity]);
 
   const oldPrice = useMemo(() => {
     if (!product) return 0;
@@ -277,12 +282,26 @@ export default function ProductDetailScreen() {
     return Math.round(((oldPrice - product.price) / oldPrice) * 100);
   }, [product, oldPrice]);
 
-  const requireAuth = async (onSuccess) => {
-    try {
-      const token = await AsyncStorage.getItem("token");
+  const completeAddToCart = (quantityToAdd, onDismiss) => {
+    Alert.alert(
+      "Añadido",
+      `${quantityToAdd} unidad(es) agregadas al carrito.`,
+      onDismiss ? [{ text: "OK", onPress: onDismiss }] : undefined
+    );
+  };
 
-      if (!token) {
-        setShowLoginPrompt(true);
+  const requireAuth = async ({ pendingActionName, pendingQuantityValue }, onSuccess) => {
+    try {
+      const session = await getSessionStatus();
+
+      if (!session.isAuthenticated) {
+        router.push(
+          buildLoginRedirect({
+            redirectPath: `/product/${id}`,
+            pendingAction: pendingActionName,
+            quantity: pendingQuantityValue,
+          })
+        );
         return;
       }
 
@@ -293,16 +312,67 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = async () => {
-    await requireAuth(() => {
-      Alert.alert("Añadido", `${quantity} unidad(es) agregadas al carrito.`);
-    });
+    await requireAuth(
+      {
+        pendingActionName: "add-to-cart",
+        pendingQuantityValue: quantity,
+      },
+      () => {
+        completeAddToCart(quantity);
+      }
+    );
   };
 
   const handleBuyNow = async () => {
-    await requireAuth(() => {
+    await requireAuth(
+      {
+        pendingActionName: "buy-now",
+        pendingQuantityValue: quantity,
+      },
+      () => {
       Alert.alert("Comprar ahora", "Redirigir a checkout.");
-    });
+      }
+    );
   };
+
+  useEffect(() => {
+    if (!product || !pendingAction || !id) {
+      return;
+    }
+
+    const actionKey = `${product.id}:${pendingAction}:${pendingQuantity || "1"}`;
+    if (handledPendingActionKey === actionKey) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function resumePendingAction() {
+      const token = await AsyncStorage.getItem("token");
+      if (!token || cancelled) {
+        return;
+      }
+
+      if (pendingAction === "add-to-cart") {
+        const restoredQuantity = Math.max(
+          1,
+          Number.parseInt(pendingQuantity || "1", 10) || 1
+        );
+
+        setHandledPendingActionKey(actionKey);
+        setQuantity(restoredQuantity);
+        completeAddToCart(restoredQuantity, () => {
+          router.replace(`/product/${id}`);
+        });
+      }
+    }
+
+    resumePendingAction();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product, pendingAction, pendingQuantity, id, handledPendingActionKey, router]);
 
   if (loadingCatalogProduct) {
     return (
@@ -455,51 +525,6 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      {showLoginPrompt && (
-        <View style={styles.loginPromptOverlay}>
-          <TouchableOpacity
-            style={styles.loginPromptBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowLoginPrompt(false)}
-          />
-          <View style={styles.loginPromptWrapper}>
-            <View style={styles.loginPromptBox}>
-              <Text style={styles.loginPromptTitle}>
-                ⚠️ DEBES INICIAR SESIÓN PARA REALIZAR ESTA ACCIÓN
-              </Text>
-
-              <Text style={styles.loginPromptText}>
-                Iniciá sesión para agregar productos al carrito o comprar ahora.
-              </Text>
-
-              <View style={styles.loginPromptButtons}>
-                <TouchableOpacity
-                  style={styles.loginPromptLoginButton}
-                  onPress={() => {
-                    setShowLoginPrompt(false);
-                    router.push("/login");
-                  }}
-                  activeOpacity={0.9}
-                >
-                  <Text style={styles.loginPromptLoginButtonText}>
-                    Iniciar sesión
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.loginPromptCancelButton}
-                  onPress={() => setShowLoginPrompt(false)}
-                  activeOpacity={0.9}
-                >
-                  <Text style={styles.loginPromptCancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.loginPromptArrow} />
-            </View>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -10,6 +11,8 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { getSessionStatus } from "../services/session";
+import { buildLoginRedirect } from "../utils/authRedirect";
 
 const COLORS = {
   primary: "#00C2B3",
@@ -210,6 +213,23 @@ export default function ProductListScreen() {
     router.push(`/product/${productId}`);
   };
 
+  const handleAddToCart = async (productId) => {
+    const session = await getSessionStatus();
+
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({
+          redirectPath: `/product/${productId}`,
+          pendingAction: "add-to-cart",
+          quantity: 1,
+        })
+      );
+      return;
+    }
+
+    Alert.alert("Añadido", "1 unidad agregada al carrito.");
+  };
+
   const clearFilters = () => {
     router.push("/products");
   };
@@ -336,7 +356,10 @@ export default function ProductListScreen() {
                     <Text style={styles.cardStock}>Stock disponible: {item.stock}</Text>
 
                     <View style={styles.cardActions}>
-                      <TouchableOpacity style={styles.btnCart}>
+                      <TouchableOpacity
+                        style={styles.btnCart}
+                        onPress={() => handleAddToCart(item.id)}
+                      >
                         <Text style={styles.btnText}>AÑADIR AL CARRITO</Text>
                       </TouchableOpacity>
 
