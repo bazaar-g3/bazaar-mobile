@@ -19,6 +19,7 @@ import {
   listRecentProducts,
   mapCatalogProductToCard,
 } from "../services/catalog";
+import { buildLoginRedirect } from "../utils/authRedirect";
 
 const mockCategories = [
   { id: "1", name: "MODA", emoji: "👕" },
@@ -112,7 +113,12 @@ export default function HomeScreen() {
       return;
     }
 
-    router.push("/login");
+    router.push(
+      buildLoginRedirect({
+        redirectPath: "/publish-product",
+        redirectFrom: "home",
+      })
+    );
   };
 
   return (
@@ -139,7 +145,11 @@ export default function HomeScreen() {
                 if (token) {
                   router.push('/profile')
                 } else {
-                  router.push('/login')
+                  router.push(
+                    buildLoginRedirect({
+                      redirectPath: '/profile',
+                    })
+                  )
                 }
               }}
             >
@@ -154,7 +164,11 @@ export default function HomeScreen() {
                 if (token) {
                   router.push('/cart')
                 } else {
-                  router.push('/login')
+                  router.push(
+                    buildLoginRedirect({
+                      redirectPath: '/cart',
+                    })
+                  )
                 }
               }}
             >
