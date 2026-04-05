@@ -13,7 +13,9 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import Logo from '../components/Logo'
 import { COLORS } from '../constants/colors'
+import { SPACING, FONT } from '../constants/theme'
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
   createProduct,
@@ -90,10 +92,7 @@ export default function PublishProductScreen() {
   const [checkingSession, setCheckingSession] = useState(true)
 
   const canSubmit = useMemo(
-    () =>
-      !submitting &&
-      !checkingSession &&
-      !loadingCategories,
+    () => !submitting && !checkingSession && !loadingCategories,
     [submitting, checkingSession, loadingCategories]
   )
 
@@ -248,6 +247,16 @@ export default function PublishProductScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.topHeader}>
+        <View style={styles.topHeaderContent}>
+          <View style={styles.headerSidePlaceholder} />
+
+          <View style={styles.logoCenter}>
+            <Logo size={30} textSize={28} />
+          </View>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -257,9 +266,10 @@ export default function PublishProductScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.85}>
             <Text style={styles.backButton}>← Volver</Text>
           </TouchableOpacity>
+
           <Text style={styles.title}>Publicar producto</Text>
           <Text style={styles.subtitle}>
-            Completa la informacion y subi al menos una foto. La primera imagen sera la principal.
+            Completá la información y subí al menos una foto. La primera imagen será la principal.
           </Text>
         </View>
 
@@ -275,15 +285,15 @@ export default function PublishProductScreen() {
                 setName(value)
                 setFieldErrors((current) => ({ ...current, name: undefined }))
               }}
-              placeholder="Ej: Teclado mecanico"
-              placeholderTextColor="#94a3b8"
+              placeholder="Ej: Teclado mecánico"
+              placeholderTextColor={COLORS.textMuted}
               maxLength={120}
             />
             {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Descripcion</Text>
+            <Text style={styles.label}>Descripción</Text>
             <TextInput
               style={[styles.input, styles.textArea, fieldErrors.description && styles.inputError]}
               value={description}
@@ -291,8 +301,8 @@ export default function PublishProductScreen() {
                 setDescription(value)
                 setFieldErrors((current) => ({ ...current, description: undefined }))
               }}
-              placeholder="Conta el estado del producto, detalles y uso"
-              placeholderTextColor="#94a3b8"
+              placeholder="Contá el estado del producto, detalles y uso"
+              placeholderTextColor={COLORS.textMuted}
               multiline
               maxLength={4000}
             />
@@ -312,7 +322,7 @@ export default function PublishProductScreen() {
                   setFieldErrors((current) => ({ ...current, price: undefined }))
                 }}
                 placeholder="25000"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={COLORS.textMuted}
                 keyboardType="decimal-pad"
               />
               {fieldErrors.price ? <Text style={styles.fieldError}>{fieldErrors.price}</Text> : null}
@@ -328,7 +338,7 @@ export default function PublishProductScreen() {
                   setFieldErrors((current) => ({ ...current, stock: undefined }))
                 }}
                 placeholder="1"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={COLORS.textMuted}
                 keyboardType="number-pad"
               />
               {fieldErrors.stock ? <Text style={styles.fieldError}>{fieldErrors.stock}</Text> : null}
@@ -336,11 +346,12 @@ export default function PublishProductScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Categoria</Text>
+            <Text style={styles.label}>Categoría</Text>
+
             {loadingCategories ? (
               <View style={styles.inlineStatus}>
-                <ActivityIndicator color={COLORS.primary} size="small" />
-                <Text style={styles.inlineStatusText}>Cargando categorias...</Text>
+                <ActivityIndicator color={COLORS.primaryLight} size="small" />
+                <Text style={styles.inlineStatusText}>Cargando categorías...</Text>
               </View>
             ) : categoriesError ? (
               <View style={styles.inlineErrorBox}>
@@ -375,6 +386,7 @@ export default function PublishProductScreen() {
                 })}
               </View>
             )}
+
             {fieldErrors.categorySlug ? (
               <Text style={styles.fieldError}>{fieldErrors.categorySlug}</Text>
             ) : null}
@@ -382,10 +394,11 @@ export default function PublishProductScreen() {
 
           <View style={styles.fieldGroup}>
             <View style={styles.imagesHeader}>
-              <View>
-                <Text style={styles.label}>Imagenes</Text>
-                <Text style={styles.helperText}>Hasta 5 imagenes JPG, PNG o WebP de 10 MB.</Text>
+              <View style={styles.imagesHeaderText}>
+                <Text style={styles.label}>Imágenes</Text>
+                <Text style={styles.helperText}>Hasta 5 imágenes JPG, PNG o WebP de 10 MB.</Text>
               </View>
+
               <TouchableOpacity style={styles.secondaryButton} onPress={handlePickImages}>
                 <Text style={styles.secondaryButtonText}>Agregar fotos</Text>
               </TouchableOpacity>
@@ -401,7 +414,7 @@ export default function PublishProductScreen() {
                       source={{ uri: PRODUCT_IMAGE_PLACEHOLDER }}
                       style={styles.previewImage}
                     />
-                    <Text style={styles.emptyImageText}>Todavia no seleccionaste imagenes.</Text>
+                    <Text style={styles.emptyImageText}>Todavía no seleccionaste imágenes.</Text>
                   </View>
                 ) : (
                   selectedImages.map((image, index) => (
@@ -432,7 +445,7 @@ export default function PublishProductScreen() {
               disabled={!canSubmit}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
                 <Text style={styles.primaryButtonText}>Publicar producto</Text>
               )}
@@ -455,200 +468,283 @@ export default function PublishProductScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#DDEAEA',
   },
+
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#DDEAEA',
   },
+
+  topHeader: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 14,
+  },
+
+  topHeaderContent: {
+    width: '100%',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    position: 'relative',
+    minHeight: 44,
+  },
+
+  headerSidePlaceholder: {
+    width: 44,
+    height: 44,
+  },
+
+  logoCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+
   content: {
-    padding: 20,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
   },
+
   header: {
     width: '100%',
     maxWidth: 920,
-    marginBottom: 20,
+    marginBottom: SPACING.md,
   },
+
   backButton: {
     color: COLORS.primary,
-    fontSize: 16,
+    fontSize: FONT.medium,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: SPACING.sm,
   },
+
   title: {
     color: COLORS.textPrimary,
-    fontSize: 30,
+    fontSize: FONT.title,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: SPACING.xs,
   },
+
   subtitle: {
     color: COLORS.textSecondary,
-    fontSize: 15,
+    fontSize: FONT.regular,
     lineHeight: 22,
   },
+
   card: {
     width: '100%',
     maxWidth: 920,
     backgroundColor: COLORS.white,
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowRadius: 18,
     elevation: 4,
   },
+
   fieldGroup: {
-    marginBottom: 18,
+    marginBottom: SPACING.md,
   },
+
   row: {
     flexDirection: 'row',
-    gap: 16,
+    gap: SPACING.md,
   },
+
   halfField: {
     flex: 1,
   },
+
   label: {
     color: COLORS.textPrimary,
-    fontSize: 15,
+    fontSize: FONT.regular,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
+
   helperText: {
     color: COLORS.textMuted,
-    fontSize: 13,
+    fontSize: FONT.small,
+    lineHeight: 18,
   },
+
   input: {
     borderWidth: 1,
-    borderColor: '#dbe4ea',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 15,
+    fontSize: FONT.regular,
     color: COLORS.textPrimary,
-    backgroundColor: '#fbfdff',
+    backgroundColor: '#F8FCFC',
   },
+
   textArea: {
     minHeight: 140,
     textAlignVertical: 'top',
   },
+
   inputError: {
     borderColor: COLORS.error,
   },
+
   fieldError: {
     color: COLORS.error,
-    fontSize: 13,
-    marginTop: 6,
+    fontSize: FONT.small,
+    marginTop: SPACING.xs,
   },
+
   errorText: {
     color: COLORS.error,
-    backgroundColor: '#fff1f2',
+    backgroundColor: '#FFF1F2',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
+    fontSize: FONT.small,
   },
+
   inlineStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
+
   inlineStatusText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: FONT.small,
   },
+
   inlineErrorBox: {
-    backgroundColor: '#fff7ed',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: '#FFF9E8',
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.secondary,
+    borderRadius: 10,
+    padding: SPACING.md,
   },
+
   inlineErrorText: {
-    color: '#b45309',
-    fontSize: 14,
+    color: COLORS.dark,
+    fontSize: FONT.small,
   },
+
   inlineErrorAction: {
-    color: COLORS.primary,
+    color: COLORS.primaryLight,
     fontWeight: '700',
-    marginTop: 8,
+    marginTop: SPACING.sm,
+    fontSize: FONT.small,
   },
+
   categoryChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: SPACING.sm,
   },
+
   categoryChip: {
     borderWidth: 1,
-    borderColor: '#d7e3ea',
+    borderColor: COLORS.border,
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    backgroundColor: '#f8fbfc',
+    backgroundColor: '#F8FCFC',
   },
+
   categoryChipSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: '#e4f3f1',
+    borderColor: COLORS.primaryLight,
+    backgroundColor: '#E7F6F4',
   },
+
   categoryChipText: {
     color: COLORS.textSecondary,
     fontWeight: '600',
+    fontSize: FONT.small,
   },
+
   categoryChipTextSelected: {
     color: COLORS.primary,
   },
+
   imagesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 12,
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
   },
+
+  imagesHeaderText: {
+    flex: 1,
+  },
+
   secondaryButton: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.primaryLight,
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
   },
+
   secondaryButtonText: {
     color: COLORS.primary,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: FONT.small,
   },
+
   imagesRow: {
     flexDirection: 'row',
     gap: 14,
   },
+
   emptyImageState: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     borderWidth: 1,
-    borderColor: '#dbe4ea',
+    borderColor: COLORS.border,
     borderRadius: 16,
     padding: 14,
     minWidth: 320,
-    backgroundColor: '#f8fbfc',
+    backgroundColor: '#F8FCFC',
   },
+
   emptyImageText: {
     flex: 1,
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: FONT.small,
   },
+
   previewCard: {
     position: 'relative',
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#dbe4ea',
-    backgroundColor: '#f8fbfc',
+    borderColor: COLORS.border,
+    backgroundColor: '#F8FCFC',
   },
+
   previewImage: {
     width: 170,
     height: 130,
     backgroundColor: COLORS.imagePlaceholder,
   },
+
   primaryBadge: {
     position: 'absolute',
     bottom: 10,
@@ -658,11 +754,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
   },
+
   primaryBadgeText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '700',
     fontSize: 12,
   },
+
   removeImageButton: {
     position: 'absolute',
     top: 10,
@@ -670,47 +768,53 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(15, 46, 53, 0.85)',
+    backgroundColor: 'rgba(11, 58, 70, 0.85)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   removeImageButtonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: FONT.small,
   },
+
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
   },
+
   primaryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     minWidth: 220,
     alignItems: 'center',
   },
+
   primaryButtonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '800',
-    fontSize: 15,
+    fontSize: FONT.regular,
   },
+
   cancelButton: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#dbe4ea',
+    backgroundColor: '#EDF5F4',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     minWidth: 140,
     alignItems: 'center',
   },
+
   cancelButtonText: {
-    color: COLORS.textSecondary,
+    color: COLORS.primary,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: FONT.regular,
   },
+
   disabledButton: {
     opacity: 0.6,
   },
