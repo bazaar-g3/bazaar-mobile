@@ -12,10 +12,15 @@ import {
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
 import BazaarLogo from '../../assets/Bazaar-logo.png'
 import VentasTab from './VentasTabScreen'
+import {
+  PRODUCT_IMAGE_PLACEHOLDER,
+  getCatalogErrorMessage,
+  listSellerProducts,
+} from '../services/catalog'
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?background=007AFF&color=fff&size=128&name='
 
@@ -28,6 +33,7 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
   const router = useRouter()
+  const { activeTab: requestedActiveTab, refreshCatalog } = useLocalSearchParams()
   const [activeTab, setActiveTab] = useState('Perfil')
   const [isMenuOpen, setIsMenuOpen] = useState(true)
 
@@ -41,6 +47,14 @@ export default function ProfileScreen() {
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [activeProductsSummary, setActiveProductsSummary] = useState([])
+  const [loadingActiveProductsSummary, setLoadingActiveProductsSummary] = useState(true)
+  const [activeProductsSummaryError, setActiveProductsSummaryError] = useState('')
+
+  const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog
+  const normalizedRequestedTab = Array.isArray(requestedActiveTab)
+    ? requestedActiveTab[0]
+    : requestedActiveTab
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true)
@@ -58,6 +72,57 @@ export default function ProfileScreen() {
   }, [])
 
   useEffect(() => { loadProfile() }, [loadProfile])
+
+  useEffect(() => {
+    if (normalizedRequestedTab && MENU_ITEMS.some(({ key }) => key === normalizedRequestedTab)) {
+      setActiveTab(normalizedRequestedTab)
+    }
+  }, [normalizedRequestedTab])
+
+  const loadActiveProductsSummary = useCallback(async () => {
+    if (!profile?.id) {
+      setActiveProductsSummary([])
+      setLoadingActiveProductsSummary(false)
+      return
+    }
+
+    setLoadingActiveProductsSummary(true)
+    setActiveProductsSummaryError('')
+
+    try {
+      const products = await listSellerProducts({
+        sellerId: profile.id,
+        status: 'active',
+        onlyAvailable: false,
+        limit: 3,
+      })
+      setActiveProductsSummary(products)
+    } catch (error) {
+      setActiveProductsSummaryError(
+        getCatalogErrorMessage(error, 'No pudimos cargar el resumen de publicaciones activas.')
+      )
+    } finally {
+      setLoadingActiveProductsSummary(false)
+    }
+  }, [profile?.id])
+
+  useEffect(() => {
+    loadActiveProductsSummary()
+  }, [loadActiveProductsSummary, refreshCatalogKey])
+
+  const handleOpenPublish = useCallback(async () => {
+    const token = await AsyncStorage.getItem('token')
+
+    if (token) {
+      router.push({
+        pathname: '/publish-product',
+        params: { from: 'profile' },
+      })
+      return
+    }
+
+    router.push('/login')
+  }, [router])
 
   function validate() {
     const errors = {}
@@ -157,9 +222,76 @@ export default function ProfileScreen() {
     setEditing(false)
   }
 
+  const renderActiveProductsSummary = () => (
+    <View style={styles.summarySection}>
+      <View style={styles.summaryHeader}>
+        <Text style={styles.summaryTitle}>Publicaciones activas</Text>
+        <TouchableOpacity onPress={() => setActiveTab('Ventas')}>
+          <Text style={styles.summaryAction}>Ver ventas</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loadingActiveProductsSummary ? (
+        <View style={styles.summaryStatus}>
+          <ActivityIndicator size="small" color="#3483FA" />
+          <Text style={styles.summaryStatusText}>Cargando resumen...</Text>
+        </View>
+      ) : activeProductsSummaryError ? (
+        <View style={styles.summaryMessageCard}>
+          <Text style={styles.summaryErrorText}>{activeProductsSummaryError}</Text>
+          <TouchableOpacity onPress={loadActiveProductsSummary}>
+            <Text style={styles.summaryRetryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : activeProductsSummary.length === 0 ? (
+        <View style={styles.summaryMessageCard}>
+          <Text style={styles.summaryEmptyTitle}>Todavia no tenes publicaciones activas.</Text>
+          <Text style={styles.summaryEmptyText}>
+            Publica tu primer producto para que empiece a aparecer en tu perfil y en Home.
+          </Text>
+          <TouchableOpacity style={styles.summaryPublishButton} onPress={handleOpenPublish}>
+            <Text style={styles.summaryPublishButtonText}>Publicar producto</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.summaryList}>
+          {activeProductsSummary.map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              style={styles.summaryRow}
+              activeOpacity={0.9}
+              onPress={() => setActiveTab('Ventas')}
+            >
+              <Image
+                source={{ uri: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER }}
+                style={styles.summaryImage}
+              />
+              <View style={styles.summaryContent}>
+                <Text style={styles.summaryProductName} numberOfLines={1}>
+                  {product.name}
+                </Text>
+                <Text style={styles.summaryMeta}>
+                  ${Number(product.price).toLocaleString('es-AR')} · Stock {product.stock}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  )
+
   const renderMainContent = () => {
     if (activeTab === 'Compras') return <Text style={styles.emptyText}>No tenés compras aún.</Text>
-    if (activeTab === 'Ventas') return <VentasTab />
+    if (activeTab === 'Ventas') {
+      return (
+        <VentasTab
+          sellerId={profile?.id}
+          refreshKey={refreshCatalogKey}
+          onOpenPublish={handleOpenPublish}
+        />
+      )
+    }
     if (activeTab === 'Tarjetas') return <Text style={styles.emptyText}>No tenés tarjetas asociadas.</Text>
 
     return (
@@ -249,6 +381,9 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={styles.summarySeparator} />
+        {renderActiveProductsSummary()}
       </View>
     )
   }
@@ -491,5 +626,98 @@ const styles = StyleSheet.create({
   btnCancel: { paddingVertical: 12, paddingHorizontal: 20 },
   btnTextWhite: { color: '#fff', fontWeight: '600' },
   btnTextBlue: { color: '#3483FA', fontWeight: '600' },
+  summarySeparator: { height: 1, backgroundColor: '#eee', marginVertical: 24 },
+  summarySection: {
+    gap: 14,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#222',
+  },
+  summaryAction: {
+    color: '#3483FA',
+    fontWeight: '600',
+  },
+  summaryStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  summaryStatusText: {
+    color: '#6b7280',
+  },
+  summaryMessageCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 16,
+    gap: 10,
+  },
+  summaryEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#222',
+  },
+  summaryEmptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+  },
+  summaryPublishButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    backgroundColor: '#3483FA',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  summaryPublishButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  summaryErrorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  summaryRetryText: {
+    color: '#3483FA',
+    fontWeight: '700',
+  },
+  summaryList: {
+    gap: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+  },
+  summaryImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: '#e5e7eb',
+  },
+  summaryContent: {
+    flex: 1,
+  },
+  summaryProductName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#222',
+    marginBottom: 4,
+  },
+  summaryMeta: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
   emptyText: { textAlign: 'center', fontSize: 18, color: '#999', marginTop: 50 },
 })
