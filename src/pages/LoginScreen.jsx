@@ -15,6 +15,7 @@ import api from '../api/api'
 import { registerForPushNotifications } from '../services/notifications'
 import { COLORS } from '../constants/colors'
 import Logo from '../components/Logo'
+import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -61,7 +62,7 @@ export default function LoginScreen() {
         console.warn('Push notification registration failed after login', notificationError)
       }
 
-      router.replace('/home')
+      router.replace(buildPostAuthDestination(params))
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Invalid email or password')
@@ -153,7 +154,9 @@ export default function LoginScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/register')}>
+          <TouchableOpacity
+            onPress={() => router.push(buildAuthScreenNavigation('/register', params))}
+          >
             <Text style={styles.registerText}>
               ¿No tienes cuenta? <Text style={styles.registerLink}>Regístrate</Text>
             </Text>
