@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { COLORS } from '../constants/colors'
@@ -22,6 +21,8 @@ import {
   getCatalogValidationErrors,
   listProductCategories,
 } from '../services/catalog'
+import { getSessionStatus } from '../services/session'
+import { buildLoginRedirect } from '../utils/authRedirect'
 
 const MAX_IMAGES = 5
 
@@ -117,9 +118,15 @@ export default function PublishProductScreen() {
     let cancelled = false
 
     async function checkSession() {
-      const token = await AsyncStorage.getItem('token')
-      if (!token) {
-        router.replace('/login')
+      const session = await getSessionStatus()
+
+      if (!session.isAuthenticated) {
+        router.replace(
+          buildLoginRedirect({
+            redirectPath: '/publish-product',
+            redirectFrom: origin,
+          })
+        )
         return
       }
 
@@ -133,7 +140,7 @@ export default function PublishProductScreen() {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [origin, router])
 
   useEffect(() => {
     loadCategories()

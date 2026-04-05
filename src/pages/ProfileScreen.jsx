@@ -21,6 +21,8 @@ import {
   getCatalogErrorMessage,
   listSellerProducts,
 } from '../services/catalog'
+import { getSessionStatus } from '../services/session'
+import { buildLoginRedirect } from '../utils/authRedirect'
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?background=007AFF&color=fff&size=128&name='
 
@@ -50,28 +52,97 @@ export default function ProfileScreen() {
   const [activeProductsSummary, setActiveProductsSummary] = useState([])
   const [loadingActiveProductsSummary, setLoadingActiveProductsSummary] = useState(true)
   const [activeProductsSummaryError, setActiveProductsSummaryError] = useState('')
+  const [checkingSession, setCheckingSession] = useState(true)
 
   const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog
   const normalizedRequestedTab = Array.isArray(requestedActiveTab)
     ? requestedActiveTab[0]
     : requestedActiveTab
 
+  const applyProfileData = useCallback((nextProfile) => {
+    setProfile(nextProfile)
+    setFullName(nextProfile?.fullName ?? '')
+    setDescription(nextProfile?.description ?? '')
+    setAvatarUri(nextProfile?.avatarUrl ?? null)
+  }, [])
+
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true)
     try {
       const res = await api.get('/users/me')
-      setProfile(res.data)
-      setFullName(res.data.fullName ?? '')
-      setDescription(res.data.description ?? '')
-      setAvatarUri(res.data.avatarUrl ?? null)
+      applyProfileData(res.data)
+      return { ok: true, profile: res.data }
     } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 404) {
+        await AsyncStorage.removeItem('token')
+        return { ok: false, authInvalid: true }
+      }
+
       console.error(err)
+      return { ok: false, authInvalid: false }
     } finally {
       setLoadingProfile(false)
     }
-  }, [])
+  }, [applyProfileData])
 
-  useEffect(() => { loadProfile() }, [loadProfile])
+  useEffect(() => {
+    let cancelled = false
+
+    async function ensureAuthenticatedUser() {
+      try {
+        const session = await getSessionStatus()
+
+        if (!session.isAuthenticated) {
+          router.replace(
+            buildLoginRedirect({
+              redirectPath: '/profile',
+              activeTab: normalizedRequestedTab,
+            })
+          )
+          return
+        }
+
+        if (!cancelled) {
+          applyProfileData(session.profile)
+          setLoadingProfile(false)
+          setCheckingSession(false)
+        }
+      } catch (error) {
+        console.error(error)
+
+        if (!cancelled) {
+          setCheckingSession(false)
+          setLoadingProfile(false)
+        }
+      }
+    }
+
+    ensureAuthenticatedUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [applyProfileData, normalizedRequestedTab, router])
+
+  useEffect(() => {
+    if (checkingSession || !refreshCatalogKey) {
+      return
+    }
+
+    async function refreshProfileIfNeeded() {
+      const result = await loadProfile()
+      if (result?.authInvalid) {
+        router.replace(
+          buildLoginRedirect({
+            redirectPath: '/profile',
+            activeTab: normalizedRequestedTab,
+          })
+        )
+      }
+    }
+
+    refreshProfileIfNeeded()
+  }, [checkingSession, loadProfile, normalizedRequestedTab, refreshCatalogKey, router])
 
   useEffect(() => {
     if (normalizedRequestedTab && MENU_ITEMS.some(({ key }) => key === normalizedRequestedTab)) {
@@ -121,7 +192,12 @@ export default function ProfileScreen() {
       return
     }
 
-    router.push('/login')
+    router.push(
+      buildLoginRedirect({
+        redirectPath: '/publish-product',
+        redirectFrom: 'profile',
+      })
+    )
   }, [router])
 
   function validate() {
@@ -388,7 +464,7 @@ export default function ProfileScreen() {
     )
   }
 
-  if (loadingProfile) return <ActivityIndicator style={{ flex: 1 }} />
+  if (checkingSession || loadingProfile) return <ActivityIndicator style={{ flex: 1 }} />
 
   return (
     <View style={styles.root}>
