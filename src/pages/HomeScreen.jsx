@@ -7,30 +7,19 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
-import SectionHeader from "../components/SectionHeader";
-import CategoryCard from "../components/CategoryCard";
 import ProductCard from "../components/ProductCard";
-
-const COLORS = {
-  primary: "#00C2B3",
-  secondary: "#FF9800",
-  third: "#F44336",
-  dark: "#003238",
-  background: "#F5F7F8",
-  white: "#FFFFFF",
-  text: "#1F1F1F",
-};
+import Logo from "../components/Logo";
+import { COLORS } from "../constants/colors";
 
 const mockCategories = [
-  { id: "1", name: "MODA", color: "#FFFFFF", emoji: "👕" },
-  { id: "2", name: "TECNOLOGÍA", color: "#FFFFFF", emoji: "📱" },
-  { id: "3", name: "HOGAR", color: "#FFFFFF", emoji: "🪑" },
-  { id: "4", name: "DEPORTES", color: "#FFFFFF", emoji: "🏈" },
-  { id: "5", name: "LIBROS", color: "#FFFFFF", emoji: "📚" },
+  { id: "1", name: "MODA", emoji: "👕" },
+  { id: "2", name: "TECNOLOGÍA", emoji: "📱" },
+  { id: "3", name: "HOGAR", emoji: "🪑" },
+  { id: "4", name: "DEPORTES", emoji: "🏈" },
+  { id: "5", name: "LIBROS", emoji: "📚" },
 ];
 
 const mockRecommendedProducts = [
@@ -115,15 +104,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.topBar}>
-          <View style={{ width: 40 }} /> 
+          <View style={styles.leftSpacer} />
 
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>
-              <Text style={{ color: COLORS.primary }}>BA</Text>
-              <Text style={{ color: COLORS.secondary }}>ZA</Text>
-              <Text style={{ color: COLORS.third }}>AR</Text>
-            </Text>
-          </View>
+          <Logo />
 
           <View style={styles.iconsContainer}>
             <TouchableOpacity
@@ -163,7 +146,7 @@ export default function HomeScreen() {
             value={search}
             onChangeText={setSearch}
             onSearch={handleSearch}
-            placeholder="Search for products, brands..."
+            placeholder="Buscar productos..."
             containerStyle={styles.customSearchBar}
           />
         </View>
@@ -179,7 +162,7 @@ export default function HomeScreen() {
                 onPress={() => handleCategoryPress(cat)}
               >
                 <View style={styles.categoryCircle}>
-                  <Text style={{ fontSize: 24 }}>{cat.emoji}</Text>
+                  <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
                 </View>
                 <Text style={styles.categoryLabel}>{cat.name}</Text>
               </TouchableOpacity>
@@ -190,7 +173,7 @@ export default function HomeScreen() {
         <View style={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              PRODUCTOS <Text style={{ color: COLORS.third }}>RECOMENDADOS</Text>
+              PRODUCTOS <Text style={styles.sectionAccent}>RECOMENDADOS</Text>
             </Text>
 
             <ScrollView
@@ -211,7 +194,7 @@ export default function HomeScreen() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
-              PRODUCTOS <Text style={{ color: COLORS.third }}>RECIENTES</Text>
+              PRODUCTOS <Text style={styles.sectionAccent}>RECIENTES</Text>
             </Text>
 
             <ScrollView
@@ -220,32 +203,18 @@ export default function HomeScreen() {
               contentContainerStyle={styles.recentList}
             >
               {mockRecentProducts.map((product) => (
-                <TouchableOpacity
+                <ProductCard
                   key={product.id}
-                  style={styles.recentCard}
-                  activeOpacity={0.9}
+                  product={{ ...product, tag: "NUEVO" }}
+                  variant="horizontal"
                   onPress={() => router.push(`/product/${product.id}`)}
-                >
-                  <Image source={{ uri: product.image }} style={styles.recentImage} />
-
-                  <View style={styles.recentCardContent}>
-                    <View style={styles.recentBadge}>
-                      <Text style={styles.recentBadgeText}>NUEVO</Text>
-                    </View>
-
-                    <Text style={styles.recentName} numberOfLines={2}>
-                      {product.name}
-                    </Text>
-
-                    <Text style={styles.recentPrice}>${product.price}</Text>
-                  </View>
-                </TouchableOpacity>
+                />
               ))}
             </ScrollView>
           </View>
 
           <Text style={styles.sectionTitle}>
-            SECCIÓN DE <Text style={{ color: COLORS.third }}>OFERTAS Y DESCUENTOS</Text>
+            SECCIÓN DE <Text style={styles.sectionAccent}>OFERTAS Y DESCUENTOS</Text>
           </Text>
 
           <TouchableOpacity style={styles.promoBanner} activeOpacity={0.9}>
@@ -259,7 +228,7 @@ export default function HomeScreen() {
                 <Text style={styles.promoButtonText}>COMPRAR AHORA</Text>
               </View>
             </View>
-            <Text style={{ fontSize: 60 }}>🥤</Text>
+            <Text style={styles.promoEmoji}>🥤</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -276,25 +245,38 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     backgroundColor: COLORS.white,
   },
-  logoContainer: {
+  topBar: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 2,
+  leftSpacer: {
+    width: 40,
+  },
+  iconsContainer: {
+    flexDirection: "row",
+  },
+  iconButton: {
+    marginLeft: 12,
+    padding: 6,
+  },
+  icon: {
+    fontSize: 22,
   },
   searchContainer: {
     backgroundColor: COLORS.dark,
     padding: 15,
+  },
+  customSearchBar: {
+    marginBottom: 0,
   },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
   categoriesBar: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
     paddingVertical: 15,
   },
   categoryItem: {
@@ -309,6 +291,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 5,
+  },
+  categoryEmoji: {
+    fontSize: 24,
   },
   categoryLabel: {
     color: COLORS.white,
@@ -326,55 +311,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     marginVertical: 15,
-    color: "#444",
+    color: COLORS.sectionTitle,
+  },
+  sectionAccent: {
+    color: COLORS.third,
   },
   recommendedList: {
     paddingBottom: 10,
   },
   recentList: {
     paddingBottom: 10,
-    paddingRight: 10,
-  },
-  recentCard: {
-    width: 220,
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    marginRight: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#EAEAEA",
-  },
-  recentImage: {
-    width: "100%",
-    height: 140,
-    backgroundColor: "#EFEFEF",
-  },
-  recentCardContent: {
-    padding: 12,
-  },
-  recentBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#DFF7F4",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  recentBadgeText: {
-    color: COLORS.dark,
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  recentName: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-  recentPrice: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: COLORS.secondary,
   },
   promoBanner: {
     backgroundColor: COLORS.secondary,
@@ -414,20 +360,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 12,
   },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-  },
-  iconsContainer: {
-    flexDirection: "row",
-  },
-  iconButton: {
-    marginLeft: 12,
-    padding: 6,
-  },
-  icon: {
-    fontSize: 22,
+  promoEmoji: {
+    fontSize: 60,
   },
 });
