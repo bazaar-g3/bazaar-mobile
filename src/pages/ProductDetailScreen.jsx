@@ -18,6 +18,7 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
+import { COLORS } from "../constants/colors";
 
 const mockProducts = [
   {
@@ -146,18 +147,6 @@ const mockProducts = [
   },
 ];
 
-const COLORS = {
-  primary: "#00C2B3",
-  secondary: "#FF9800",
-  dark: "#003238",
-  background: "#F5F7F8",
-  white: "#FFFFFF",
-  text: "#1F1F1F",
-  grey: "#6B6B6B",
-  lightGrey: "#EAEAEA",
-  success: "#23A26D",
-};
-
 export default function ProductDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -170,6 +159,7 @@ export default function ProductDetailScreen() {
   const [loadingCatalogProduct, setLoadingCatalogProduct] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   const mockProduct = useMemo(() => {
     return mockProducts.find((item) => item.id === String(id));
@@ -290,7 +280,33 @@ export default function ProductDetailScreen() {
     );
   };
 
-  const requireAuth = async ({ pendingActionName, pendingQuantityValue }, onSuccess) => {
+  const handleRequireAuthForCart = async () => {
+    try {
+      const session = await getSessionStatus();
+
+      if (!session.isAuthenticated) {
+        setShowLoginPrompt(true);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      Alert.alert("Error", "No se pudo verificar la sesión.");
+      return false;
+    }
+  };
+
+  const handleAddToCart = async () => {
+    const isAuthenticated = await handleRequireAuthForCart();
+
+    if (!isAuthenticated) {
+      return;
+    }
+
+    completeAddToCart(quantity);
+  };
+
+  const handleBuyNow = async () => {
     try {
       const session = await getSessionStatus();
 
@@ -298,40 +314,27 @@ export default function ProductDetailScreen() {
         router.push(
           buildLoginRedirect({
             redirectPath: `/product/${id}`,
-            pendingAction: pendingActionName,
-            quantity: pendingQuantityValue,
+            pendingAction: "buy-now",
+            quantity,
           })
         );
         return;
       }
 
-      onSuccess();
+      Alert.alert("Comprar ahora", "Redirigir a checkout.");
     } catch (error) {
       Alert.alert("Error", "No se pudo verificar la sesión.");
     }
   };
 
-  const handleAddToCart = async () => {
-    await requireAuth(
-      {
-        pendingActionName: "add-to-cart",
-        pendingQuantityValue: quantity,
-      },
-      () => {
-        completeAddToCart(quantity);
-      }
-    );
-  };
-
-  const handleBuyNow = async () => {
-    await requireAuth(
-      {
-        pendingActionName: "buy-now",
-        pendingQuantityValue: quantity,
-      },
-      () => {
-      Alert.alert("Comprar ahora", "Redirigir a checkout.");
-      }
+  const handleLoginRedirect = () => {
+    setShowLoginPrompt(false);
+    router.push(
+      buildLoginRedirect({
+        redirectPath: `/product/${id}`,
+        pendingAction: "add-to-cart",
+        quantity,
+      })
     );
   };
 
@@ -378,7 +381,7 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFoundContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={COLORS.primaryLight} />
           <Text style={styles.notFoundText}>
             Cargando información del producto...
           </Text>
@@ -415,116 +418,153 @@ export default function ProductDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-          <Text style={styles.backButton}>← Volver</Text>
-        </TouchableOpacity>
+      <View style={styles.safeArea}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
+            <Text style={styles.backButton}>← Volver</Text>
+          </TouchableOpacity>
 
-        <View style={styles.breadcrumb}>
-          <Text style={styles.breadcrumbText}>
-            INICIO &gt; {product.categoryName.toUpperCase()} &gt; {product.name.toUpperCase()}
-          </Text>
-        </View>
-
-        <View style={styles.mainCard}>
-          <View style={styles.leftColumn}>
-            <View style={styles.imageWrapper}>
-              <Image source={{ uri: selectedImage }} style={styles.productImage} />
-            </View>
-
-            <View style={styles.thumbnailRow}>
-              {safeImages.slice(0, 5).map((imageUri, index) => (
-                <TouchableOpacity
-                  key={`${imageUri}-${index}`}
-                  style={[
-                    styles.thumbnail,
-                    index === selectedImageIndex ? styles.activeThumbnail : null,
-                  ]}
-                  activeOpacity={0.85}
-                  onPress={() => setSelectedImageIndex(index)}
-                >
-                  <Image source={{ uri: imageUri }} style={styles.thumbnailImg} />
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View style={styles.breadcrumb}>
+            <Text style={styles.breadcrumbText}>
+              INICIO &gt; {product.categoryName.toUpperCase()} &gt; {product.name.toUpperCase()}
+            </Text>
           </View>
 
-          <View style={styles.rightColumn}>
-            <Text style={styles.productTitle}>{product.name}</Text>
-
-            <View style={styles.metaRow}>
-              <View style={styles.promoBadge}>
-                <Text style={styles.promoBadgeText}>OFERTA DESTACADA</Text>
+          <View style={styles.mainCard}>
+            <View style={styles.leftColumn}>
+              <View style={styles.imageWrapper}>
+                <Image source={{ uri: selectedImage }} style={styles.productImage} />
               </View>
-              <Text style={styles.ratingText}>
-                ⭐ {product.rating} ({product.reviews})
-              </Text>
-            </View>
 
-            <View style={styles.priceContainer}>
-              <Text style={styles.oldPrice}>${oldPrice}</Text>
-              <Text style={styles.currentPrice}>${product.price}</Text>
-              <Text style={styles.savings}>
-                Ahorrá ${Number((oldPrice - product.price).toFixed(2))} ({discountPercent}% DTO)
-              </Text>
-            </View>
-
-            <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
-
-            <View style={styles.stockRow}>
-              <View style={styles.categoryPill}>
-                <Text style={styles.categoryPillText}>{product.categoryName}</Text>
+              <View style={styles.thumbnailRow}>
+                {safeImages.slice(0, 5).map((imageUri, index) => (
+                  <TouchableOpacity
+                    key={`${imageUri}-${index}`}
+                    style={[
+                      styles.thumbnail,
+                      index === selectedImageIndex ? styles.activeThumbnail : null,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedImageIndex(index)}
+                  >
+                    <Image source={{ uri: imageUri }} style={styles.thumbnailImg} />
+                  </TouchableOpacity>
+                ))}
               </View>
-              <Text style={styles.stockText}>Stock disponible: {product.stock}</Text>
             </View>
 
-            <Text style={styles.descriptionText}>{product.description}</Text>
+            <View style={styles.rightColumn}>
+              <Text style={styles.productTitle}>{product.name}</Text>
 
-            <View style={styles.featuresBox}>
-              {safeFeatures.map((feature, index) => (
-                <Text key={index} style={styles.featureItem}>
-                  • {feature}
+              <View style={styles.metaRow}>
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>OFERTA DESTACADA</Text>
+                </View>
+                <Text style={styles.ratingText}>
+                  ⭐ {product.rating} ({product.reviews})
                 </Text>
-              ))}
-            </View>
+              </View>
 
-            <View style={styles.quantitySection}>
-              <Text style={styles.quantityLabel}>Cantidad</Text>
-              <View style={styles.quantitySelector}>
+              <View style={styles.priceContainer}>
+                <Text style={styles.oldPrice}>${oldPrice}</Text>
+                <Text style={styles.currentPrice}>${product.price}</Text>
+                <Text style={styles.savings}>
+                  Ahorrá ${Number((oldPrice - product.price).toFixed(2))} ({discountPercent}% DTO)
+                </Text>
+              </View>
+
+              <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
+
+              <View style={styles.stockRow}>
+                <View style={styles.categoryPill}>
+                  <Text style={styles.categoryPillText}>{product.categoryName}</Text>
+                </View>
+                <Text style={styles.stockText}>Stock disponible: {product.stock}</Text>
+              </View>
+
+              <Text style={styles.descriptionText}>{product.description}</Text>
+
+              <View style={styles.featuresBox}>
+                {safeFeatures.map((feature, index) => (
+                  <Text key={index} style={styles.featureItem}>
+                    • {feature}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.quantitySection}>
+                <Text style={styles.quantityLabel}>Cantidad</Text>
+                <View style={styles.quantitySelector}>
+                  <TouchableOpacity
+                    onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                    style={styles.qtyBtn}
+                  >
+                    <Text style={styles.qtyBtnText}>-</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.qtyValue}>{quantity}</Text>
+
+                  <TouchableOpacity
+                    onPress={() => setQuantity(quantity + 1)}
+                    style={styles.qtyBtn}
+                  >
+                    <Text style={styles.qtyBtnText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.actions}>
                 <TouchableOpacity
-                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                  style={styles.qtyBtn}
+                  style={styles.cartButton}
+                  onPress={handleAddToCart}
+                  activeOpacity={0.9}
                 >
-                  <Text style={styles.qtyBtnText}>-</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.qtyValue}>{quantity}</Text>
-
-                <TouchableOpacity
-                  onPress={() => setQuantity(quantity + 1)}
-                  style={styles.qtyBtn}
-                >
-                  <Text style={styles.qtyBtnText}>+</Text>
+                  <Text style={styles.cartButtonText}>
+                    {isOwnProduct ? "PRODUCTO PROPIO" : "AÑADIR AL CARRITO"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.cartButton}
-                onPress={handleAddToCart}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.cartButtonText}>
-                  {isOwnProduct ? "PRODUCTO PROPIO" : "AÑADIR AL CARRITO"}
-                </Text>
-              </TouchableOpacity>
-
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
+        {showLoginPrompt ? (
+          <View style={styles.loginPromptOverlay}>
+            <TouchableOpacity
+              style={styles.loginPromptBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowLoginPrompt(false)}
+            />
+
+            <View style={styles.loginPromptWrapper}>
+              <View style={styles.loginPromptBox}>
+                <Text style={styles.loginPromptTitle}>⚠️</Text>
+                <Text style={styles.loginPromptText}>
+                  Necesitas loggearte para agregar el producto al carrito.
+                </Text>
+
+                <View style={styles.loginPromptButtons}>
+                  <TouchableOpacity
+                    style={styles.loginPromptLoginButton}
+                    onPress={handleLoginRedirect}
+                  >
+                    <Text style={styles.loginPromptLoginButtonText}>
+                      Iniciar sesión
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.loginPromptCancelButton}
+                    onPress={() => setShowLoginPrompt(false)}
+                  >
+                    <Text style={styles.loginPromptCancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -534,90 +574,106 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
+
   content: {
     padding: 16,
     paddingBottom: 28,
   },
+
   backButton: {
     fontSize: 15,
     fontWeight: "700",
     color: COLORS.dark,
     marginBottom: 10,
   },
+
   breadcrumb: {
     marginBottom: 14,
   },
+
   breadcrumbText: {
     fontSize: 12,
     fontWeight: "800",
-    color: COLORS.primary,
+    color: COLORS.primaryLight,
     letterSpacing: 0.5,
   },
+
   mainCard: {
     flexDirection: "row",
     backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 18,
-    shadowColor: "#000",
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 4,
   },
+
   leftColumn: {
     width: "44%",
     paddingRight: 16,
   },
+
   imageWrapper: {
-    backgroundColor: "#F8FAFA",
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#CDECEA",
+    borderColor: COLORS.border,
   },
+
   productImage: {
     width: "100%",
     height: 260,
     resizeMode: "contain",
   },
+
   thumbnailRow: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 14,
     gap: 10,
   },
+
   thumbnail: {
     width: 58,
     height: 58,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.lightGrey,
+    borderColor: COLORS.divider,
     padding: 5,
     backgroundColor: COLORS.white,
   },
+
   activeThumbnail: {
-    borderColor: COLORS.dark,
+    borderColor: COLORS.primary,
     borderWidth: 2,
   },
+
   thumbnailImg: {
     width: "100%",
     height: "100%",
     resizeMode: "contain",
   },
+
   rightColumn: {
     width: "56%",
   },
+
   productTitle: {
     fontSize: 23,
     lineHeight: 29,
     fontWeight: "900",
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     marginBottom: 10,
   },
+
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -625,47 +681,56 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
   },
+
   promoBadge: {
-    backgroundColor: "#FFD84D",
+    backgroundColor: COLORS.secondary,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 7,
   },
+
   promoBadgeText: {
     fontSize: 10,
     fontWeight: "900",
-    color: "#5B4700",
+    color: COLORS.white,
   },
+
   ratingText: {
     fontSize: 14,
     fontWeight: "700",
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
   },
+
   priceContainer: {
     marginBottom: 12,
   },
+
   oldPrice: {
     fontSize: 15,
     textDecorationLine: "line-through",
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
     marginBottom: 2,
   },
+
   currentPrice: {
     fontSize: 32,
     fontWeight: "900",
     color: COLORS.secondary,
     marginBottom: 2,
   },
+
   savings: {
     fontSize: 14,
     fontWeight: "800",
     color: COLORS.secondary,
   },
+
   sellerText: {
     fontSize: 14,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
     marginBottom: 12,
   },
+
   stockRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -673,91 +738,107 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
   },
+
   categoryPill: {
-    backgroundColor: "#E8FBF8",
+    backgroundColor: COLORS.promoLight,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
+
   categoryPillText: {
     color: COLORS.primary,
     fontWeight: "800",
     fontSize: 12,
   },
+
   stockText: {
     fontSize: 13,
     fontWeight: "700",
     color: COLORS.success,
   },
+
   descriptionText: {
     fontSize: 14,
     lineHeight: 21,
-    color: "#444",
+    color: COLORS.text,
     marginBottom: 12,
   },
+
   featuresBox: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: COLORS.white,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#EEF1F2",
+    borderColor: COLORS.divider,
     marginBottom: 18,
   },
+
   featureItem: {
     fontSize: 14,
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     fontWeight: "600",
     marginBottom: 5,
   },
+
   quantitySection: {
     marginBottom: 18,
   },
+
   quantityLabel: {
     fontWeight: "800",
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
+
   quantitySelector: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#A8E5DF",
+    borderColor: COLORS.border,
     borderRadius: 10,
     width: 118,
     overflow: "hidden",
     backgroundColor: COLORS.white,
   },
+
   qtyBtn: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 8,
-    backgroundColor: "#F5FBFA",
+    backgroundColor: COLORS.background,
   },
+
   qtyBtnText: {
     fontSize: 18,
     fontWeight: "900",
     color: COLORS.primary,
   },
+
   qtyValue: {
     flex: 1,
     textAlign: "center",
     fontWeight: "800",
-    color: COLORS.text,
+    color: COLORS.textPrimary,
   },
+
   actions: {
     gap: 12,
   },
+
   cartButton: {
     backgroundColor: COLORS.dark,
     paddingVertical: 15,
     borderRadius: 14,
     alignItems: "center",
   },
+
   cartButtonText: {
     color: COLORS.white,
     fontWeight: "900",
     fontSize: 15,
   },
+
   shippingInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -765,11 +846,13 @@ const styles = StyleSheet.create({
     marginTop: 18,
     gap: 10,
   },
+
   shippingText: {
     fontSize: 12,
     fontWeight: "800",
     color: COLORS.dark,
   },
+
   notFoundContainer: {
     flex: 1,
     justifyContent: "center",
@@ -777,29 +860,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     backgroundColor: COLORS.background,
   },
+
   notFoundEmoji: {
     fontSize: 42,
     marginBottom: 16,
   },
+
   notFoundTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
+
   notFoundText: {
     fontSize: 15,
     lineHeight: 22,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
+
   backHomeButton: {
     backgroundColor: COLORS.dark,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 16,
   },
+
   backHomeButtonText: {
     color: COLORS.white,
     fontWeight: "800",
@@ -816,6 +904,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 999,
   },
+
   loginPromptBackdrop: {
     position: "absolute",
     top: 0,
@@ -824,27 +913,30 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: "rgba(0, 0, 0, 0.22)",
   },
+
   loginPromptWrapper: {
     width: "100%",
     alignItems: "center",
     paddingHorizontal: 16,
   },
+
   loginPromptBox: {
     width: 320,
     maxWidth: "92%",
-    backgroundColor: "rgba(34, 93, 98, 0.96)",
+    backgroundColor: COLORS.primary,
     borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    shadowColor: "#000",
+    borderColor: COLORS.primaryLight,
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 18,
     elevation: 12,
     alignItems: "center",
   },
+
   loginPromptTitle: {
     color: COLORS.white,
     fontSize: 22,
@@ -853,54 +945,58 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     textTransform: "uppercase",
     marginBottom: 10,
-    textShadowColor: "rgba(0,0,0,0.18)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
+
   loginPromptText: {
-    color: "rgba(255,255,255,0.92)",
+    color: COLORS.white,
     fontSize: 16,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 16,
   },
+
   loginPromptButtons: {
     width: "100%",
     gap: 10,
   },
+
   loginPromptLoginButton: {
     backgroundColor: COLORS.secondary,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
   },
+
   loginPromptLoginButtonText: {
     color: COLORS.white,
     fontSize: 15,
     fontWeight: "900",
   },
+
   loginPromptCancelButton: {
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)",
+    borderColor: COLORS.primaryLight,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
   },
+
   loginPromptCancelButtonText: {
-    color: COLORS.white,
+    color: COLORS.primary,
     fontSize: 15,
     fontWeight: "800",
   },
+
   loginPromptArrow: {
     position: "absolute",
     bottom: -12,
     width: 22,
     height: 22,
-    backgroundColor: "rgba(34, 93, 98, 0.96)",
+    backgroundColor: COLORS.primary,
     transform: [{ rotate: "45deg" }],
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
+    borderColor: COLORS.primaryLight,
   },
 });

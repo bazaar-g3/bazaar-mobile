@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   View,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
@@ -22,6 +23,7 @@ import {
   mapCatalogProductToCard,
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
+import { getSessionStatus } from "../services/session";
 
 const mockCategories = [
   { id: "1", name: "MODA", emoji: "👕" },
@@ -57,8 +59,16 @@ export default function HomeScreen() {
   const [recentProductsError, setRecentProductsError] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [profileImageUri, setProfileImageUri] = useState(null);
+  const profileButtonRef = useRef(null);
+  const [profileMenuPosition, setProfileMenuPosition] = useState({
+    top: 0,
+    left: 0,
+  });
 
-  const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog;
+  const refreshCatalogKey = Array.isArray(refreshCatalog)
+    ? refreshCatalog[0]
+    : refreshCatalog;
 
   const loadRecentCatalogProducts = useCallback(async () => {
     setLoadingRecentProducts(true);
@@ -85,8 +95,16 @@ export default function HomeScreen() {
 
   useEffect(() => {
     async function refreshData() {
-      const token = await AsyncStorage.getItem("token");
-      setIsAuthenticated(Boolean(token));
+      try {
+        const session = await getSessionStatus();
+        setIsAuthenticated(Boolean(session?.isAuthenticated));
+        setProfileImageUri(session?.profile?.avatarUrl ?? null);
+      } catch (error) {
+        const token = await AsyncStorage.getItem("token");
+        setIsAuthenticated(Boolean(token));
+        setProfileImageUri(null);
+      }
+
       loadRecentCatalogProducts();
     }
 
@@ -131,9 +149,20 @@ export default function HomeScreen() {
     );
   };
 
+  const handleOpenProfileMenu = () => {
+    profileButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setProfileMenuPosition({
+        top: y + height + 8,
+        left: x - 184 + width,
+      });
+      setProfileMenuVisible(true);
+    });
+  };
+
   const handleLogout = async () => {
     await AsyncStorage.removeItem("token");
     setIsAuthenticated(false);
+    setProfileImageUri(null);
     setProfileMenuVisible(false);
     router.replace("/home");
   };
@@ -159,10 +188,20 @@ export default function HomeScreen() {
 
               {isAuthenticated ? (
                 <TouchableOpacity
+                  ref={profileButtonRef}
                   style={styles.iconButton}
-                  onPress={() => setProfileMenuVisible(true)}
+                  onPress={handleOpenProfileMenu}
                 >
-                  <Text style={styles.icon}>👤</Text>
+                  {profileImageUri ? (
+                    <Image
+                      source={{ uri: profileImageUri }}
+                      style={styles.profileAvatar}
+                    />
+                  ) : (
+                    <View style={styles.profileAvatarFallback}>
+                      <Text style={styles.icon}>👤</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -182,16 +221,16 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={async () => {
-                  const token = await AsyncStorage.getItem('token')
+                  const token = await AsyncStorage.getItem("token");
 
                   if (token) {
-                    router.push('/cart')
+                    router.push("/cart");
                   } else {
                     router.push(
                       buildLoginRedirect({
-                        redirectPath: '/cart',
+                        redirectPath: "/cart",
                       })
-                    )
+                    );
                   }
                 }}
               >
@@ -321,13 +360,23 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setProfileMenuVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.dropdownOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             onPress={() => setProfileMenuVisible(false)}
           />
 
-          <View style={styles.modalCard}>
+          <View
+            style={[
+              styles.dropdownMenu,
+              {
+                top: profileMenuPosition.top,
+                left: profileMenuPosition.left,
+              },
+            ]}
+          >
+            <View style={styles.dropdownArrow} />
+
             <Text style={styles.modalTitle}>Mi cuenta</Text>
 
             <TouchableOpacity
@@ -372,13 +421,13 @@ const styles = StyleSheet.create({
   },
 
   topBarContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 1280,
-    alignSelf: 'center',
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    position: 'relative',
+    position: "relative",
     minHeight: 44,
   },
 
@@ -388,12 +437,12 @@ const styles = StyleSheet.create({
   },
 
   logoCenter: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none',
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
   },
 
   logoNoMargin: {
@@ -444,10 +493,32 @@ const styles = StyleSheet.create({
   iconButton: {
     marginLeft: 12,
     padding: 6,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   icon: {
     fontSize: 22,
+  },
+
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#D9F4F0",
+    borderWidth: 1.5,
+    borderColor: "#BDEAE4",
+  },
+
+  profileAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F2FBFA",
+    borderWidth: 1.5,
+    borderColor: "#B9D8D4",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   searchContainer: {
@@ -601,27 +672,36 @@ const styles = StyleSheet.create({
     fontSize: 60,
   },
 
-  modalOverlay: {
+  dropdownOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.18)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: SPACING.lg,
   },
 
-  modalCard: {
-    width: "100%",
-    maxWidth: 340,
+  dropdownMenu: {
+    position: "absolute",
+    width: 220,
     backgroundColor: COLORS.white,
-    borderRadius: 18,
-    padding: SPACING.lg,
+    borderRadius: 16,
+    padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.divider,
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
-    elevation: 5,
+    elevation: 6,
+  },
+
+  dropdownArrow: {
+    position: "absolute",
+    top: -8,
+    right: 18,
+    width: 16,
+    height: 16,
+    backgroundColor: COLORS.white,
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: COLORS.divider,
+    transform: [{ rotate: "45deg" }],
   },
 
   modalTitle: {
