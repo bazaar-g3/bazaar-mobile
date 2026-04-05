@@ -14,6 +14,7 @@ import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/ProductCard";
 import Logo from "../components/Logo";
 import { COLORS } from "../constants/colors";
+import { SPACING, FONT } from "../constants/theme";
 import {
   getCatalogErrorMessage,
   listRecentProducts,
@@ -125,55 +126,59 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.topBar}>
-          <View style={styles.leftSpacer} />
+          <View style={styles.topBarContent}>
+            <View style={styles.leftPlaceholder} />
 
-          <Logo />
+            <View style={styles.logoCenter}>
+              <Logo size={34} textSize={32} style={styles.logoNoMargin} />
+            </View>
 
-          <View style={styles.iconsContainer}>
-            <TouchableOpacity
-              style={styles.publishButton}
-              onPress={handlePublishPress}
-            >
-              <Text style={styles.publishButtonText}>+ Publicar producto</Text>
-            </TouchableOpacity>
+            <View style={styles.iconsContainer}>
+              <TouchableOpacity
+                style={styles.publishButton}
+                onPress={handlePublishPress}
+              >
+                <Text style={styles.publishButtonText}>+ Publicar producto</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={async () => {
-                const token = await AsyncStorage.getItem('token')
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={async () => {
+                  const token = await AsyncStorage.getItem('token')
 
-                if (token) {
-                  router.push('/profile')
-                } else {
-                  router.push(
-                    buildLoginRedirect({
-                      redirectPath: '/profile',
-                    })
-                  )
-                }
-              }}
-            >
-              <Text style={styles.icon}>👤</Text>
-            </TouchableOpacity>
+                  if (token) {
+                    router.push('/profile')
+                  } else {
+                    router.push(
+                      buildLoginRedirect({
+                        redirectPath: '/profile',
+                      })
+                    )
+                  }
+                }}
+              >
+                <Text style={styles.icon}>👤</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={async () => {
-                const token = await AsyncStorage.getItem('token')
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={async () => {
+                  const token = await AsyncStorage.getItem('token')
 
-                if (token) {
-                  router.push('/cart')
-                } else {
-                  router.push(
-                    buildLoginRedirect({
-                      redirectPath: '/cart',
-                    })
-                  )
-                }
-              }}
-            >
-              <Text style={styles.icon}>🛒</Text>
-            </TouchableOpacity>
+                  if (token) {
+                    router.push('/cart')
+                  } else {
+                    router.push(
+                      buildLoginRedirect({
+                        redirectPath: '/cart',
+                      })
+                    )
+                  }
+                }}
+              >
+                <Text style={styles.icon}>🛒</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -299,66 +304,106 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+
   header: {
-    paddingTop: 10,
     backgroundColor: COLORS.white,
   },
+
   topBar: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 14,
+  },
+
+  topBarContent: {
+    width: '100%',
+    maxWidth: 1280,
+    alignSelf: 'center',
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    position: 'relative',
+    minHeight: 44,
   },
-  leftSpacer: {
-    width: 1,
+
+  leftPlaceholder: {
+    width: 44,
+    height: 44,
   },
+
+  logoCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+
+  logoNoMargin: {
+    marginBottom: 0,
+  },
+
   iconsContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    flexShrink: 1,
+    zIndex: 2,
   },
+
   publishButton: {
     borderWidth: 1,
     borderColor: "#B9D8D4",
     backgroundColor: "#F2FBFA",
     borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     marginRight: 4,
     flexShrink: 1,
   },
+
   publishButtonText: {
     color: COLORS.primary,
     fontWeight: "700",
-    fontSize: 12,
+    fontSize: FONT.small,
   },
+
   iconButton: {
     marginLeft: 12,
     padding: 6,
   },
+
   icon: {
     fontSize: 22,
   },
+
   searchContainer: {
     backgroundColor: COLORS.dark,
-    padding: 15,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
   },
+
   customSearchBar: {
     marginBottom: 0,
   },
+
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
+
   categoriesBar: {
     backgroundColor: COLORS.primaryLight,
     paddingVertical: 15,
   },
+
   categoryItem: {
     alignItems: "center",
     marginHorizontal: 15,
   },
+
   categoryCircle: {
     width: 60,
     height: 60,
@@ -368,20 +413,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 5,
   },
+
   categoryEmoji: {
     fontSize: 24,
   },
+
   categoryLabel: {
     color: COLORS.white,
     fontSize: 10,
     fontWeight: "bold",
   },
+
   content: {
     padding: 16,
   },
+
   section: {
     marginBottom: 10,
   },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: "800",
@@ -389,15 +439,19 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     color: COLORS.sectionTitle,
   },
+
   sectionAccent: {
     color: COLORS.third,
   },
+
   recommendedList: {
     paddingBottom: 10,
   },
+
   recentList: {
     paddingBottom: 10,
   },
+
   sectionStatusCard: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
@@ -408,21 +462,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+
   sectionStatusText: {
     color: COLORS.textSecondary,
     fontSize: 14,
     textAlign: "center",
   },
+
   sectionErrorText: {
     color: COLORS.error,
     fontSize: 14,
     textAlign: "center",
   },
+
   sectionRetryText: {
     color: COLORS.primary,
     fontWeight: "700",
     fontSize: 14,
   },
+
   promoBanner: {
     backgroundColor: COLORS.secondary,
     borderRadius: 20,
@@ -431,24 +489,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   promoTextContainer: {
     flex: 1,
   },
+
   promoTag: {
     color: COLORS.dark,
     fontWeight: "700",
     fontSize: 12,
   },
+
   promoTitle: {
     fontSize: 40,
     fontWeight: "900",
     color: COLORS.dark,
   },
+
   promoSubtitle: {
     fontSize: 14,
     color: COLORS.dark,
     marginBottom: 10,
   },
+
   promoButton: {
     backgroundColor: COLORS.dark,
     paddingVertical: 8,
@@ -456,11 +519,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: "flex-start",
   },
+
   promoButtonText: {
     color: COLORS.white,
     fontWeight: "bold",
     fontSize: 12,
   },
+
   promoEmoji: {
     fontSize: 60,
   },
