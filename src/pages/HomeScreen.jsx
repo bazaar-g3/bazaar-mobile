@@ -20,46 +20,35 @@ import { SPACING, FONT } from "../constants/theme";
 import {
   getCatalogErrorMessage,
   listRecentProducts,
+  listProductCategories,
+  listCatalogProducts,
   mapCatalogProductToCard,
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
 
-const mockCategories = [
-  { id: "1", name: "MODA", emoji: "👕" },
-  { id: "2", name: "TECNOLOGÍA", emoji: "📱" },
-  { id: "3", name: "HOGAR", emoji: "🪑" },
-  { id: "4", name: "DEPORTES", emoji: "🏈" },
-  { id: "5", name: "LIBROS", emoji: "📚" },
-];
-
-const mockRecommendedProducts = [
-  {
-    id: "1",
-    name: "Auriculares Bluetooth",
-    price: 25000,
-    image: "https://via.placeholder.com/500x350.png?text=Auriculares",
-    tag: "OFERTA!",
-  },
-  {
-    id: "2",
-    name: "Silla Gamer",
-    price: 120000,
-    image: "https://via.placeholder.com/500x350.png?text=Silla+Gamer",
-    tag: "OFERTA!",
-  },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
   const { refreshCatalog } = useLocalSearchParams();
+
   const [search, setSearch] = useState("");
+
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
+
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [loadingRecommendedProducts, setLoadingRecommendedProducts] = useState(true);
+  const [recommendedProductsError, setRecommendedProductsError] = useState("");
+
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
   const [recentProductsError, setRecentProductsError] = useState("");
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState(null);
+
   const profileButtonRef = useRef(null);
   const [profileMenuPosition, setProfileMenuPosition] = useState({
     top: 0,
@@ -69,6 +58,77 @@ export default function HomeScreen() {
   const refreshCatalogKey = Array.isArray(refreshCatalog)
     ? refreshCatalog[0]
     : refreshCatalog;
+
+  const loadSessionData = useCallback(async () => {
+    try {
+      const session = await getSessionStatus();
+      setIsAuthenticated(Boolean(session?.isAuthenticated));
+      setProfileImageUri(session?.profile?.avatarUrl ?? null);
+    } catch (error) {
+      const token = await AsyncStorage.getItem("token");
+      setIsAuthenticated(Boolean(token));
+      setProfileImageUri(null);
+    }
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    setCategoriesError("");
+
+    try {
+      const catalogCategories = await listProductCategories();
+
+      setCategories(
+        catalogCategories.map((category) => ({
+          id: String(category.id ?? category.slug ?? category.name ?? category.label),
+          name: String(category.label ?? category.name ?? "Categoría").toUpperCase(),
+          slug: category.slug,
+          emoji: "🛍️",
+        }))
+      );
+    } catch (error) {
+      setCategoriesError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar las categorías por el momento."
+        )
+      );
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, []);
+
+  const loadRecommendedCatalogProducts = useCallback(async () => {
+    setLoadingRecommendedProducts(true);
+    setRecommendedProductsError("");
+
+    try {
+      const products = await listCatalogProducts({
+        status: "active",
+        onlyAvailable: true,
+        sort: "recent",
+        limit: 10,
+        offset: 0,
+      });
+
+      setRecommendedProducts(
+        products.map((product) =>
+          mapCatalogProductToCard(product, { tag: "RECOMENDADO" })
+        )
+      );
+    } catch (error) {
+      setRecommendedProductsError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar los productos recomendados por el momento."
+        )
+      );
+      setRecommendedProducts([]);
+    } finally {
+      setLoadingRecommendedProducts(false);
+    }
+  }, []);
 
   const loadRecentCatalogProducts = useCallback(async () => {
     setLoadingRecentProducts(true);
@@ -88,6 +148,7 @@ export default function HomeScreen() {
           "No pudimos cargar las publicaciones recientes por el momento."
         )
       );
+      setRecentProducts([]);
     } finally {
       setLoadingRecentProducts(false);
     }
@@ -95,21 +156,22 @@ export default function HomeScreen() {
 
   useEffect(() => {
     async function refreshData() {
-      try {
-        const session = await getSessionStatus();
-        setIsAuthenticated(Boolean(session?.isAuthenticated));
-        setProfileImageUri(session?.profile?.avatarUrl ?? null);
-      } catch (error) {
-        const token = await AsyncStorage.getItem("token");
-        setIsAuthenticated(Boolean(token));
-        setProfileImageUri(null);
-      }
-
-      loadRecentCatalogProducts();
+      await Promise.all([
+        loadSessionData(),
+        loadCategories(),
+        loadRecommendedCatalogProducts(),
+        loadRecentCatalogProducts(),
+      ]);
     }
 
     refreshData();
-  }, [loadRecentCatalogProducts, refreshCatalogKey]);
+  }, [
+    loadSessionData,
+    loadCategories,
+    loadRecommendedCatalogProducts,
+    loadRecentCatalogProducts,
+    refreshCatalogKey,
+  ]);
 
   const handleSearch = () => {
     const trimmedSearch = search.trim();
@@ -126,6 +188,7 @@ export default function HomeScreen() {
       params: {
         categoryId: category.id,
         categoryName: category.name,
+        ...(category.slug ? { categorySlug: category.slug } : {}),
       },
     });
   };
@@ -254,18 +317,37 @@ export default function HomeScreen() {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.categoriesBar}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {mockCategories.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                style={styles.categoryItem}
-                onPress={() => handleCategoryPress(cat)}
-              >
-                <View style={styles.categoryCircle}>
-                  <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                </View>
-                <Text style={styles.categoryLabel}>{cat.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {loadingCategories ? (
+              <View style={styles.categoriesStatus}>
+                <ActivityIndicator size="small" color={COLORS.white} />
+                <Text style={styles.categoriesStatusText}>
+                  Cargando categorías...
+                </Text>
+              </View>
+            ) : categoriesError ? (
+              <View style={styles.categoriesStatus}>
+                <Text style={styles.categoriesErrorText}>{categoriesError}</Text>
+              </View>
+            ) : categories.length === 0 ? (
+              <View style={styles.categoriesStatus}>
+                <Text style={styles.categoriesStatusText}>
+                  No hay categorías disponibles.
+                </Text>
+              </View>
+            ) : (
+              categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.categoryItem}
+                  onPress={() => handleCategoryPress(cat)}
+                >
+                  <View style={styles.categoryCircle}>
+                    <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                  </View>
+                  <Text style={styles.categoryLabel}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
 
@@ -275,20 +357,44 @@ export default function HomeScreen() {
               PRODUCTOS <Text style={styles.sectionAccent}>RECOMENDADOS</Text>
             </Text>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.recommendedList}
-            >
-              {mockRecommendedProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  variant="horizontal"
-                  onPress={() => router.push(`/product/${product.id}`)}
-                />
-              ))}
-            </ScrollView>
+            {loadingRecommendedProducts ? (
+              <View style={styles.sectionStatusCard}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.sectionStatusText}>
+                  Cargando productos recomendados...
+                </Text>
+              </View>
+            ) : recommendedProductsError ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionErrorText}>
+                  {recommendedProductsError}
+                </Text>
+                <TouchableOpacity onPress={loadRecommendedCatalogProducts}>
+                  <Text style={styles.sectionRetryText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : recommendedProducts.length === 0 ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionStatusText}>
+                  Todavía no hay productos recomendados disponibles.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recommendedList}
+              >
+                {recommendedProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="horizontal"
+                    onPress={() => router.push(`/product/${product.id}`)}
+                  />
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -539,6 +645,25 @@ const styles = StyleSheet.create({
   categoriesBar: {
     backgroundColor: COLORS.primaryLight,
     paddingVertical: 15,
+  },
+
+  categoriesStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+
+  categoriesStatusText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  categoriesErrorText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   categoryItem: {

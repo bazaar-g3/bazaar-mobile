@@ -93,6 +93,8 @@ export function mapCatalogProductToCard(product, overrides = {}) {
     price: Number(product.price) || 0,
     image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
     tag: overrides.tag || product.tag,
+    categoryId: product.category?.id ? String(product.category.id) : undefined,
+    categoryName: product.category?.label || '',
   }
 }
 
@@ -208,4 +210,14 @@ export async function createProduct({
   }
 
   return data?.product
+}
+
+export async function listRecommendedProducts() {
+  return listCatalogProducts({
+    status: 'active',
+    onlyAvailable: true,
+    sort: 'recent',
+    limit: 10,
+    offset: 0,
+  })
 }
