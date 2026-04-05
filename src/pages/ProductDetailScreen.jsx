@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -11,6 +12,11 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../api/api";
+import {
+  PRODUCT_IMAGE_PLACEHOLDER,
+  getCatalogProduct,
+} from "../services/catalog";
 
 const mockProducts = [
   {
@@ -155,11 +161,111 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [catalogProduct, setCatalogProduct] = useState(null);
+  const [loadingCatalogProduct, setLoadingCatalogProduct] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  const product = useMemo(() => {
+  const mockProduct = useMemo(() => {
     return mockProducts.find((item) => item.id === String(id));
   }, [id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalogProduct() {
+      if (mockProduct || !id) {
+        setCatalogProduct(null);
+        setLoadingCatalogProduct(false);
+        return;
+      }
+
+      setLoadingCatalogProduct(true);
+
+      try {
+        const product = await getCatalogProduct(String(id));
+        if (!cancelled && product) {
+          setCatalogProduct({
+            id: String(product.id),
+            sellerId: Number(product.sellerId),
+            name: product.name,
+            price: Number(product.price) || 0,
+            images: product.images?.length ? product.images : [PRODUCT_IMAGE_PLACEHOLDER],
+            image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
+            categoryName: product.category?.label || "Catalogo",
+            description: product.description || "Sin descripcion disponible.",
+            stock: Number(product.stock) || 0,
+            seller: `Vendedor #${product.sellerId}`,
+            features: [
+              `Categoria: ${product.category?.label || "Catalogo"}`,
+              product.stock > 0 ? "Disponible para compra inmediata" : "Sin stock disponible",
+              "Publicacion cargada desde el catalogo real",
+            ],
+            rating: "Nuevo",
+            reviews: "sin reseñas",
+          });
+        } else if (!cancelled) {
+          setCatalogProduct(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCatalogProduct(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingCatalogProduct(false);
+        }
+      }
+    }
+
+    loadCatalogProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, mockProduct]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          if (!cancelled) {
+            setCurrentUserId(null);
+          }
+          return;
+        }
+
+        const response = await api.get("/users/me");
+        if (!cancelled) {
+          setCurrentUserId(response.data?.id ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setCurrentUserId(null);
+        }
+      }
+    }
+
+    loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const product = mockProduct || catalogProduct;
+  const isOwnProduct =
+    currentUserId !== null &&
+    product?.sellerId !== undefined &&
+    Number(product.sellerId) === Number(currentUserId);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [product?.id]);
 
   const oldPrice = useMemo(() => {
     if (!product) return 0;
@@ -198,6 +304,19 @@ export default function ProductDetailScreen() {
     });
   };
 
+  if (loadingCatalogProduct) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.notFoundContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.notFoundText}>
+            Cargando información del producto...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!product) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -219,6 +338,10 @@ export default function ProductDetailScreen() {
   }
 
   const safeFeatures = product.features || [];
+  const safeImages = product.images?.length
+    ? product.images
+    : [product.image || PRODUCT_IMAGE_PLACEHOLDER];
+  const selectedImage = safeImages[selectedImageIndex] || safeImages[0];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -236,20 +359,22 @@ export default function ProductDetailScreen() {
         <View style={styles.mainCard}>
           <View style={styles.leftColumn}>
             <View style={styles.imageWrapper}>
-              <Image source={{ uri: product.image }} style={styles.productImage} />
+              <Image source={{ uri: selectedImage }} style={styles.productImage} />
             </View>
 
             <View style={styles.thumbnailRow}>
-              {[1, 2, 3].map((thumb) => (
-                <View
-                  key={thumb}
+              {safeImages.slice(0, 5).map((imageUri, index) => (
+                <TouchableOpacity
+                  key={`${imageUri}-${index}`}
                   style={[
                     styles.thumbnail,
-                    thumb === 1 ? styles.activeThumbnail : null,
+                    index === selectedImageIndex ? styles.activeThumbnail : null,
                   ]}
+                  activeOpacity={0.85}
+                  onPress={() => setSelectedImageIndex(index)}
                 >
-                  <Image source={{ uri: product.image }} style={styles.thumbnailImg} />
-                </View>
+                  <Image source={{ uri: imageUri }} style={styles.thumbnailImg} />
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -320,7 +445,9 @@ export default function ProductDetailScreen() {
                 onPress={handleAddToCart}
                 activeOpacity={0.9}
               >
-                <Text style={styles.cartButtonText}>AÑADIR AL CARRITO</Text>
+                <Text style={styles.cartButtonText}>
+                  {isOwnProduct ? "PRODUCTO PROPIO" : "AÑADIR AL CARRITO"}
+                </Text>
               </TouchableOpacity>
 
             </View>
