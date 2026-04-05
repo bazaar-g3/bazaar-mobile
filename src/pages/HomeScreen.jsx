@@ -8,6 +8,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
@@ -54,6 +55,8 @@ export default function HomeScreen() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
   const [recentProductsError, setRecentProductsError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
 
   const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog;
 
@@ -81,7 +84,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    loadRecentCatalogProducts();
+    async function refreshData() {
+      const token = await AsyncStorage.getItem("token");
+      setIsAuthenticated(Boolean(token));
+      loadRecentCatalogProducts();
+    }
+
+    refreshData();
   }, [loadRecentCatalogProducts, refreshCatalogKey]);
 
   const handleSearch = () => {
@@ -122,6 +131,13 @@ export default function HomeScreen() {
     );
   };
 
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("token");
+    setIsAuthenticated(false);
+    setProfileMenuVisible(false);
+    router.replace("/home");
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -141,24 +157,27 @@ export default function HomeScreen() {
                 <Text style={styles.publishButtonText}>+ Publicar producto</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={async () => {
-                  const token = await AsyncStorage.getItem('token')
-
-                  if (token) {
-                    router.push('/profile')
-                  } else {
+              {isAuthenticated ? (
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={() => setProfileMenuVisible(true)}
+                >
+                  <Text style={styles.icon}>👤</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.loginButton}
+                  onPress={() =>
                     router.push(
                       buildLoginRedirect({
-                        redirectPath: '/profile',
+                        redirectPath: "/profile",
                       })
                     )
                   }
-                }}
-              >
-                <Text style={styles.icon}>👤</Text>
-              </TouchableOpacity>
+                >
+                  <Text style={styles.loginButtonText}>Iniciar sesión</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.iconButton}
@@ -295,6 +314,41 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={profileMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setProfileMenuVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={() => setProfileMenuVisible(false)}
+          />
+
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Mi cuenta</Text>
+
+            <TouchableOpacity
+              style={styles.modalPrimaryButton}
+              onPress={() => {
+                setProfileMenuVisible(false);
+                router.push("/profile");
+              }}
+            >
+              <Text style={styles.modalPrimaryButtonText}>Ir a perfil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalSecondaryButton}
+              onPress={handleLogout}
+            >
+              <Text style={styles.modalSecondaryButtonText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -365,6 +419,23 @@ const styles = StyleSheet.create({
   },
 
   publishButtonText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: FONT.small,
+  },
+
+  loginButton: {
+    borderWidth: 1,
+    borderColor: "#B9D8D4",
+    backgroundColor: "#F2FBFA",
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+    marginRight: 4,
+  },
+
+  loginButtonText: {
     color: COLORS.primary,
     fontWeight: "700",
     fontSize: FONT.small,
@@ -528,5 +599,65 @@ const styles = StyleSheet.create({
 
   promoEmoji: {
     fontSize: 60,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.18)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+  },
+
+  modalCard: {
+    width: "100%",
+    maxWidth: 340,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+
+  modalTitle: {
+    fontSize: FONT.large,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: SPACING.md,
+  },
+
+  modalPrimaryButton: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
+
+  modalPrimaryButtonText: {
+    color: COLORS.white,
+    fontWeight: "800",
+    fontSize: FONT.regular,
+  },
+
+  modalSecondaryButton: {
+    backgroundColor: "#EDF5F4",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    alignItems: "center",
+  },
+
+  modalSecondaryButtonText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: FONT.regular,
   },
 });

@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.secondary,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,
