@@ -11,6 +11,8 @@ const COLORS = {
 };
 
 export default function ProductCard({ product, onPress, variant = "horizontal" }) {
+  const badgeText = product.tag || "Recomendado";
+
   if (variant === "grid") {
     return (
       <TouchableOpacity
@@ -20,7 +22,7 @@ export default function ProductCard({ product, onPress, variant = "horizontal" }
       >
         <Image source={{ uri: product.image }} style={styles.gridImage} />
         <View style={styles.newBadge}>
-          <Text style={styles.newBadgeText}>Nuevo</Text>
+          <Text style={styles.newBadgeText}>{product.tag || "Nuevo"}</Text>
         </View>
         <View style={styles.gridInfo}>
           <Text style={styles.gridProductName} numberOfLines={2}>
@@ -40,7 +42,7 @@ export default function ProductCard({ product, onPress, variant = "horizontal" }
     >
       <Image source={{ uri: product.image }} style={styles.recommendedImage} />
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>Recomendado</Text>
+        <Text style={styles.badgeText}>{badgeText}</Text>
       </View>
       <Text style={styles.productName} numberOfLines={2}>
         {product.name}
