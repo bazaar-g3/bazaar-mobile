@@ -72,6 +72,11 @@ export default function ProductListScreen() {
   const [productsError, setProductsError] = useState("");
   const [categoriesError, setCategoriesError] = useState("");
 
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const LIMIT = 20;
+
   const loadCategories = useCallback(async () => {
     setLoadingCategories(true);
     setCategoriesError("");
@@ -101,96 +106,48 @@ export default function ProductListScreen() {
     }
   }, []);
 
-  const loadProducts = useCallback(async () => {
-    setLoadingProducts(true);
+  const loadProducts = useCallback(async (currentOffset = 0, replace = true) => {
+    if (replace) {
+      setLoadingProducts(true);
+    } else {
+      setLoadingMore(true);
+    }
     setProductsError("");
 
     try {
       const requestParams = {
         status: "active",
         onlyAvailable: true,
-        limit: 50,
-        offset: 0,
+        limit: LIMIT,
+        offset: currentOffset,
       };
 
-      if (search) {
-        requestParams.search = search;
-      }
-
-      if (categorySlug) {
-        requestParams.categorySlug = categorySlug;
-      } else if (categoryId) {
-        requestParams.categoryId = categoryId;
-      }
-
-      if (sortBy === "recent" || section === "recommended") {
-        requestParams.sort = "recent";
-      }
+      if (search) requestParams.search = search;
+      if (categorySlug) requestParams.category = categorySlug; // fix CA2 también
+      if (sortBy === "recent" || section === "recommended") requestParams.sort = "recent";
 
       const response = await listCatalogProducts(requestParams);
-
-      let mappedProducts = response.map((product) =>
-        mapProductToListItem(product, {
-          recommended: section === "recommended",
-        })
+      const mappedProducts = response.map((product) =>
+        mapProductToListItem(product, { recommended: section === "recommended" })
       );
 
-      if (categorySlug || categoryId || categoryName) {
-        mappedProducts = mappedProducts.filter((product) => {
-          const normalizedProductCategoryId = String(product.categoryId || "");
-          const normalizedProductCategorySlug = String(product.categorySlug || "");
-          const normalizedProductCategoryName = String(product.categoryName || "")
-            .trim()
-            .toLowerCase();
-
-          const normalizedSelectedCategoryId = String(categoryId || "");
-          const normalizedSelectedCategorySlug = String(categorySlug || "");
-          const normalizedSelectedCategoryName = String(categoryName || "")
-            .trim()
-            .toLowerCase();
-
-          if (
-            normalizedSelectedCategorySlug &&
-            normalizedProductCategorySlug === normalizedSelectedCategorySlug
-          ) {
-            return true;
-          }
-
-          if (
-            normalizedSelectedCategoryId &&
-            normalizedProductCategoryId === normalizedSelectedCategoryId
-          ) {
-            return true;
-          }
-
-          if (
-            normalizedSelectedCategoryName &&
-            normalizedProductCategoryName === normalizedSelectedCategoryName
-          ) {
-            return true;
-          }
-
-          return false;
-        });
-      }
-
-      if (section === "recommended") {
-        mappedProducts = mappedProducts.slice(0, 10);
-      }
-
-      setProducts(mappedProducts);
+      setProducts((prev) => replace ? mappedProducts : [...prev, ...mappedProducts]);
+      setHasMore(response.length === LIMIT);
+      setOffset(currentOffset);
     } catch (error) {
-      setProductsError(
-        getCatalogErrorMessage(
-          error,
-          "No pudimos cargar los productos por el momento."
-        )
-      );
-      setProducts([]);
+      setProductsError(getCatalogErrorMessage(error, "No pudimos cargar los productos por el momento."));
+      if (replace) setProducts([]);
     } finally {
       setLoadingProducts(false);
+      setLoadingMore(false);
     }
-  }, [search, categoryId, categorySlug, categoryName, sortBy, section]);
+  }, [search, categorySlug, sortBy, section]);
+
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      loadProducts(offset + LIMIT, false);
+    }
+  };
 
   useEffect(() => {
     setSearchText(search ? String(search) : "");
@@ -453,6 +410,15 @@ export default function ProductListScreen() {
                 </View>
               ))}
             </View>
+          )}
+
+          {hasMore && !loadingProducts && (
+            <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
+              {loadingMore
+                ? <ActivityIndicator color={COLORS.white} />
+                : <Text style={styles.loadMoreText}>Cargar más productos</Text>
+              }
+            </TouchableOpacity>
           )}
         </ScrollView>
       </View>
