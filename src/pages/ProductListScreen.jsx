@@ -41,6 +41,7 @@ function mapProductToListItem(product, { recommended = false } = {}) {
       product.category?.id !== undefined && product.category?.id !== null
         ? String(product.category.id)
         : "",
+    categorySlug: product.category?.slug || "",
     categoryName: product.category?.label || "Catálogo",
     createdAt: product.createdAt || product.created_at || null,
     stock: Number(product.stock) || 0,
@@ -134,6 +135,45 @@ export default function ProductListScreen() {
         })
       );
 
+      if (categorySlug || categoryId || categoryName) {
+        mappedProducts = mappedProducts.filter((product) => {
+          const normalizedProductCategoryId = String(product.categoryId || "");
+          const normalizedProductCategorySlug = String(product.categorySlug || "");
+          const normalizedProductCategoryName = String(product.categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          const normalizedSelectedCategoryId = String(categoryId || "");
+          const normalizedSelectedCategorySlug = String(categorySlug || "");
+          const normalizedSelectedCategoryName = String(categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          if (
+            normalizedSelectedCategorySlug &&
+            normalizedProductCategorySlug === normalizedSelectedCategorySlug
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryId &&
+            normalizedProductCategoryId === normalizedSelectedCategoryId
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryName &&
+            normalizedProductCategoryName === normalizedSelectedCategoryName
+          ) {
+            return true;
+          }
+
+          return false;
+        });
+      }
+
       if (section === "recommended") {
         mappedProducts = mappedProducts.slice(0, 10);
       }
@@ -150,7 +190,7 @@ export default function ProductListScreen() {
     } finally {
       setLoadingProducts(false);
     }
-  }, [search, categoryId, categorySlug, sortBy, section]);
+  }, [search, categoryId, categorySlug, categoryName, sortBy, section]);
 
   useEffect(() => {
     setSearchText(search ? String(search) : "");
