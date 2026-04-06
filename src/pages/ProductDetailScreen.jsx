@@ -19,6 +19,8 @@ import {
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
 import { COLORS } from "../constants/colors";
+import Logo from "../components/Logo";
+import { FONT } from "../constants/theme";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -309,10 +311,21 @@ export default function ProductDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.safeArea}>
+        <View style={styles.topHeader}>
+          <View style={styles.topHeaderContent}>
+
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.headerBack}>← Volver</Text>
+            </TouchableOpacity>
+
+            <View style={styles.logoCenter}>
+              <Logo size={32} textSize={30} />
+            </View>
+
+          </View>
+        </View>
+
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-            <Text style={styles.backButton}>← Volver</Text>
-          </TouchableOpacity>
 
           <View style={styles.breadcrumb}>
             <Text style={styles.breadcrumbText}>
@@ -915,5 +928,35 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: COLORS.primaryLight,
+  },
+
+  topHeader: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: 16,
+    paddingVertical: 25,
+  },
+
+  topHeaderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+  },
+
+  logoCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+
+  headerBack: {
+    fontSize: FONT.medium,
+    fontWeight: "700",
+    color: COLORS.primary,
+    zIndex: 2,
   },
 });

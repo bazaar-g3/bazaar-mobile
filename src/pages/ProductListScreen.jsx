@@ -22,6 +22,7 @@ import {
 } from "../services/catalog";
 import { COLORS } from "../constants/colors";
 import Logo from "../components/Logo";
+import { FONT } from "../constants/theme";
 
 function formatPrice(value) {
   return `$${Number(value || 0).toLocaleString("es-AR")}`;
@@ -477,7 +478,7 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    fontSize: 14,
+    fontSize: FONT.medium,
     fontWeight: "700",
     color: COLORS.dark,
     marginBottom: 10,
