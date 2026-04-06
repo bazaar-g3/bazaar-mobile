@@ -13,11 +13,27 @@ import {
   isRemoteImage,
   listSellerProducts,
   mapCatalogProductToVentasItem,
+  updateSellerProductStatus,
 } from '../services/catalog'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
+import EditProductModal from '../components/EditProductModal'
 
 const FILTROS = ['activa', 'inactiva']
+
+function EstadoSwitch({ value, onToggle }) {
+  return (
+    <TouchableOpacity
+      onPress={onToggle}
+      activeOpacity={0.85}
+      style={[styles.switchTrack, value ? styles.switchTrackOn : styles.switchTrackOff]}
+    >
+      <View
+        style={[styles.switchThumb, value ? styles.switchThumbOn : styles.switchThumbOff]}
+      />
+    </TouchableOpacity>
+  )
+}
 
 export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
   const [busqueda, setBusqueda] = useState('')
@@ -25,6 +41,8 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
   const [publicaciones, setPublicaciones] = useState([])
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true)
   const [publicacionesError, setPublicacionesError] = useState('')
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
 
   const loadPublicaciones = useCallback(async () => {
     if (!sellerId) {
@@ -64,6 +82,85 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     )
   }
 
+  async function handleTogglePublicacion(id) {
+    const pub = publicaciones.find((p) => p.id === id)
+    if (!pub) return
+
+    const nuevoEnabled = pub.estado !== 'activa'
+
+    try {
+      const updatedProduct = await updateSellerProductStatus({
+        productId: id,
+        enabled: nuevoEnabled,
+      })
+
+      if (!updatedProduct) return
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+                stock: Number(updatedProduct.stock) || 0,
+                precio: Number(updatedProduct.price) || 0,
+                titulo: updatedProduct.name,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+              }
+            : p
+        )
+      )
+    } catch (error) {
+      console.error('Error al cambiar estado de la publicación:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo actualizar la publicación'))
+    }
+  }
+
+  function handleCrearPublicacion() {
+    onOpenPublish?.()
+  }
+
+  function handleEditarPublicacion(pub) {
+    setPublicacionEnEdicion(pub)
+    setEditModalVisible(true)
+  }
+
+  function handleCerrarModalEdicion() {
+    setEditModalVisible(false)
+    setPublicacionEnEdicion(null)
+  }
+
+  function handleGuardarEdicion(productoActualizado) {
+    if (!productoActualizado?.id) {
+      handleCerrarModalEdicion()
+      return
+    }
+
+    setPublicaciones((prev) =>
+      prev.map((p) =>
+        p.id === productoActualizado.id
+          ? {
+              ...p,
+              titulo: productoActualizado.titulo ?? p.titulo,
+              precio:
+                productoActualizado.precio !== undefined
+                  ? Number(productoActualizado.precio) || 0
+                  : p.precio,
+              stock:
+                productoActualizado.stock !== undefined
+                  ? Number(productoActualizado.stock) || 0
+                  : p.stock,
+              imagen: productoActualizado.imagen || p.imagen,
+              categoria: productoActualizado.categoria ?? p.categoria,
+              descripcion: productoActualizado.descripcion ?? p.descripcion,
+            }
+          : p
+      )
+    )
+
+    handleCerrarModalEdicion()
+  }
+
   const publicacionesFiltradas = useMemo(() => {
     return publicaciones.filter((p) => {
       const coincideBusqueda = p.titulo.toLowerCase().includes(busqueda.toLowerCase())
@@ -71,10 +168,6 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
       return coincideBusqueda && coincideFiltro
     })
   }, [busqueda, filtrosActivos, publicaciones])
-
-  function handleCrearPublicacion() {
-    onOpenPublish?.()
-  }
 
   return (
     <View style={styles.container}>
@@ -168,7 +261,9 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
             <Text style={[styles.colHeader, styles.alignRight, { flex: 2 }]}>Precio</Text>
             <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Stock</Text>
             <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Vendidos</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Estado</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Estado</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Visible</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.4 }]}>Acciones</Text>
           </View>
 
           {publicacionesFiltradas.map((pub, idx) => (
@@ -199,7 +294,7 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
                 {pub.vendidos}
               </Text>
 
-              <View style={[styles.estadoCell, { flex: 1 }]}>
+              <View style={[styles.estadoCell, { flex: 1.2 }]}>
                 <View
                   style={[
                     styles.estadoBadge,
@@ -218,6 +313,22 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
                   </Text>
                 </View>
               </View>
+
+              <View style={[styles.switchCell, { flex: 1.2 }]}>
+                <EstadoSwitch
+                  value={pub.estado === 'activa'}
+                  onToggle={() => handleTogglePublicacion(pub.id)}
+                />
+              </View>
+
+              <View style={[styles.actionsCell, { flex: 1.4 }]}>
+                <TouchableOpacity
+                  style={styles.btnEditar}
+                  onPress={() => handleEditarPublicacion(pub)}
+                >
+                  <Text style={styles.btnEditarText}>Editar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
@@ -229,6 +340,13 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
           quedarán para una próxima etapa.
         </Text>
       </View>
+
+      <EditProductModal
+        visible={editModalVisible}
+        product={publicacionEnEdicion}
+        onClose={handleCerrarModalEdicion}
+        onSave={handleGuardarEdicion}
+      />
     </View>
   )
 }
@@ -468,6 +586,67 @@ const styles = StyleSheet.create({
 
   estadoTextInactiva: {
     color: COLORS.textSecondary,
+  },
+
+  switchCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  actionsCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  btnEditar: {
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+
+  btnEditarText: {
+    color: COLORS.primaryLight,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  switchTrack: {
+    width: 46,
+    height: 24,
+    borderRadius: 999,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+
+  switchTrackOn: {
+    backgroundColor: COLORS.secondary,
+  },
+
+  switchTrackOff: {
+    backgroundColor: '#D9D9D9',
+  },
+
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  switchThumbOn: {
+    alignSelf: 'flex-end',
+  },
+
+  switchThumbOff: {
+    alignSelf: 'flex-start',
   },
 
   emptyState: {
