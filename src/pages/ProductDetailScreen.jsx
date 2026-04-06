@@ -18,6 +18,7 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
+import { getPublicProfile } from "../services/user";
 import { COLORS } from "../constants/colors";
 
 const mockProducts = [
@@ -188,6 +189,7 @@ export default function ProductDetailScreen() {
       try {
         const product = await getCatalogProduct(String(id));
         if (!cancelled && product) {
+          const sellerProfile = await getPublicProfile(product.sellerId);
           setCatalogProduct({
             id: String(product.id),
             sellerId: Number(product.sellerId),
@@ -198,7 +200,7 @@ export default function ProductDetailScreen() {
             categoryName: product.category?.label || "Catalogo",
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
-            seller: `Vendedor #${product.sellerId}`,
+            seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
             features: [
               `Categoria: ${product.category?.label || "Catalogo"}`,
               product.stock > 0 ? "Disponible para compra inmediata" : "Sin stock disponible",
@@ -481,7 +483,13 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
+              {/* TODO: cuando catalog-api esté integrada, reemplazar mockProducts por
+                  llamada real a la API. El sellerId debe venir en la respuesta del producto. */}
+              <TouchableOpacity onPress={() => router.push(`/user/${product.sellerId}`)}>
+                <Text style={[styles.sellerText, { textDecorationLine: 'underline' }]}>
+                  Vendido por {product.seller}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.stockRow}>
                 <View style={styles.categoryPill}>
