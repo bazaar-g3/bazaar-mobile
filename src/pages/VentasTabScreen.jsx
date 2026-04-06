@@ -280,16 +280,28 @@ export default function VentasTab({
 
       if (!updatedProduct) return
 
+      let finalProduct = updatedProduct
+
+      if (nuevoStock === 0 && updatedProduct.status !== 'disabled') {
+        finalProduct = await updateSellerProductStatus({
+          productId: id,
+          enabled: false,
+        })
+      }
+
       setPublicaciones((prev) =>
         prev.map((p) =>
           p.id === id
             ? {
                 ...p,
-                stock: Number(updatedProduct.stock) || 0,
-                precio: Number(updatedProduct.price) || 0,
-                titulo: updatedProduct.name,
-                imagen: updatedProduct.images?.[0] || p.imagen,
-                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+                stock: Number(finalProduct.stock) || 0,
+                precio: Number(finalProduct.price) || 0,
+                titulo: finalProduct.name,
+                imagen: finalProduct.images?.[0] || p.imagen,
+                estado:
+                  finalProduct.status === 'disabled'
+                    ? 'inactiva'
+                    : 'activa',
               }
             : p
         )
