@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
+import removeIcon from '../../assets/removeImg.png'
 
 const PRODUCT_IMAGE_PLACEHOLDER =
   'https://via.placeholder.com/500x350.png?text=Producto'
@@ -29,7 +30,7 @@ export default function EditProductModal({
   const [precio, setPrecio] = useState('')
   const [stock, setStock] = useState('')
   const [categoria, setCategoria] = useState('')
-  const [imagen, setImagen] = useState('')
+  const [imagenes, setImagenes] = useState([])
 
   useEffect(() => {
     if (!product || !visible) return
@@ -50,7 +51,15 @@ export default function EditProductModal({
         product.categoria ||
         ''
     )
-    setImagen(product.images?.[0] || product.imagen || '')
+
+    const currentImages =
+      Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : product.imagen
+          ? [product.imagen]
+          : []
+
+    setImagenes(currentImages)
   }, [product, visible])
 
   const categoriasDisponibles = useMemo(() => {
@@ -65,7 +74,7 @@ export default function EditProductModal({
         ]
   }, [categories])
 
-  async function handlePickImage() {
+  async function handlePickImages() {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -73,28 +82,36 @@ export default function EditProductModal({
       if (!permissionResult.granted) {
         Alert.alert(
           'Permiso requerido',
-          'Necesitamos acceso a tu galería para cambiar la imagen.'
+          'Necesitamos acceso a tu galería para agregar imágenes.'
         )
         return
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsMultipleSelection: true,
+        allowsEditing: false,
         quality: 0.9,
+        selectionLimit: 10,
       })
 
       if (result.canceled) return
 
-      const asset = result.assets?.[0]
-      if (!asset?.uri) return
+      const nuevasImagenes = (result.assets || [])
+        .map((asset) => asset?.uri)
+        .filter(Boolean)
 
-      setImagen(asset.uri)
+      if (nuevasImagenes.length === 0) return
+
+      setImagenes((prev) => [...prev, ...nuevasImagenes])
     } catch (error) {
-      console.error('Error al seleccionar imagen:', error)
-      Alert.alert('Error', 'No se pudo seleccionar la imagen.')
+      console.error('Error al seleccionar imágenes:', error)
+      Alert.alert('Error', 'No se pudieron seleccionar las imágenes.')
     }
+  }
+
+  function handleRemoveImage(indexToRemove) {
+    setImagenes((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
 
   function handleSave() {
@@ -108,10 +125,10 @@ export default function EditProductModal({
       price: Number(precio),
       precio: Number(precio),
       stock: Number(stock),
-      categoria: categoria,
+      categoria,
       categorySlug: categoria,
-      images: imagen ? [imagen] : [],
-      imagen: imagen || '',
+      images: imagenes,
+      imagen: imagenes[0] || '',
     })
   }
 
@@ -130,21 +147,30 @@ export default function EditProductModal({
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.imageHeader}>
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{
-                    uri:
-                      imagen ||
-                      PRODUCT_IMAGE_PLACEHOLDER,
-                  }}
-                  style={styles.productImageLarge}
-                />
-                <TouchableOpacity
-                  style={styles.changePhotoOverlay}
-                  onPress={handlePickImage}
-                >
-                  <Text style={styles.changePhotoText}>Cambiar foto</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Imágenes</Text>
+
+              <View style={styles.imagesGrid}>
+                {imagenes.map((imagen, index) => (
+                  <View key={`${imagen}-${index}`} style={styles.imageCard}>
+                    <TouchableOpacity
+                      style={styles.deleteImageButton}
+                      onPress={() => handleRemoveImage(index)}
+                      activeOpacity={0.7}
+                    >
+                      <Image source={removeIcon} style={styles.deleteIcon} />
+                    </TouchableOpacity>
+
+                    <Image
+                      source={{ uri: imagen || PRODUCT_IMAGE_PLACEHOLDER }}
+                      style={styles.productImage}
+                    />
+                  </View>
+                ))}
+
+                <TouchableOpacity style={styles.addImageCard} onPress={handlePickImages}>
+                  <Text style={styles.addImagePlus}>+</Text>
+                  <Text style={styles.addImageText}>Agregar foto</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -247,7 +273,7 @@ const styles = StyleSheet.create({
 
   modalCard: {
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 760,
     maxHeight: '90%',
     backgroundColor: COLORS.white,
     borderRadius: 18,
@@ -283,39 +309,6 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
 
-  imageHeader: {
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-
-  imageContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  productImageLarge: {
-    width: 180,
-    height: 180,
-    borderRadius: 18,
-    backgroundColor: COLORS.imagePlaceholder,
-  },
-
-  changePhotoOverlay: {
-    position: 'absolute',
-    bottom: 10,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-  },
-
-  changePhotoText: {
-    color: COLORS.white,
-    fontSize: FONT.small,
-    fontWeight: '600',
-  },
-
   fieldGroup: {
     gap: 8,
   },
@@ -324,6 +317,74 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
     fontWeight: '600',
     color: COLORS.textPrimary,
+  },
+
+  imagesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+
+  imageCard: {
+    width: 130,
+    height: 130,
+    borderRadius: 14,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: COLORS.imagePlaceholder,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+deleteImageButton: {
+  position: 'absolute',
+  top: 6,
+  right: 6,
+  zIndex: 2,
+  width: 22,
+  height: 22,
+  borderRadius: 11,
+  backgroundColor: '#EF4444',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+deleteIcon: {
+  width: 16,
+  height: 16,
+},
+
+  addImageCard: {
+    width: 130,
+    height: 130,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    padding: SPACING.sm,
+  },
+
+  addImagePlus: {
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: '500',
+    color: COLORS.primaryLight,
+  },
+
+  addImageText: {
+    marginTop: 4,
+    fontSize: FONT.small,
+    color: COLORS.primaryLight,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 
   input: {
@@ -389,21 +450,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.divider,
-  },
-
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    borderRadius: 10,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-  },
-
-  cancelButtonText: {
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    fontSize: FONT.small,
   },
 
   saveButton: {

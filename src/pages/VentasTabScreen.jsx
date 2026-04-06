@@ -14,10 +14,12 @@ import {
   listSellerProducts,
   mapCatalogProductToVentasItem,
   updateSellerProductStatus,
+  updateSellerProductStock,
 } from '../services/catalog'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
 import EditProductModal from '../components/EditProductModal'
+import EditableStockStepper from '../components/EditableStockStepper'
 
 const FILTROS = ['activa', 'inactiva']
 
@@ -161,6 +163,38 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     handleCerrarModalEdicion()
   }
 
+  async function handleUpdateStock(id, nuevoStock) {
+    const pub = publicaciones.find((p) => p.id === id)
+    if (!pub) return
+
+    try {
+      const updatedProduct = await updateSellerProductStock({
+        productId: id,
+        stock: nuevoStock,
+      })
+
+      if (!updatedProduct) return
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                stock: Number(updatedProduct.stock) || 0,
+                precio: Number(updatedProduct.price) || 0,
+                titulo: updatedProduct.name,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+              }
+            : p
+        )
+      )
+    } catch (error) {
+      console.error('Error al actualizar stock de la publicación:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo actualizar el stock'))
+    }
+  }
+
   const publicacionesFiltradas = useMemo(() => {
     return publicaciones.filter((p) => {
       const coincideBusqueda = p.titulo.toLowerCase().includes(busqueda.toLowerCase())
@@ -286,9 +320,12 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
                 ${pub.precio.toLocaleString('es-AR')}
               </Text>
 
-              <Text style={[styles.colText, styles.alignCenter, { flex: 1 }]}>
-                {pub.stock}
-              </Text>
+              <View style={[styles.stockCell, { flex: 1 }]}>
+                <EditableStockStepper
+                  value={pub.stock}
+                  onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
+                />
+              </View>
 
               <Text style={[styles.colText, styles.alignCenter, { flex: 1 }]}>
                 {pub.vendidos}
@@ -715,5 +752,11 @@ const styles = StyleSheet.create({
 
   alignCenter: {
     textAlign: 'center',
+  },
+
+  stockCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 54,
   },
 })
