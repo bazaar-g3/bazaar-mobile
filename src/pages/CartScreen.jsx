@@ -1,15 +1,50 @@
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native'
+import { useEffect, useState } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
+import { getSessionStatus } from '../services/session'
+import { buildLoginRedirect } from '../utils/authRedirect'
 
 const cartItems = []
 
 export default function Cart() {
   const router = useRouter()
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function ensureAuthenticatedUser() {
+      const session = await getSessionStatus()
+
+      if (!session.isAuthenticated) {
+        router.replace(
+          buildLoginRedirect({
+            redirectPath: '/cart',
+          })
+        )
+        return
+      }
+
+      if (!cancelled) {
+        setCheckingSession(false)
+      }
+    }
+
+    ensureAuthenticatedUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router])
 
   const total = cartItems.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   )
+
+  if (checkingSession) {
+    return <ActivityIndicator style={{ flex: 1 }} />
+  }
 
   const renderItem = ({ item }) => (
     <View style={styles.itemCard}>

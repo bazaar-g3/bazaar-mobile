@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -8,170 +9,200 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { getSessionStatus } from "../services/session";
+import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
+import {
+  PRODUCT_IMAGE_PLACEHOLDER,
+  getCatalogErrorMessage,
+  listCatalogProducts,
+  listProductCategories,
+} from "../services/catalog";
+import { COLORS } from "../constants/colors";
+import Logo from "../components/Logo";
 
-const COLORS = {
-  primary: "#00C2B3",
-  secondary: "#FF9800",
-  dark: "#003238",
-  background: "#F5F7F8",
-  white: "#FFFFFF",
-  grey: "#6B6B6B",
-  lightGrey: "#EAEAEA",
-  text: "#1F1F1F",
-};
+function formatPrice(value) {
+  return `$${Number(value || 0).toLocaleString("es-AR")}`;
+}
 
-const mockProducts = [
-  {
-    id: "1",
-    name: "Auriculares Bluetooth",
-    price: 25000,
-    oldPrice: 32500,
-    image: "https://via.placeholder.com/300x200.png?text=Auriculares",
-    categoryId: "2",
-    categoryName: "Tecnología",
-    createdAt: "2026-04-03T10:00:00Z",
-    stock: 8,
-    seller: "Tech Store",
-    tag: "OFERTA DESTACADA!",
-  },
-  {
-    id: "2",
-    name: "Silla Gamer",
-    price: 120000,
-    oldPrice: 156000,
-    image: "https://via.placeholder.com/300x200.png?text=Silla",
-    categoryId: "3",
-    categoryName: "Hogar",
-    createdAt: "2026-04-01T15:30:00Z",
-    stock: 3,
-    seller: "Home Design",
-    tag: null,
-  },
-  {
-    id: "3",
-    name: "Campera Nike",
-    price: 89000,
-    oldPrice: 115700,
-    image: "https://via.placeholder.com/300x200.png?text=Campera",
-    categoryId: "1",
-    categoryName: "Moda",
-    createdAt: "2026-04-02T12:00:00Z",
-    stock: 5,
-    seller: "Urban Wear",
-    tag: "OFERTA DESTACADA!",
-  },
-  {
-    id: "4",
-    name: "Mochila Urbana",
-    price: 34000,
-    oldPrice: 44200,
-    image: "https://via.placeholder.com/300x200.png?text=Mochila",
-    categoryId: "1",
-    categoryName: "Moda",
-    createdAt: "2026-04-04T08:45:00Z",
-    stock: 10,
-    seller: "City Bags",
-    tag: null,
-  },
-  {
-    id: "5",
-    name: "Mouse Inalámbrico",
-    price: 18000,
-    oldPrice: 23400,
-    image: "https://via.placeholder.com/300x200.png?text=Mouse",
-    categoryId: "2",
-    categoryName: "Tecnología",
-    createdAt: "2026-03-30T09:15:00Z",
-    stock: 15,
-    seller: "Tech Store",
-    tag: "OFERTA DESTACADA!",
-  },
-  {
-    id: "6",
-    name: "Zapatillas Adidas",
-    price: 76000,
-    oldPrice: 98800,
-    image: "https://via.placeholder.com/300x200.png?text=Zapatillas",
-    categoryId: "4",
-    categoryName: "Deportes",
-    createdAt: "2026-04-03T18:20:00Z",
-    stock: 6,
-    seller: "Sport House",
-    tag: null,
-  },
-  {
-    id: "7",
-    name: "Lámpara LED",
-    price: 21000,
-    oldPrice: 27300,
-    image: "https://via.placeholder.com/300x200.png?text=Lampara",
-    categoryId: "3",
-    categoryName: "Hogar",
-    createdAt: "2026-03-29T11:00:00Z",
-    stock: 4,
-    seller: "Home Design",
-    tag: null,
-  },
-  {
-    id: "8",
-    name: "Pelota de fútbol",
-    price: 15000,
-    oldPrice: 19500,
-    image: "https://via.placeholder.com/300x200.png?text=Pelota",
-    categoryId: "4",
-    categoryName: "Deportes",
-    createdAt: "2026-04-04T14:10:00Z",
-    stock: 12,
-    seller: "Sport House",
-    tag: "OFERTA DESTACADA!",
-  },
-];
+function mapProductToListItem(product, { recommended = false } = {}) {
+  const price = Number(product.price) || 0;
+  const oldPrice = Number((price * 1.3).toFixed(2));
 
-const categoryOptions = [
-  { id: "1", label: "Moda" },
-  { id: "2", label: "Tecnología" },
-  { id: "3", label: "Hogar" },
-  { id: "4", label: "Deportes" },
-  { id: "5", label: "Libros" },
-];
+  return {
+    id: String(product.id),
+    name: product.name || "Producto",
+    price,
+    oldPrice,
+    image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
+    categoryId:
+      product.category?.id !== undefined && product.category?.id !== null
+        ? String(product.category.id)
+        : "",
+    categorySlug: product.category?.slug || "",
+    categoryName: product.category?.label || "Catálogo",
+    createdAt: product.createdAt || product.created_at || null,
+    stock: Number(product.stock) || 0,
+    sellerId: product.sellerId,
+    seller: product.sellerName || `Vendedor #${product.sellerId ?? "-"}`,
+    tag: recommended ? "RECOMENDADO" : null,
+  };
+}
 
 export default function ProductListScreen() {
   const router = useRouter();
-  const { search, categoryId, categoryName, sortBy, section } =
-    useLocalSearchParams();
+  const params = useLocalSearchParams();
+
+  const search = normalizeRouteParam(params.search);
+  const categoryId = normalizeRouteParam(params.categoryId);
+  const categoryName = normalizeRouteParam(params.categoryName);
+  const categorySlug = normalizeRouteParam(params.categorySlug);
+  const sortBy = normalizeRouteParam(params.sortBy);
+  const section = normalizeRouteParam(params.section);
 
   const [searchText, setSearchText] = useState(search ? String(search) : "");
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  const filteredProducts = useMemo(() => {
-    let result = [...mockProducts];
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-    if (search) {
-      const normalizedSearch = String(search).toLowerCase().trim();
-      result = result.filter((product) =>
-        product.name.toLowerCase().includes(normalizedSearch)
+  const [productsError, setProductsError] = useState("");
+  const [categoriesError, setCategoriesError] = useState("");
+
+  const loadCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    setCategoriesError("");
+
+    try {
+      const response = await listProductCategories();
+      setCategories(
+        response.map((category) => ({
+          id:
+            category.id !== undefined && category.id !== null
+              ? String(category.id)
+              : String(category.slug ?? category.label ?? category.name),
+          label: String(category.label ?? category.name ?? "Categoría"),
+          slug: category.slug ?? undefined,
+        }))
       );
-    }
-
-    if (categoryId) {
-      result = result.filter(
-        (product) => product.categoryId === String(categoryId)
+    } catch (error) {
+      setCategoriesError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar las categorías por el momento."
+        )
       );
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
     }
+  }, []);
 
-    if (section === "recommended") {
-      result = result.slice(0, 4);
-    }
+  const loadProducts = useCallback(async () => {
+    setLoadingProducts(true);
+    setProductsError("");
 
-    if (sortBy === "recent") {
-      result.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    try {
+      const requestParams = {
+        status: "active",
+        onlyAvailable: true,
+        limit: 50,
+        offset: 0,
+      };
+
+      if (search) {
+        requestParams.search = search;
+      }
+
+      if (categorySlug) {
+        requestParams.categorySlug = categorySlug;
+      } else if (categoryId) {
+        requestParams.categoryId = categoryId;
+      }
+
+      if (sortBy === "recent" || section === "recommended") {
+        requestParams.sort = "recent";
+      }
+
+      const response = await listCatalogProducts(requestParams);
+
+      let mappedProducts = response.map((product) =>
+        mapProductToListItem(product, {
+          recommended: section === "recommended",
+        })
       );
-    }
 
-    return result;
-  }, [search, categoryId, sortBy, section]);
+      if (categorySlug || categoryId || categoryName) {
+        mappedProducts = mappedProducts.filter((product) => {
+          const normalizedProductCategoryId = String(product.categoryId || "");
+          const normalizedProductCategorySlug = String(product.categorySlug || "");
+          const normalizedProductCategoryName = String(product.categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          const normalizedSelectedCategoryId = String(categoryId || "");
+          const normalizedSelectedCategorySlug = String(categorySlug || "");
+          const normalizedSelectedCategoryName = String(categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          if (
+            normalizedSelectedCategorySlug &&
+            normalizedProductCategorySlug === normalizedSelectedCategorySlug
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryId &&
+            normalizedProductCategoryId === normalizedSelectedCategoryId
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryName &&
+            normalizedProductCategoryName === normalizedSelectedCategoryName
+          ) {
+            return true;
+          }
+
+          return false;
+        });
+      }
+
+      if (section === "recommended") {
+        mappedProducts = mappedProducts.slice(0, 10);
+      }
+
+      setProducts(mappedProducts);
+    } catch (error) {
+      setProductsError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar los productos por el momento."
+        )
+      );
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [search, categoryId, categorySlug, categoryName, sortBy, section]);
+
+  useEffect(() => {
+    setSearchText(search ? String(search) : "");
+  }, [search]);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const screenTitle = useMemo(() => {
     if (search) return `RESULTADOS PARA "${String(search).toUpperCase()}"`;
@@ -182,10 +213,12 @@ export default function ProductListScreen() {
   }, [search, categoryName, sortBy, section]);
 
   const screenSubtitle = useMemo(() => {
-    if (filteredProducts.length === 0) return "No encontramos productos.";
-    if (filteredProducts.length === 1) return "1 producto encontrado";
-    return `${filteredProducts.length} productos encontrados`;
-  }, [filteredProducts.length]);
+    if (loadingProducts) return "Cargando productos...";
+    if (productsError) return productsError;
+    if (products.length === 0) return "No encontramos productos.";
+    if (products.length === 1) return "1 producto encontrado";
+    return `${products.length} productos encontrados`;
+  }, [loadingProducts, productsError, products.length]);
 
   const handleSearch = () => {
     const trimmedSearch = searchText.trim();
@@ -202,6 +235,9 @@ export default function ProductListScreen() {
       params: {
         categoryId: selectedCategory.id,
         categoryName: selectedCategory.label,
+        ...(selectedCategory.slug
+          ? { categorySlug: selectedCategory.slug }
+          : {}),
       },
     });
   };
@@ -210,8 +246,32 @@ export default function ProductListScreen() {
     router.push(`/product/${productId}`);
   };
 
+  const handleAddToCart = async (productId) => {
+    const session = await getSessionStatus();
+
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({
+          redirectPath: `/product/${productId}`,
+          pendingAction: "add-to-cart",
+          quantity: 1,
+        })
+      );
+      return;
+    }
+
+    Alert.alert("Añadido", "1 unidad agregada al carrito.");
+  };
+
   const clearFilters = () => {
     router.push("/products");
+  };
+
+  const isCategoryActive = (cat) => {
+    if (categorySlug && cat.slug) {
+      return String(categorySlug) === String(cat.slug);
+    }
+    return String(categoryId || "") === String(cat.id);
   };
 
   return (
@@ -221,18 +281,16 @@ export default function ProductListScreen() {
           <Text style={styles.backButton}>← Volver</Text>
         </TouchableOpacity>
 
-        <Text style={styles.logo}>
-          <Text style={{ color: COLORS.primary }}>BA</Text>
-          <Text style={{ color: COLORS.secondary }}>ZA</Text>
-          <Text style={{ color: "#F44336" }}>AR</Text>
-        </Text>
+        <View style={styles.logoCenter}>
+          <Logo size={34} textSize={32} style={styles.logoNoMargin} />
+        </View>
 
         <View style={styles.searchBarContainer}>
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
             placeholder="Buscar productos..."
-            placeholderTextColor="#7D8B8E"
+            placeholderTextColor={COLORS.textMuted}
             style={styles.searchInput}
             onSubmitEditing={handleSearch}
           />
@@ -250,23 +308,42 @@ export default function ProductListScreen() {
               <Text style={styles.filterIcon}>−</Text>
             </View>
 
-            {categoryOptions.map((cat) => {
-              const isActive = String(categoryId || "") === cat.id;
+            {loadingCategories ? (
+              <View style={styles.sidebarStatus}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.sidebarStatusText}>Cargando...</Text>
+              </View>
+            ) : categoriesError ? (
+              <Text style={styles.sidebarErrorText}>{categoriesError}</Text>
+            ) : (
+              categories.map((cat) => {
+                const active = isCategoryActive(cat);
 
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={styles.checkboxRow}
-                  onPress={() => handleCategoryFilter(cat)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.checkbox, isActive && styles.checkboxActive]} />
-                  <Text style={[styles.filterItem, isActive && styles.filterItemActive]}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={styles.checkboxRow}
+                    onPress={() => handleCategoryFilter(cat)}
+                    activeOpacity={0.8}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        active && styles.checkboxActive,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.filterItem,
+                        active && styles.filterItemActive,
+                      ]}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
 
           <View style={styles.filterSection}>
@@ -278,7 +355,10 @@ export default function ProductListScreen() {
             <TouchableOpacity
               style={styles.filterAction}
               onPress={() =>
-                router.push({ pathname: "/products", params: { sortBy: "recent" } })
+                router.push({
+                  pathname: "/products",
+                  params: { sortBy: "recent" },
+                })
               }
             >
               <Text style={styles.filterActionText}>Más recientes</Text>
@@ -287,7 +367,10 @@ export default function ProductListScreen() {
             <TouchableOpacity
               style={styles.filterAction}
               onPress={() =>
-                router.push({ pathname: "/products", params: { section: "recommended" } })
+                router.push({
+                  pathname: "/products",
+                  params: { section: "recommended" },
+                })
               }
             >
               <Text style={styles.filterActionText}>Recomendados</Text>
@@ -303,7 +386,21 @@ export default function ProductListScreen() {
           <Text style={styles.sectionHeading}>{screenTitle}</Text>
           <Text style={styles.sectionSubheading}>{screenSubtitle}</Text>
 
-          {filteredProducts.length === 0 ? (
+          {loadingProducts ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.emptyText}>Cargando productos...</Text>
+            </View>
+          ) : productsError ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>⚠️</Text>
+              <Text style={styles.emptyTitle}>No pudimos cargar el listado</Text>
+              <Text style={styles.emptyText}>{productsError}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadProducts}>
+                <Text style={styles.retryButtonText}>Reintentar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : products.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🛍️</Text>
               <Text style={styles.emptyTitle}>No hay resultados</Text>
@@ -313,7 +410,7 @@ export default function ProductListScreen() {
             </View>
           ) : (
             <View style={styles.grid}>
-              {filteredProducts.map((item) => (
+              {products.map((item) => (
                 <View key={item.id} style={styles.card}>
                   <TouchableOpacity
                     activeOpacity={0.9}
@@ -330,13 +427,18 @@ export default function ProductListScreen() {
                     ) : null}
 
                     <Text style={styles.cardName}>{item.name}</Text>
-                    <Text style={styles.cardOldPrice}>${item.oldPrice}</Text>
-                    <Text style={styles.cardPrice}>${item.price}</Text>
+                    <Text style={styles.cardOldPrice}>{formatPrice(item.oldPrice)}</Text>
+                    <Text style={styles.cardPrice}>{formatPrice(item.price)}</Text>
                     <Text style={styles.cardSeller}>Vendido por {item.seller}</Text>
-                    <Text style={styles.cardStock}>Stock disponible: {item.stock}</Text>
+                    <Text style={styles.cardStock}>
+                      Stock disponible: {item.stock}
+                    </Text>
 
                     <View style={styles.cardActions}>
-                      <TouchableOpacity style={styles.btnCart}>
+                      <TouchableOpacity
+                        style={styles.btnCart}
+                        onPress={() => handleAddToCart(item.id)}
+                      >
                         <Text style={styles.btnText}>AÑADIR AL CARRITO</Text>
                       </TouchableOpacity>
 
@@ -363,41 +465,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
   },
+
   header: {
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 15,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGrey,
+    borderBottomColor: COLORS.divider,
+    minHeight: 132,
   },
+
   backButton: {
     fontSize: 14,
     fontWeight: "700",
     color: COLORS.dark,
     marginBottom: 10,
+    zIndex: 2,
   },
-  logo: {
-    fontSize: 26,
-    fontWeight: "900",
-    textAlign: "center",
-    marginBottom: 12,
-    letterSpacing: 1.5,
+
+  logoCenter: {
+    position: "absolute",
+    top: 14,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
   },
+
+  logoNoMargin: {
+    marginBottom: 0,
+  },
+
   searchBarContainer: {
     flexDirection: "row",
     backgroundColor: COLORS.dark,
     borderRadius: 10,
     padding: 5,
     width: "100%",
+    marginTop: 26,
   },
+
   searchInput: {
     flex: 1,
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     backgroundColor: COLORS.white,
     borderRadius: 6,
     paddingHorizontal: 14,
     marginRight: 6,
     height: 42,
   },
+
   searchButton: {
     backgroundColor: COLORS.secondary,
     paddingHorizontal: 18,
@@ -405,25 +524,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   searchButtonText: {
     color: COLORS.white,
     fontWeight: "800",
   },
+
   mainContainer: {
     flex: 1,
     flexDirection: "row",
     backgroundColor: COLORS.background,
   },
+
   sidebar: {
     width: "25%",
     backgroundColor: COLORS.white,
     borderRightWidth: 1,
-    borderRightColor: COLORS.lightGrey,
+    borderRightColor: COLORS.divider,
     padding: 15,
   },
+
   filterSection: {
     marginBottom: 24,
   },
+
   filterHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -432,183 +556,253 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 12,
   },
+
   filterTitle: {
     color: COLORS.white,
     fontSize: 12,
     fontWeight: "900",
   },
+
   filterIcon: {
     color: COLORS.white,
     fontWeight: "900",
   },
+
+  sidebarStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
+
+  sidebarStatusText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+
+  sidebarErrorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
   },
+
   checkbox: {
     width: 18,
     height: 18,
     borderWidth: 1,
-    borderColor: COLORS.grey,
+    borderColor: COLORS.textMuted,
     borderRadius: 4,
     marginRight: 10,
     backgroundColor: COLORS.white,
   },
+
   checkboxActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
+
   filterItem: {
     fontSize: 14,
     color: COLORS.dark,
   },
+
   filterItemActive: {
     fontWeight: "800",
     color: COLORS.primary,
   },
+
   filterAction: {
     paddingVertical: 8,
   },
+
   filterActionText: {
     fontSize: 14,
     color: COLORS.dark,
     fontWeight: "700",
   },
+
   clearButton: {
     marginTop: 10,
-    backgroundColor: "#EEF8F7",
+    backgroundColor: COLORS.promoLight,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: "center",
   },
+
   clearButtonText: {
     color: COLORS.primary,
     fontWeight: "800",
     fontSize: 12,
   },
+
   gridContainer: {
     padding: 20,
     width: "75%",
     paddingBottom: 30,
   },
+
   sectionHeading: {
     fontSize: 22,
     fontWeight: "900",
-    color: COLORS.grey,
+    color: COLORS.sectionTitle,
     textAlign: "center",
     marginBottom: 6,
   },
+
   sectionSubheading: {
     fontSize: 14,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
+
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+
   card: {
     width: "48%",
     backgroundColor: COLORS.white,
     borderRadius: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: COLORS.lightGrey,
+    borderColor: COLORS.divider,
     overflow: "hidden",
     elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
   },
+
   productImage: {
     width: "100%",
     height: 160,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: COLORS.imagePlaceholder,
   },
+
   cardContent: {
     padding: 12,
   },
+
   tagBadge: {
-    backgroundColor: "#FFD700",
+    backgroundColor: COLORS.secondary,
     alignSelf: "flex-start",
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
     marginBottom: 6,
   },
+
   tagText: {
     fontSize: 9,
     fontWeight: "900",
-    color: "#4E3B00",
+    color: COLORS.white,
   },
+
   cardName: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#000",
+    color: COLORS.textPrimary,
     marginBottom: 4,
   },
+
   cardOldPrice: {
     fontSize: 12,
     textDecorationLine: "line-through",
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
   },
+
   cardPrice: {
     fontSize: 21,
     fontWeight: "900",
     color: COLORS.secondary,
     marginBottom: 4,
   },
+
   cardSeller: {
     fontSize: 11,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
   },
+
   cardStock: {
     fontSize: 12,
     fontWeight: "800",
     color: COLORS.primary,
     marginVertical: 6,
   },
+
   cardActions: {
     gap: 6,
     marginTop: 10,
   },
+
   btnCart: {
     backgroundColor: COLORS.dark,
     padding: 9,
     borderRadius: 6,
     alignItems: "center",
   },
+
   btnBuy: {
     backgroundColor: COLORS.secondary,
     padding: 9,
     borderRadius: 6,
     alignItems: "center",
   },
+
   btnText: {
     color: COLORS.white,
     fontSize: 10,
     fontWeight: "900",
   },
+
   emptyState: {
     minHeight: 300,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
+    gap: 10,
   },
+
   emptyEmoji: {
     fontSize: 44,
     marginBottom: 16,
   },
+
   emptyTitle: {
     fontSize: 22,
     fontWeight: "900",
-    color: COLORS.text,
+    color: COLORS.textPrimary,
     marginBottom: 8,
   },
+
   emptyText: {
     fontSize: 15,
     lineHeight: 22,
-    color: COLORS.grey,
+    color: COLORS.textSecondary,
     textAlign: "center",
+  },
+
+  retryButton: {
+    marginTop: 12,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+  },
+
+  retryButtonText: {
+    color: COLORS.white,
+    fontWeight: "800",
+    fontSize: 13,
   },
 });

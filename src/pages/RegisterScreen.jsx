@@ -9,14 +9,16 @@ import {
   ScrollView,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
 import { COLORS } from '../constants/colors'
+import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 
 export default function RegisterScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams()
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -52,7 +54,7 @@ export default function RegisterScreen() {
       }
 
       await AsyncStorage.setItem('token', token)
-      router.replace('/home')
+      router.replace(buildPostAuthDestination(params))
     } catch (err) {
       if (err.response?.status === 409) {
         setError('The email is already in use')
@@ -154,7 +156,9 @@ export default function RegisterScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/login')}>
+          <TouchableOpacity
+            onPress={() => router.push(buildAuthScreenNavigation('/login', params))}
+          >
             <Text style={styles.registerText}>
               ¿Ya tienes una cuenta? <Text style={styles.registerLink}>Inicia sesión</Text>
             </Text>
