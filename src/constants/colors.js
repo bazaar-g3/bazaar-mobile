@@ -30,4 +30,6 @@ export const COLORS = {
   promoLight: '#DFF7F4',
   shadow: '#000',
 
-  lightPurple: '#ded1ff',}
+  lightPurple: '#ded1ff',
+  lightPink: '#f7e9ee',
+}

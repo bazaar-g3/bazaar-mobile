@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
   },
 
   modalPrimaryButton: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.logoA2,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
   },
 
   modalSecondaryButton: {
-    backgroundColor: "#EDF5F4",
+    backgroundColor: COLORS.lightPink,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,
