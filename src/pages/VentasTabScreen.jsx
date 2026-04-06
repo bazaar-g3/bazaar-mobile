@@ -488,13 +488,6 @@ export default function VentasTab({
         </View>
       )}
 
-      <View style={styles.aviso}>
-        <Text style={styles.avisoText}>
-          Las publicaciones se cargan desde el catálogo real. La edición y la baja
-          quedarán para una próxima etapa.
-        </Text>
-      </View>
-
       <EditProductModal
         visible={editModalVisible}
         product={publicacionEnEdicion}
@@ -848,20 +841,6 @@ const styles = StyleSheet.create({
     color: COLORS.primaryLight,
     fontWeight: '600',
     fontSize: FONT.small,
-  },
-
-  aviso: {
-    backgroundColor: '#FFF9E8',
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.secondary,
-    borderRadius: 10,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-
-  avisoText: {
-    fontSize: FONT.small,
-    color: COLORS.dark,
   },
 
   alignRight: {
