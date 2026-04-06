@@ -10,11 +10,13 @@ import {
 } from 'react-native'
 import {
   getCatalogErrorMessage,
+  getCatalogProduct,
   isRemoteImage,
   listSellerProducts,
   mapCatalogProductToVentasItem,
   updateSellerProductStatus,
   updateSellerProductStock,
+  updateSellerProduct,
 } from '../services/catalog'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
@@ -23,7 +25,7 @@ import EditableStockStepper from '../components/EditableStockStepper'
 
 const FILTROS = ['activa', 'inactiva']
 
-function EstadoSwitch({ value, onToggle }) {
+function StateSwitch({ value, onToggle }) {
   return (
     <TouchableOpacity
       onPress={onToggle}
@@ -45,6 +47,7 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
   const [publicacionesError, setPublicacionesError] = useState('')
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
+  const [loadingEditProduct, setLoadingEditProduct] = useState(false)
 
   const loadPublicaciones = useCallback(async () => {
     if (!sellerId) {
@@ -122,45 +125,105 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     onOpenPublish?.()
   }
 
-  function handleEditarPublicacion(pub) {
-    setPublicacionEnEdicion(pub)
+  async function handleEditarPublicacion(pub) {
+    if (!pub?.id) return
+
+    setLoadingEditProduct(true)
     setEditModalVisible(true)
+    setPublicacionEnEdicion(null)
+
+    try {
+      const product = await getCatalogProduct(pub.id)
+
+      if (!product) {
+        throw new Error('No se pudo obtener el detalle del producto')
+      }
+
+      setPublicacionEnEdicion(product)
+    } catch (error) {
+      console.error('Error al cargar la publicación para editar:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo cargar la publicación'))
+      setEditModalVisible(false)
+    } finally {
+      setLoadingEditProduct(false)
+    }
   }
 
-  function handleCerrarModalEdicion() {
+  function handleCloseModal() {
     setEditModalVisible(false)
     setPublicacionEnEdicion(null)
+    setLoadingEditProduct(false)
   }
 
-  function handleGuardarEdicion(productoActualizado) {
+  async function handleSaveChanges(productoActualizado) {
     if (!productoActualizado?.id) {
-      handleCerrarModalEdicion()
+      handleCloseModal()
       return
     }
 
-    setPublicaciones((prev) =>
-      prev.map((p) =>
-        p.id === productoActualizado.id
-          ? {
-              ...p,
-              titulo: productoActualizado.titulo ?? p.titulo,
-              precio:
-                productoActualizado.precio !== undefined
-                  ? Number(productoActualizado.precio) || 0
-                  : p.precio,
-              stock:
-                productoActualizado.stock !== undefined
-                  ? Number(productoActualizado.stock) || 0
-                  : p.stock,
-              imagen: productoActualizado.imagen || p.imagen,
-              categoria: productoActualizado.categoria ?? p.categoria,
-              descripcion: productoActualizado.descripcion ?? p.descripcion,
-            }
-          : p
-      )
-    )
+    try {
+      const updatedProduct = await updateSellerProduct({
+        productId: productoActualizado.id,
+        name: productoActualizado.name ?? productoActualizado.titulo,
+        description:
+          productoActualizado.description ?? productoActualizado.descripcion,
+        price: productoActualizado.price ?? productoActualizado.precio,
+        stock: productoActualizado.stock,
+        category:
+          productoActualizado.categorySlug ?? productoActualizado.categoria,
+        images: productoActualizado.images,
+      })
 
-    handleCerrarModalEdicion()
+      if (!updatedProduct) {
+        handleCloseModal()
+        return
+      }
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === updatedProduct.id
+            ? {
+                ...p,
+                titulo: updatedProduct.name ?? p.titulo,
+                precio:
+                  updatedProduct.price !== undefined
+                    ? Number(updatedProduct.price) || 0
+                    : p.precio,
+                stock:
+                  updatedProduct.stock !== undefined
+                    ? Number(updatedProduct.stock) || 0
+                    : p.stock,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+                images: updatedProduct.images ?? p.images,
+                categoria:
+                  updatedProduct.categorySlug ??
+                  updatedProduct.category ??
+                  p.categoria,
+                descripcion:
+                  updatedProduct.description ?? p.descripcion,
+                estado:
+                  updatedProduct.status === 'disabled'
+                    ? 'inactiva'
+                    : 'activa',
+              }
+            : p
+        )
+      )
+
+      handleCloseModal()
+    } catch (error) {
+      console.error('Error al editar la publicación:', {
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+      })
+      alert(
+        getCatalogErrorMessage(
+          error,
+          error?.data?.detail || 'No se pudo guardar la edición'
+        )
+      )
+    }
   }
 
   async function handleUpdateStock(id, nuevoStock) {
@@ -352,7 +415,7 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
               </View>
 
               <View style={[styles.switchCell, { flex: 1.2 }]}>
-                <EstadoSwitch
+                <StateSwitch
                   value={pub.estado === 'activa'}
                   onToggle={() => handleTogglePublicacion(pub.id)}
                 />
@@ -381,8 +444,9 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
       <EditProductModal
         visible={editModalVisible}
         product={publicacionEnEdicion}
-        onClose={handleCerrarModalEdicion}
-        onSave={handleGuardarEdicion}
+        loading={loadingEditProduct}
+        onClose={handleCloseModal}
+        onSave={handleSaveChanges}
       />
     </View>
   )
