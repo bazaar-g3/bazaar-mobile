@@ -18,6 +18,7 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
+import { getPublicProfile } from "../services/user";
 import { COLORS } from "../constants/colors";
 
 const mockProducts = [
@@ -28,6 +29,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Auriculares",
     categoryId: "1",
     categoryName: "Tecnología",
+    sellerId: 1,
     description:
       "Auriculares inalámbricos con sonido envolvente, batería de larga duración y diseño cómodo para uso diario.",
     stock: 8,
@@ -47,6 +49,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Silla+Gamer",
     categoryId: "2",
     categoryName: "Hogar",
+    sellerId: 2,
     description:
       "Silla ergonómica con respaldo reclinable, apoyabrazos acolchados y excelente soporte lumbar.",
     stock: 3,
@@ -62,6 +65,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Campera",
     categoryId: "3",
     categoryName: "Ropa",
+    sellerId: 5,
     description:
       "Campera deportiva liviana, ideal para media estación, confeccionada con materiales resistentes.",
     stock: 5,
@@ -77,6 +81,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Mochila",
     categoryId: "3",
     categoryName: "Ropa",
+    sellerId: 3,
     description:
       "Mochila versátil con varios compartimentos, ideal para facultad, oficina o salidas de todos los días.",
     stock: 10,
@@ -92,6 +97,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Mouse",
     categoryId: "1",
     categoryName: "Tecnología",
+    sellerId: 1,
     description:
       "Mouse inalámbrico compacto, preciso y liviano, con conexión estable y excelente autonomía.",
     stock: 15,
@@ -107,6 +113,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Zapatillas",
     categoryId: "4",
     categoryName: "Deportes",
+    sellerId: 4,
     description:
       "Zapatillas deportivas con gran amortiguación, pensadas para entrenamiento y uso urbano.",
     stock: 6,
@@ -122,6 +129,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Lampara",
     categoryId: "2",
     categoryName: "Hogar",
+    sellerId: 2,
     description:
       "Lámpara LED moderna de bajo consumo, perfecta para escritorio o mesa de luz.",
     stock: 4,
@@ -137,6 +145,7 @@ const mockProducts = [
     image: "https://via.placeholder.com/500x350.png?text=Pelota",
     categoryId: "4",
     categoryName: "Deportes",
+    sellerId: 4,
     description:
       "Pelota resistente para entrenamiento y recreación, con excelente terminación y durabilidad.",
     stock: 12,
@@ -180,6 +189,7 @@ export default function ProductDetailScreen() {
       try {
         const product = await getCatalogProduct(String(id));
         if (!cancelled && product) {
+          const sellerProfile = await getPublicProfile(product.sellerId);
           setCatalogProduct({
             id: String(product.id),
             sellerId: Number(product.sellerId),
@@ -190,7 +200,7 @@ export default function ProductDetailScreen() {
             categoryName: product.category?.label || "Catalogo",
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
-            seller: `Vendedor #${product.sellerId}`,
+            seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
             features: [
               `Categoria: ${product.category?.label || "Catalogo"}`,
               product.stock > 0 ? "Disponible para compra inmediata" : "Sin stock disponible",
@@ -473,7 +483,13 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
+              {/* TODO: cuando catalog-api esté integrada, reemplazar mockProducts por
+                  llamada real a la API. El sellerId debe venir en la respuesta del producto. */}
+              <TouchableOpacity onPress={() => router.push(`/user/${product.sellerId}`)}>
+                <Text style={[styles.sellerText, { textDecorationLine: 'underline' }]}>
+                  Vendido por {product.seller}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.stockRow}>
                 <View style={styles.categoryPill}>
