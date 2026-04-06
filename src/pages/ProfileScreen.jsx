@@ -26,7 +26,8 @@ import {
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 
-const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?background=69BDB6&color=fff&size=128&name='
+const PLACEHOLDER_AVATAR =
+  'https://ui-avatars.com/api/?background=69BDB6&color=fff&size=128&name='
 
 const MENU_ITEMS = [
   { key: 'Perfil', emoji: '👤' },
@@ -37,7 +38,13 @@ const MENU_ITEMS = [
 
 export default function ProfileScreen() {
   const router = useRouter()
-  const { activeTab: requestedActiveTab, refreshCatalog } = useLocalSearchParams()
+  const {
+    activeTab: requestedActiveTab,
+    refreshCatalog,
+    productId: requestedProductId,
+    openEdit: requestedOpenEdit,
+  } = useLocalSearchParams()
+
   const [activeTab, setActiveTab] = useState('Perfil')
   const [isMenuOpen, setIsMenuOpen] = useState(true)
 
@@ -56,10 +63,24 @@ export default function ProfileScreen() {
   const [activeProductsSummaryError, setActiveProductsSummaryError] = useState('')
   const [checkingSession, setCheckingSession] = useState(true)
 
-  const refreshCatalogKey = Array.isArray(refreshCatalog) ? refreshCatalog[0] : refreshCatalog
+  const refreshCatalogKey = Array.isArray(refreshCatalog)
+    ? refreshCatalog[0]
+    : refreshCatalog
+
   const normalizedRequestedTab = Array.isArray(requestedActiveTab)
     ? requestedActiveTab[0]
     : requestedActiveTab
+
+  const normalizedRequestedProductId = Array.isArray(requestedProductId)
+    ? requestedProductId[0]
+    : requestedProductId
+
+  const normalizedRequestedOpenEdit = Array.isArray(requestedOpenEdit)
+    ? requestedOpenEdit[0]
+    : requestedOpenEdit
+
+  const shouldOpenSalesEdit =
+    normalizedRequestedOpenEdit === 'true' && !!normalizedRequestedProductId
 
   const applyProfileData = useCallback((nextProfile) => {
     setProfile(nextProfile)
@@ -99,6 +120,8 @@ export default function ProfileScreen() {
             buildLoginRedirect({
               redirectPath: '/profile',
               activeTab: normalizedRequestedTab,
+              productId: normalizedRequestedProductId,
+              openEdit: normalizedRequestedOpenEdit,
             })
           )
           return
@@ -124,7 +147,13 @@ export default function ProfileScreen() {
     return () => {
       cancelled = true
     }
-  }, [applyProfileData, normalizedRequestedTab, router])
+  }, [
+    applyProfileData,
+    normalizedRequestedOpenEdit,
+    normalizedRequestedProductId,
+    normalizedRequestedTab,
+    router,
+  ])
 
   useEffect(() => {
     if (checkingSession || !refreshCatalogKey) {
@@ -138,19 +167,34 @@ export default function ProfileScreen() {
           buildLoginRedirect({
             redirectPath: '/profile',
             activeTab: normalizedRequestedTab,
+            productId: normalizedRequestedProductId,
+            openEdit: normalizedRequestedOpenEdit,
           })
         )
       }
     }
 
     refreshProfileIfNeeded()
-  }, [checkingSession, loadProfile, normalizedRequestedTab, refreshCatalogKey, router])
+  }, [
+    checkingSession,
+    loadProfile,
+    normalizedRequestedOpenEdit,
+    normalizedRequestedProductId,
+    normalizedRequestedTab,
+    refreshCatalogKey,
+    router,
+  ])
 
   useEffect(() => {
     if (normalizedRequestedTab && MENU_ITEMS.some(({ key }) => key === normalizedRequestedTab)) {
       setActiveTab(normalizedRequestedTab)
+      return
     }
-  }, [normalizedRequestedTab])
+
+    if (shouldOpenSalesEdit) {
+      setActiveTab('Ventas')
+    }
+  }, [normalizedRequestedTab, shouldOpenSalesEdit])
 
   const loadActiveProductsSummary = useCallback(async () => {
     if (!profile?.id) {
@@ -172,7 +216,10 @@ export default function ProfileScreen() {
       setActiveProductsSummary(products)
     } catch (error) {
       setActiveProductsSummaryError(
-        getCatalogErrorMessage(error, 'No pudimos cargar el resumen de publicaciones activas.')
+        getCatalogErrorMessage(
+          error,
+          'No pudimos cargar el resumen de publicaciones activas.'
+        )
       )
     } finally {
       setLoadingActiveProductsSummary(false)
@@ -204,20 +251,25 @@ export default function ProfileScreen() {
 
   function validate() {
     const errors = {}
+
     if (fullName.trim().length > 0 && fullName.trim().length < 2) {
       errors.fullName = 'El nombre debe tener al menos 2 caracteres'
     }
+
     if (fullName.trim().length > 50) {
       errors.fullName = 'El nombre no puede superar los 50 caracteres'
     }
+
     if (description.length > 500) {
       errors.description = 'La descripción no puede superar los 500 caracteres'
     }
+
     return errors
   }
 
   async function handlePickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
     if (status !== 'granted') {
       Alert.alert('Permiso denegado', 'Necesitamos acceso a tu galería.')
       return
@@ -248,8 +300,14 @@ export default function ProfileScreen() {
     } else {
       const uriParts = localUri.split('.')
       const ext = uriParts[uriParts.length - 1]?.toLowerCase() ?? 'jpg'
-      const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
-      formData.append('avatar', { uri: localUri, name: `avatar.${ext}`, type: mimeType })
+      const mimeType =
+        ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+
+      formData.append('avatar', {
+        uri: localUri,
+        name: `avatar.${ext}`,
+        type: mimeType,
+      })
     }
 
     const token = await AsyncStorage.getItem('token')
@@ -259,6 +317,7 @@ export default function ProfileScreen() {
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     })
+
     const data = await res.json()
     if (!res.ok) throw new Error(data.detail ?? 'Error al subir la imagen')
     return data.avatarUrl
@@ -279,13 +338,15 @@ export default function ProfileScreen() {
 
     try {
       let finalAvatarUrl = profile?.avatarUrl
-      const isLocalUri = avatarUri && (
-        avatarUri.startsWith('blob:') ||
-        avatarUri.startsWith('data:') ||
-        avatarUri.startsWith('file')
-      )
+      const isLocalUri =
+        avatarUri &&
+        (avatarUri.startsWith('blob:') ||
+          avatarUri.startsWith('data:') ||
+          avatarUri.startsWith('file'))
 
-      if (isLocalUri) finalAvatarUrl = await uploadAvatarToBackend(avatarUri)
+      if (isLocalUri) {
+        finalAvatarUrl = await uploadAvatarToBackend(avatarUri)
+      }
 
       const payload = {
         fullName: fullName.trim(),
@@ -299,8 +360,14 @@ export default function ProfileScreen() {
       setSaveSuccess('¡Perfil actualizado con éxito!')
       setEditing(false)
     } catch (err) {
-      const msg = err.response?.data?.detail || err.message || 'Error al actualizar el perfil'
-      setSaveError(typeof msg === 'string' ? msg : 'Error de validación en los datos.')
+      const msg =
+        err.response?.data?.detail ||
+        err.message ||
+        'Error al actualizar el perfil'
+
+      setSaveError(
+        typeof msg === 'string' ? msg : 'Error de validación en los datos.'
+      )
     } finally {
       setSaving(false)
     }
@@ -316,11 +383,15 @@ export default function ProfileScreen() {
     setEditing(false)
   }
 
+  const handleGoToSalesTab = useCallback(() => {
+    setActiveTab('Ventas')
+  }, [])
+
   const renderActiveProductsSummary = () => (
     <View style={styles.summarySection}>
       <View style={styles.summaryHeader}>
         <Text style={styles.sectionTitle}>Publicaciones activas</Text>
-        <TouchableOpacity onPress={() => setActiveTab('Ventas')}>
+        <TouchableOpacity onPress={handleGoToSalesTab}>
           <Text style={styles.summaryAction}>Ver ventas</Text>
         </TouchableOpacity>
       </View>
@@ -339,11 +410,17 @@ export default function ProfileScreen() {
         </View>
       ) : activeProductsSummary.length === 0 ? (
         <View style={styles.summaryMessageCard}>
-          <Text style={styles.summaryEmptyTitle}>Todavía no tenés publicaciones activas.</Text>
-          <Text style={styles.summaryEmptyText}>
-            Publicá tu primer producto para que empiece a aparecer en tu perfil y en Home.
+          <Text style={styles.summaryEmptyTitle}>
+            Todavía no tenés publicaciones activas.
           </Text>
-          <TouchableOpacity style={styles.summaryPublishButton} onPress={handleOpenPublish}>
+          <Text style={styles.summaryEmptyText}>
+            Publicá tu primer producto para que empiece a aparecer en tu perfil y en
+            Home.
+          </Text>
+          <TouchableOpacity
+            style={styles.summaryPublishButton}
+            onPress={handleOpenPublish}
+          >
             <Text style={styles.summaryPublishButtonText}>Publicar ahora</Text>
           </TouchableOpacity>
         </View>
@@ -354,7 +431,7 @@ export default function ProfileScreen() {
               key={product.id}
               style={styles.summaryRow}
               activeOpacity={0.9}
-              onPress={() => setActiveTab('Ventas')}
+              onPress={handleGoToSalesTab}
             >
               <Image
                 source={{ uri: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER }}
@@ -386,6 +463,8 @@ export default function ProfileScreen() {
           sellerId={profile?.id}
           refreshKey={refreshCatalogKey}
           onOpenPublish={handleOpenPublish}
+          initialProductId={normalizedRequestedProductId ?? null}
+          initialOpenEdit={shouldOpenSalesEdit}
         />
       )
     }
@@ -418,11 +497,18 @@ export default function ProfileScreen() {
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             <Image
-              source={{ uri: avatarUri || `${PLACEHOLDER_AVATAR}${encodeURIComponent(fullName || 'U')}` }}
+              source={{
+                uri:
+                  avatarUri ||
+                  `${PLACEHOLDER_AVATAR}${encodeURIComponent(fullName || 'U')}`,
+              }}
               style={styles.avatarLarge}
             />
             {editing && (
-              <TouchableOpacity style={styles.changePhotoOverlay} onPress={handlePickImage}>
+              <TouchableOpacity
+                style={styles.changePhotoOverlay}
+                onPress={handlePickImage}
+              >
                 <Text style={styles.changePhotoText}>Cambiar foto</Text>
               </TouchableOpacity>
             )}
@@ -451,7 +537,9 @@ export default function ProfileScreen() {
                 placeholder="Ingresá tu nombre"
                 placeholderTextColor={COLORS.textMuted}
               />
-              {fieldErrors.fullName ? <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text> : null}
+              {fieldErrors.fullName ? (
+                <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text>
+              ) : null}
             </>
           ) : (
             <View style={styles.readonlyField}>
@@ -465,7 +553,11 @@ export default function ProfileScreen() {
           {editing ? (
             <>
               <TextInput
-                style={[styles.input, styles.textArea, fieldErrors.description && styles.inputError]}
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  fieldErrors.description && styles.inputError,
+                ]}
                 value={description}
                 onChangeText={(v) => {
                   setDescription(v)
@@ -477,7 +569,9 @@ export default function ProfileScreen() {
                 placeholderTextColor={COLORS.textMuted}
               />
               <Text style={styles.charCount}>{description.length}/500</Text>
-              {fieldErrors.description ? <Text style={styles.fieldErrorText}>{fieldErrors.description}</Text> : null}
+              {fieldErrors.description ? (
+                <Text style={styles.fieldErrorText}>{fieldErrors.description}</Text>
+              ) : null}
             </>
           ) : (
             <View style={styles.readonlyField}>
@@ -536,17 +630,20 @@ export default function ProfileScreen() {
             <View style={styles.hamburgerLine} />
             <View style={styles.hamburgerLine} />
           </TouchableOpacity>
-  
+
           <View style={styles.logoCenter}>
             <Logo size={30} textSize={28} />
           </View>
-  
-          <TouchableOpacity style={styles.homeButton} onPress={() => router.replace('/')}>
+
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => router.replace('/')}
+          >
             <Text style={styles.homeButtonText}>Inicio</Text>
           </TouchableOpacity>
         </View>
       </View>
-  
+
       <View style={styles.mainWrapper}>
         {isMenuOpen && (
           <View style={styles.sidebar}>
@@ -554,26 +651,32 @@ export default function ProfileScreen() {
             {MENU_ITEMS.map(({ key, emoji }) => (
               <TouchableOpacity
                 key={key}
-                style={[styles.sidebarItem, activeTab === key && styles.sidebarItemActive]}
+                style={[
+                  styles.sidebarItem,
+                  activeTab === key && styles.sidebarItemActive,
+                ]}
                 onPress={() => setActiveTab(key)}
               >
                 <Text style={styles.sidebarEmoji}>{emoji}</Text>
-                <Text style={[styles.sidebarText, activeTab === key && styles.sidebarTextActive]}>
+                <Text
+                  style={[
+                    styles.sidebarText,
+                    activeTab === key && styles.sidebarTextActive,
+                  ]}
+                >
                   {key}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
         )}
-  
+
         <ScrollView
           style={styles.contentArea}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.containerCenter}>
-            {renderMainContent()}
-          </View>
+          <View style={styles.containerCenter}>{renderMainContent()}</View>
         </ScrollView>
       </View>
     </View>
@@ -600,7 +703,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: 14,
   },
-  
+
   topHeaderContent: {
     width: '100%',
     maxWidth: 1280,

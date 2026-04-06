@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   View,
@@ -39,7 +39,13 @@ function StateSwitch({ value, onToggle }) {
   )
 }
 
-export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
+export default function VentasTab({
+  sellerId,
+  refreshKey,
+  onOpenPublish,
+  initialProductId = null,
+  initialOpenEdit = false,
+}) {
   const [busqueda, setBusqueda] = useState('')
   const [filtrosActivos, setFiltrosActivos] = useState(['activa', 'inactiva'])
   const [publicaciones, setPublicaciones] = useState([])
@@ -48,6 +54,8 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
   const [loadingEditProduct, setLoadingEditProduct] = useState(false)
+
+  const alreadyAutoOpenedRef = useRef('')
 
   const loadPublicaciones = useCallback(async () => {
     if (!sellerId) {
@@ -125,7 +133,7 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     onOpenPublish?.()
   }
 
-  async function handleEditarPublicacion(pub) {
+  const handleEditarPublicacion = useCallback(async (pub) => {
     if (!pub?.id) return
 
     setLoadingEditProduct(true)
@@ -147,7 +155,41 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     } finally {
       setLoadingEditProduct(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!initialOpenEdit || !initialProductId) {
+      return
+    }
+
+    if (loadingPublicaciones || publicaciones.length === 0) {
+      return
+    }
+
+    const autoOpenKey = `${sellerId}-${initialProductId}-${refreshKey ?? 'base'}`
+    if (alreadyAutoOpenedRef.current === autoOpenKey) {
+      return
+    }
+
+    const publicacionObjetivo = publicaciones.find(
+      (pub) => String(pub.id) === String(initialProductId)
+    )
+
+    if (!publicacionObjetivo) {
+      return
+    }
+
+    alreadyAutoOpenedRef.current = autoOpenKey
+    handleEditarPublicacion(publicacionObjetivo)
+  }, [
+    handleEditarPublicacion,
+    initialOpenEdit,
+    initialProductId,
+    loadingPublicaciones,
+    publicaciones,
+    refreshKey,
+    sellerId,
+  ])
 
   function handleCloseModal() {
     setEditModalVisible(false)

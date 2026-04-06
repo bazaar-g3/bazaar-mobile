@@ -29,4 +29,5 @@ export const COLORS = {
   imagePlaceholder: '#EFEFEF',
   promoLight: '#DFF7F4',
   shadow: '#000',
-}
+
+  lightPurple: '#ded1ff',}
