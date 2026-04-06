@@ -221,3 +221,46 @@ export async function listRecommendedProducts() {
     offset: 0,
   })
 }
+
+export async function updateSellerProductStatus({ productId, enabled }) {
+  const token = await AsyncStorage.getItem('token')
+  if (!token) {
+    const error = new Error('No autenticado')
+    error.status = 401
+    throw error
+  }
+
+  const response = await fetch(
+    `${getCatalogApiBaseUrl()}/products/${productId}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: enabled ? 'active' : 'disabled',
+      }),
+    }
+  )
+
+  let data = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      typeof data?.detail === 'string'
+        ? data.detail
+        : 'No se pudo actualizar el estado de la publicacion'
+    )
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+
+  return data?.product ?? null
+}
