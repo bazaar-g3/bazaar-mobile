@@ -21,6 +21,7 @@ import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
 import { COLORS } from "../constants/colors";
 import Logo from "../components/Logo";
 import { FONT } from "../constants/theme";
+import { getPublicProfile } from "../services/user";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -182,27 +183,6 @@ export default function ProductDetailScreen() {
     }
 
     completeAddToCart(quantity);
-  };
-
-  const handleBuyNow = async () => {
-    try {
-      const session = await getSessionStatus();
-
-      if (!session.isAuthenticated) {
-        router.push(
-          buildLoginRedirect({
-            redirectPath: `/product/${id}`,
-            pendingAction: "buy-now",
-            quantity,
-          })
-        );
-        return;
-      }
-
-      Alert.alert("Comprar ahora", "Redirigir a checkout.");
-    } catch {
-      Alert.alert("Error", "No se pudo verificar la sesión.");
-    }
   };
 
   const handleManagePublication = () => {
@@ -376,7 +356,11 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
+              <TouchableOpacity onPress={() => router.push(`/user/${product.sellerId}`)}>
+                <Text style={[styles.sellerText, { textDecorationLine: 'underline' }]}>
+                  Vendido por {product.seller}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.stockRow}>
                 <View style={styles.categoryPill}>
