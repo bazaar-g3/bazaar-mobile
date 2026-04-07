@@ -21,6 +21,7 @@ import {
   listProductCategories,
 } from "../services/catalog";
 import { COLORS } from "../constants/colors";
+import { SPACING, FONT } from "../constants/theme";
 import Logo from "../components/Logo";
 
 function formatPrice(value) {
