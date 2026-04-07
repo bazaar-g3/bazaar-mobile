@@ -16,7 +16,6 @@ import { registerForPushNotifications } from '../services/notifications'
 import { COLORS } from '../constants/colors'
 import Logo from '../components/Logo'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
-import OAuthButtons from '../components/OAuthButtons'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -154,11 +153,6 @@ export default function LoginScreen() {
               <Ionicons name="arrow-forward" size={18} color={COLORS.primary} />
             </View>
           </TouchableOpacity>
-
-          <OAuthButtons
-            onSuccess={() => router.replace(buildPostAuthDestination(params))}
-            onError={(msg) => setError(msg)}
-          />
 
           <TouchableOpacity
             onPress={() => router.push(buildAuthScreenNavigation('/register', params))}

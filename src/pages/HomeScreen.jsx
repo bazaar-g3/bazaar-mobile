@@ -439,24 +439,6 @@ export default function HomeScreen() {
               </ScrollView>
             )}
           </View>
-
-          <Text style={styles.sectionTitle}>
-            SECCIÓN DE <Text style={styles.sectionAccent}>OFERTAS Y DESCUENTOS</Text>
-          </Text>
-
-          <TouchableOpacity style={styles.promoBanner} activeOpacity={0.9}>
-            <View style={styles.promoTextContainer}>
-              <Text style={styles.promoTag}>¡OFERTA ESPECIAL DE LA SEMANA!</Text>
-              <Text style={styles.promoTitle}>30% DTO.</Text>
-              <Text style={styles.promoSubtitle}>
-                Licuadora Ninja Pro{"\n"}¡Solo por tiempo limitado!
-              </Text>
-              <View style={styles.promoButton}>
-                <Text style={styles.promoButtonText}>COMPRAR AHORA</Text>
-              </View>
-            </View>
-            <Text style={styles.promoEmoji}>🥤</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -748,55 +730,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  promoBanner: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  promoTextContainer: {
-    flex: 1,
-  },
-
-  promoTag: {
-    color: COLORS.dark,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-
-  promoTitle: {
-    fontSize: 40,
-    fontWeight: "900",
-    color: COLORS.dark,
-  },
-
-  promoSubtitle: {
-    fontSize: 14,
-    color: COLORS.dark,
-    marginBottom: 10,
-  },
-
-  promoButton: {
-    backgroundColor: COLORS.dark,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-  },
-
-  promoButtonText: {
-    color: COLORS.white,
-    fontWeight: "bold",
-    fontSize: 12,
-  },
-
-  promoEmoji: {
-    fontSize: 60,
-  },
-
   dropdownOverlay: {
     flex: 1,
   },
@@ -838,7 +771,7 @@ const styles = StyleSheet.create({
   },
 
   modalPrimaryButton: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: COLORS.logoA2,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,
@@ -853,7 +786,7 @@ const styles = StyleSheet.create({
   },
 
   modalSecondaryButton: {
-    backgroundColor: "#EDF5F4",
+    backgroundColor: COLORS.lightPink,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 18,

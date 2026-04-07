@@ -18,143 +18,9 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
-import { getPublicProfile } from "../services/user";
 import { COLORS } from "../constants/colors";
-
-const mockProducts = [
-  {
-    id: "1",
-    name: "Auriculares Bluetooth",
-    price: 25000,
-    image: "https://via.placeholder.com/500x350.png?text=Auriculares",
-    categoryId: "1",
-    categoryName: "Tecnología",
-    sellerId: 1,
-    description:
-      "Auriculares inalámbricos con sonido envolvente, batería de larga duración y diseño cómodo para uso diario.",
-    stock: 8,
-    seller: "Tech Store",
-    features: [
-      "Bluetooth 5.2",
-      "Cancelación de ruido",
-      "Micrófono integrado",
-    ],
-    rating: 4.8,
-    reviews: 312,
-  },
-  {
-    id: "2",
-    name: "Silla Gamer",
-    price: 120000,
-    image: "https://via.placeholder.com/500x350.png?text=Silla+Gamer",
-    categoryId: "2",
-    categoryName: "Hogar",
-    sellerId: 2,
-    description:
-      "Silla ergonómica con respaldo reclinable, apoyabrazos acolchados y excelente soporte lumbar.",
-    stock: 3,
-    seller: "Home Design",
-    features: ["Respaldo reclinable", "Soporte lumbar", "Apoyabrazos acolchados"],
-    rating: 4.7,
-    reviews: 128,
-  },
-  {
-    id: "3",
-    name: "Campera Nike",
-    price: 89000,
-    image: "https://via.placeholder.com/500x350.png?text=Campera",
-    categoryId: "3",
-    categoryName: "Ropa",
-    sellerId: 5,
-    description:
-      "Campera deportiva liviana, ideal para media estación, confeccionada con materiales resistentes.",
-    stock: 5,
-    seller: "Urban Wear",
-    features: ["Liviana", "Resistente", "Ideal media estación"],
-    rating: 4.6,
-    reviews: 95,
-  },
-  {
-    id: "4",
-    name: "Mochila Urbana",
-    price: 34000,
-    image: "https://via.placeholder.com/500x350.png?text=Mochila",
-    categoryId: "3",
-    categoryName: "Ropa",
-    sellerId: 3,
-    description:
-      "Mochila versátil con varios compartimentos, ideal para facultad, oficina o salidas de todos los días.",
-    stock: 10,
-    seller: "City Bags",
-    features: ["Múltiples compartimentos", "Uso diario", "Diseño urbano"],
-    rating: 4.5,
-    reviews: 201,
-  },
-  {
-    id: "5",
-    name: "Mouse Inalámbrico",
-    price: 18000,
-    image: "https://via.placeholder.com/500x350.png?text=Mouse",
-    categoryId: "1",
-    categoryName: "Tecnología",
-    sellerId: 1,
-    description:
-      "Mouse inalámbrico compacto, preciso y liviano, con conexión estable y excelente autonomía.",
-    stock: 15,
-    seller: "Tech Store",
-    features: ["Compacto", "Preciso", "Gran autonomía"],
-    rating: 4.9,
-    reviews: 410,
-  },
-  {
-    id: "6",
-    name: "Zapatillas Adidas",
-    price: 76000,
-    image: "https://via.placeholder.com/500x350.png?text=Zapatillas",
-    categoryId: "4",
-    categoryName: "Deportes",
-    sellerId: 4,
-    description:
-      "Zapatillas deportivas con gran amortiguación, pensadas para entrenamiento y uso urbano.",
-    stock: 6,
-    seller: "Sport House",
-    features: ["Gran amortiguación", "Entrenamiento", "Uso urbano"],
-    rating: 4.8,
-    reviews: 278,
-  },
-  {
-    id: "7",
-    name: "Lámpara LED",
-    price: 21000,
-    image: "https://via.placeholder.com/500x350.png?text=Lampara",
-    categoryId: "2",
-    categoryName: "Hogar",
-    sellerId: 2,
-    description:
-      "Lámpara LED moderna de bajo consumo, perfecta para escritorio o mesa de luz.",
-    stock: 4,
-    seller: "Home Design",
-    features: ["Bajo consumo", "Diseño moderno", "Ideal escritorio"],
-    rating: 4.4,
-    reviews: 77,
-  },
-  {
-    id: "8",
-    name: "Pelota de fútbol",
-    price: 15000,
-    image: "https://via.placeholder.com/500x350.png?text=Pelota",
-    categoryId: "4",
-    categoryName: "Deportes",
-    sellerId: 4,
-    description:
-      "Pelota resistente para entrenamiento y recreación, con excelente terminación y durabilidad.",
-    stock: 12,
-    seller: "Sport House",
-    features: ["Resistente", "Entrenamiento", "Alta durabilidad"],
-    rating: 4.7,
-    reviews: 166,
-  },
-];
+import Logo from "../components/Logo";
+import { FONT } from "../constants/theme";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -162,6 +28,7 @@ export default function ProductDetailScreen() {
   const id = normalizeRouteParam(params.id);
   const pendingAction = normalizeRouteParam(params.pendingAction);
   const pendingQuantity = normalizeRouteParam(params.quantity);
+
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [catalogProduct, setCatalogProduct] = useState(null);
@@ -170,15 +37,11 @@ export default function ProductDetailScreen() {
   const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
-  const mockProduct = useMemo(() => {
-    return mockProducts.find((item) => item.id === String(id));
-  }, [id]);
-
   useEffect(() => {
     let cancelled = false;
 
     async function loadCatalogProduct() {
-      if (mockProduct || !id) {
+      if (!id) {
         setCatalogProduct(null);
         setLoadingCatalogProduct(false);
         return;
@@ -188,22 +51,26 @@ export default function ProductDetailScreen() {
 
       try {
         const product = await getCatalogProduct(String(id));
+
         if (!cancelled && product) {
-          const sellerProfile = await getPublicProfile(product.sellerId);
           setCatalogProduct({
             id: String(product.id),
             sellerId: Number(product.sellerId),
             name: product.name,
             price: Number(product.price) || 0,
-            images: product.images?.length ? product.images : [PRODUCT_IMAGE_PLACEHOLDER],
+            images: product.images?.length
+              ? product.images
+              : [PRODUCT_IMAGE_PLACEHOLDER],
             image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
             categoryName: product.category?.label || "Catalogo",
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
-            seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
+            seller: `Vendedor #${product.sellerId}`,
             features: [
               `Categoria: ${product.category?.label || "Catalogo"}`,
-              product.stock > 0 ? "Disponible para compra inmediata" : "Sin stock disponible",
+              product.stock > 0
+                ? "Disponible para compra inmediata"
+                : "Sin stock disponible",
               "Publicacion cargada desde el catalogo real",
             ],
             rating: "Nuevo",
@@ -228,7 +95,7 @@ export default function ProductDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, mockProduct]);
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -261,7 +128,8 @@ export default function ProductDetailScreen() {
     };
   }, []);
 
-  const product = mockProduct || catalogProduct;
+  const product = catalogProduct;
+
   const isOwnProduct =
     currentUserId !== null &&
     product?.sellerId !== undefined &&
@@ -300,7 +168,7 @@ export default function ProductDetailScreen() {
       }
 
       return true;
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "No se pudo verificar la sesión.");
       return false;
     }
@@ -332,9 +200,20 @@ export default function ProductDetailScreen() {
       }
 
       Alert.alert("Comprar ahora", "Redirigir a checkout.");
-    } catch (error) {
+    } catch {
       Alert.alert("Error", "No se pudo verificar la sesión.");
     }
+  };
+
+  const handleManagePublication = () => {
+    router.push({
+      pathname: "/profile",
+      params: {
+        section: "sales",
+        productId: String(product.id),
+        openEdit: "true",
+      },
+    });
   };
 
   const handleLoginRedirect = () => {
@@ -354,6 +233,7 @@ export default function ProductDetailScreen() {
     }
 
     const actionKey = `${product.id}:${pendingAction}:${pendingQuantity || "1"}`;
+
     if (handledPendingActionKey === actionKey) {
       return;
     }
@@ -362,6 +242,7 @@ export default function ProductDetailScreen() {
 
     async function resumePendingAction() {
       const token = await AsyncStorage.getItem("token");
+
       if (!token || cancelled) {
         return;
       }
@@ -374,6 +255,7 @@ export default function ProductDetailScreen() {
 
         setHandledPendingActionKey(actionKey);
         setQuantity(restoredQuantity);
+
         completeAddToCart(restoredQuantity, () => {
           router.replace(`/product/${id}`);
         });
@@ -429,10 +311,21 @@ export default function ProductDetailScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.safeArea}>
+        <View style={styles.topHeader}>
+          <View style={styles.topHeaderContent}>
+
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.headerBack}>← Volver</Text>
+            </TouchableOpacity>
+
+            <View style={styles.logoCenter}>
+              <Logo size={32} textSize={30} />
+            </View>
+
+          </View>
+        </View>
+
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.8}>
-            <Text style={styles.backButton}>← Volver</Text>
-          </TouchableOpacity>
 
           <View style={styles.breadcrumb}>
             <Text style={styles.breadcrumbText}>
@@ -483,13 +376,7 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              {/* TODO: cuando catalog-api esté integrada, reemplazar mockProducts por
-                  llamada real a la API. El sellerId debe venir en la respuesta del producto. */}
-              <TouchableOpacity onPress={() => router.push(`/user/${product.sellerId}`)}>
-                <Text style={[styles.sellerText, { textDecorationLine: 'underline' }]}>
-                  Vendido por {product.seller}
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.sellerText}>Vendido por {product.seller}</Text>
 
               <View style={styles.stockRow}>
                 <View style={styles.categoryPill}>
@@ -508,37 +395,47 @@ export default function ProductDetailScreen() {
                 ))}
               </View>
 
-              <View style={styles.quantitySection}>
-                <Text style={styles.quantityLabel}>Cantidad</Text>
-                <View style={styles.quantitySelector}>
-                  <TouchableOpacity
-                    onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                    style={styles.qtyBtn}
-                  >
-                    <Text style={styles.qtyBtnText}>-</Text>
-                  </TouchableOpacity>
+              {!isOwnProduct ? (
+                <View style={styles.quantitySection}>
+                  <Text style={styles.quantityLabel}>Cantidad</Text>
+                  <View style={styles.quantitySelector}>
+                    <TouchableOpacity
+                      onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                      style={styles.qtyBtn}
+                    >
+                      <Text style={styles.qtyBtnText}>-</Text>
+                    </TouchableOpacity>
 
-                  <Text style={styles.qtyValue}>{quantity}</Text>
+                    <Text style={styles.qtyValue}>{quantity}</Text>
 
-                  <TouchableOpacity
-                    onPress={() => setQuantity(quantity + 1)}
-                    style={styles.qtyBtn}
-                  >
-                    <Text style={styles.qtyBtnText}>+</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setQuantity(quantity + 1)}
+                      style={styles.qtyBtn}
+                    >
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
+              ) : null}
 
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.cartButton}
-                  onPress={handleAddToCart}
-                  activeOpacity={0.9}
-                >
-                  <Text style={styles.cartButtonText}>
-                    {isOwnProduct ? "PRODUCTO PROPIO" : "AÑADIR AL CARRITO"}
-                  </Text>
-                </TouchableOpacity>
+                {isOwnProduct ? (
+                  <TouchableOpacity
+                    style={styles.manageButton}
+                    onPress={handleManagePublication}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.manageButtonText}>GESTIONAR PUBLICACIÓN</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.cartButton}
+                    onPress={handleAddToCart}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.cartButtonText}>AÑADIR AL CARRITO</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -855,6 +752,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
+  manageButton: {
+    backgroundColor: COLORS.logoA2,
+    paddingVertical: 15,
+    paddingHorizontal: 22,
+    borderRadius: 14,
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: COLORS.lightPurple,
+  },
+
+  manageButtonText: {
+    color: COLORS.lightPurple,
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
   shippingInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1014,5 +928,35 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: COLORS.primaryLight,
+  },
+
+  topHeader: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: 16,
+    paddingVertical: 25,
+  },
+
+  topHeaderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+  },
+
+  logoCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+
+  headerBack: {
+    fontSize: FONT.medium,
+    fontWeight: "700",
+    color: COLORS.primary,
+    zIndex: 2,
   },
 });

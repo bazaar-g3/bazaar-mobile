@@ -221,3 +221,169 @@ export async function listRecommendedProducts() {
     offset: 0,
   })
 }
+
+export async function updateSellerProductStatus({ productId, enabled }) {
+  const token = await AsyncStorage.getItem('token')
+  if (!token) {
+    const error = new Error('No autenticado')
+    error.status = 401
+    throw error
+  }
+
+  const response = await fetch(
+    `${getCatalogApiBaseUrl()}/products/${productId}/status`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: enabled ? 'active' : 'disabled',
+      }),
+    }
+  )
+
+  let data = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      typeof data?.detail === 'string'
+        ? data.detail
+        : 'No se pudo actualizar el estado de la publicacion'
+    )
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+
+  return data?.product ?? null
+}
+
+export async function updateSellerProductStock({ productId, stock }) {
+  const token = await AsyncStorage.getItem('token')
+  if (!token) {
+    const error = new Error('No autenticado')
+    error.status = 401
+    throw error
+  }
+
+  const response = await fetch(
+    `${getCatalogApiBaseUrl()}/products/${productId}/stock`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        stock,
+      }),
+    }
+  )
+
+  let data = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      typeof data?.detail === 'string'
+        ? data.detail
+        : 'No se pudo actualizar el stock de la publicacion'
+    )
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+
+  return data?.product ?? null
+}
+
+export async function updateSellerProduct({
+  productId,
+  name,
+  description,
+  price,
+  stock,
+  category,
+  images,
+  status,
+}) {
+  const token = await AsyncStorage.getItem('token')
+  if (!token) {
+    const error = new Error('No autenticado')
+    error.status = 401
+    throw error
+  }
+
+  const body = {}
+
+  if (typeof name === 'string' && name.trim() !== '') {
+    body.name = name.trim()
+  }
+
+  if (typeof description === 'string' && description.trim() !== '') {
+    body.description = description.trim()
+  }
+
+  if (price !== undefined && price !== null && price !== '') {
+    body.price = Number(price)
+  }
+
+  if (stock !== undefined && stock !== null && stock !== '') {
+    body.stock = Number(stock)
+  }
+
+  if (typeof category === 'string' && category.trim() !== '') {
+    body.categorySlug = category.trim()
+  }
+
+  if (Array.isArray(images) && images.length > 0) {
+    body.images = images
+  }
+
+  if (status !== undefined) {
+    body.status = status
+  }
+
+  const response = await fetch(
+    `${getCatalogApiBaseUrl()}/products/${productId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    }
+  )
+
+  let data = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      typeof data?.detail === 'string'
+        ? data.detail
+        : 'No se pudo actualizar la publicacion'
+    )
+    error.status = response.status
+    error.data = data
+    throw error
+  }
+
+  return data?.product ?? null
+}

@@ -22,6 +22,7 @@ import {
 } from "../services/catalog";
 import { COLORS } from "../constants/colors";
 import Logo from "../components/Logo";
+import { FONT } from "../constants/theme";
 
 function formatPrice(value) {
   return `$${Number(value || 0).toLocaleString("es-AR")}`;
@@ -72,11 +73,6 @@ export default function ProductListScreen() {
   const [productsError, setProductsError] = useState("");
   const [categoriesError, setCategoriesError] = useState("");
 
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const LIMIT = 20;
-
   const loadCategories = useCallback(async () => {
     setLoadingCategories(true);
     setCategoriesError("");
@@ -106,48 +102,96 @@ export default function ProductListScreen() {
     }
   }, []);
 
-  const loadProducts = useCallback(async (currentOffset = 0, replace = true) => {
-    if (replace) {
-      setLoadingProducts(true);
-    } else {
-      setLoadingMore(true);
-    }
+  const loadProducts = useCallback(async () => {
+    setLoadingProducts(true);
     setProductsError("");
 
     try {
       const requestParams = {
         status: "active",
         onlyAvailable: true,
-        limit: LIMIT,
-        offset: currentOffset,
+        limit: 50,
+        offset: 0,
       };
 
-      if (search) requestParams.search = search;
-      if (categorySlug) requestParams.category = categorySlug; // fix CA2 también
-      if (sortBy === "recent" || section === "recommended") requestParams.sort = "recent";
+      if (search) {
+        requestParams.search = search;
+      }
+
+      if (categorySlug) {
+        requestParams.categorySlug = categorySlug;
+      } else if (categoryId) {
+        requestParams.categoryId = categoryId;
+      }
+
+      if (sortBy === "recent" || section === "recommended") {
+        requestParams.sort = "recent";
+      }
 
       const response = await listCatalogProducts(requestParams);
-      const mappedProducts = response.map((product) =>
-        mapProductToListItem(product, { recommended: section === "recommended" })
+
+      let mappedProducts = response.map((product) =>
+        mapProductToListItem(product, {
+          recommended: section === "recommended",
+        })
       );
 
-      setProducts((prev) => replace ? mappedProducts : [...prev, ...mappedProducts]);
-      setHasMore(response.length === LIMIT);
-      setOffset(currentOffset);
+      if (categorySlug || categoryId || categoryName) {
+        mappedProducts = mappedProducts.filter((product) => {
+          const normalizedProductCategoryId = String(product.categoryId || "");
+          const normalizedProductCategorySlug = String(product.categorySlug || "");
+          const normalizedProductCategoryName = String(product.categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          const normalizedSelectedCategoryId = String(categoryId || "");
+          const normalizedSelectedCategorySlug = String(categorySlug || "");
+          const normalizedSelectedCategoryName = String(categoryName || "")
+            .trim()
+            .toLowerCase();
+
+          if (
+            normalizedSelectedCategorySlug &&
+            normalizedProductCategorySlug === normalizedSelectedCategorySlug
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryId &&
+            normalizedProductCategoryId === normalizedSelectedCategoryId
+          ) {
+            return true;
+          }
+
+          if (
+            normalizedSelectedCategoryName &&
+            normalizedProductCategoryName === normalizedSelectedCategoryName
+          ) {
+            return true;
+          }
+
+          return false;
+        });
+      }
+
+      if (section === "recommended") {
+        mappedProducts = mappedProducts.slice(0, 10);
+      }
+
+      setProducts(mappedProducts);
     } catch (error) {
-      setProductsError(getCatalogErrorMessage(error, "No pudimos cargar los productos por el momento."));
-      if (replace) setProducts([]);
+      setProductsError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar los productos por el momento."
+        )
+      );
+      setProducts([]);
     } finally {
       setLoadingProducts(false);
-      setLoadingMore(false);
     }
-  }, [search, categorySlug, sortBy, section]);
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadProducts(offset + LIMIT, false);
-    }
-  };
+  }, [search, categoryId, categorySlug, categoryName, sortBy, section]);
 
   useEffect(() => {
     setSearchText(search ? String(search) : "");
@@ -411,15 +455,6 @@ export default function ProductListScreen() {
               ))}
             </View>
           )}
-
-          {hasMore && !loadingProducts && (
-            <TouchableOpacity style={styles.loadMoreButton} onPress={loadMore}>
-              {loadingMore
-                ? <ActivityIndicator color={COLORS.white} />
-                : <Text style={styles.loadMoreText}>Cargar más productos</Text>
-              }
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -443,7 +478,7 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    fontSize: 14,
+    fontSize: FONT.medium,
     fontWeight: "700",
     color: COLORS.dark,
     marginBottom: 10,

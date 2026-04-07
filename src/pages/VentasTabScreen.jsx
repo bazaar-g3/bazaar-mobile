@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   View,
@@ -10,21 +10,52 @@ import {
 } from 'react-native'
 import {
   getCatalogErrorMessage,
+  getCatalogProduct,
   isRemoteImage,
   listSellerProducts,
   mapCatalogProductToVentasItem,
+  updateSellerProductStatus,
+  updateSellerProductStock,
+  updateSellerProduct,
 } from '../services/catalog'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
+import EditProductModal from '../components/EditProductModal'
+import EditableStockStepper from '../components/EditableStockStepper'
 
 const FILTROS = ['activa', 'inactiva']
 
-export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
+function StateSwitch({ value, onToggle }) {
+  return (
+    <TouchableOpacity
+      onPress={onToggle}
+      activeOpacity={0.85}
+      style={[styles.switchTrack, value ? styles.switchTrackOn : styles.switchTrackOff]}
+    >
+      <View
+        style={[styles.switchThumb, value ? styles.switchThumbOn : styles.switchThumbOff]}
+      />
+    </TouchableOpacity>
+  )
+}
+
+export default function VentasTab({
+  sellerId,
+  refreshKey,
+  onOpenPublish,
+  initialProductId = null,
+  initialOpenEdit = false,
+}) {
   const [busqueda, setBusqueda] = useState('')
   const [filtrosActivos, setFiltrosActivos] = useState(['activa', 'inactiva'])
   const [publicaciones, setPublicaciones] = useState([])
   const [loadingPublicaciones, setLoadingPublicaciones] = useState(true)
   const [publicacionesError, setPublicacionesError] = useState('')
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
+  const [loadingEditProduct, setLoadingEditProduct] = useState(false)
+
+  const alreadyAutoOpenedRef = useRef('')
 
   const loadPublicaciones = useCallback(async () => {
     if (!sellerId) {
@@ -64,6 +95,223 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
     )
   }
 
+  async function handleTogglePublicacion(id) {
+    const pub = publicaciones.find((p) => p.id === id)
+    if (!pub) return
+
+    const nuevoEnabled = pub.estado !== 'activa'
+
+    try {
+      const updatedProduct = await updateSellerProductStatus({
+        productId: id,
+        enabled: nuevoEnabled,
+      })
+
+      if (!updatedProduct) return
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+                stock: Number(updatedProduct.stock) || 0,
+                precio: Number(updatedProduct.price) || 0,
+                titulo: updatedProduct.name,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+              }
+            : p
+        )
+      )
+    } catch (error) {
+      console.error('Error al cambiar estado de la publicación:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo actualizar la publicación'))
+    }
+  }
+
+  function handleCrearPublicacion() {
+    onOpenPublish?.()
+  }
+
+  const handleEditarPublicacion = useCallback(async (pub) => {
+    if (!pub?.id) return
+
+    setLoadingEditProduct(true)
+    setEditModalVisible(true)
+    setPublicacionEnEdicion(null)
+
+    try {
+      const product = await getCatalogProduct(pub.id)
+
+      if (!product) {
+        throw new Error('No se pudo obtener el detalle del producto')
+      }
+
+      setPublicacionEnEdicion(product)
+    } catch (error) {
+      console.error('Error al cargar la publicación para editar:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo cargar la publicación'))
+      setEditModalVisible(false)
+    } finally {
+      setLoadingEditProduct(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!initialOpenEdit || !initialProductId) {
+      return
+    }
+
+    if (loadingPublicaciones || publicaciones.length === 0) {
+      return
+    }
+
+    const autoOpenKey = `${sellerId}-${initialProductId}-${refreshKey ?? 'base'}`
+    if (alreadyAutoOpenedRef.current === autoOpenKey) {
+      return
+    }
+
+    const publicacionObjetivo = publicaciones.find(
+      (pub) => String(pub.id) === String(initialProductId)
+    )
+
+    if (!publicacionObjetivo) {
+      return
+    }
+
+    alreadyAutoOpenedRef.current = autoOpenKey
+    handleEditarPublicacion(publicacionObjetivo)
+  }, [
+    handleEditarPublicacion,
+    initialOpenEdit,
+    initialProductId,
+    loadingPublicaciones,
+    publicaciones,
+    refreshKey,
+    sellerId,
+  ])
+
+  function handleCloseModal() {
+    setEditModalVisible(false)
+    setPublicacionEnEdicion(null)
+    setLoadingEditProduct(false)
+  }
+
+  async function handleSaveChanges(productoActualizado) {
+    if (!productoActualizado?.id) {
+      handleCloseModal()
+      return
+    }
+
+    try {
+      const updatedProduct = await updateSellerProduct({
+        productId: productoActualizado.id,
+        name: productoActualizado.name ?? productoActualizado.titulo,
+        description:
+          productoActualizado.description ?? productoActualizado.descripcion,
+        price: productoActualizado.price ?? productoActualizado.precio,
+        stock: productoActualizado.stock,
+        category:
+          productoActualizado.categorySlug ?? productoActualizado.categoria,
+        images: productoActualizado.images,
+      })
+
+      if (!updatedProduct) {
+        handleCloseModal()
+        return
+      }
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === updatedProduct.id
+            ? {
+                ...p,
+                titulo: updatedProduct.name ?? p.titulo,
+                precio:
+                  updatedProduct.price !== undefined
+                    ? Number(updatedProduct.price) || 0
+                    : p.precio,
+                stock:
+                  updatedProduct.stock !== undefined
+                    ? Number(updatedProduct.stock) || 0
+                    : p.stock,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+                images: updatedProduct.images ?? p.images,
+                categoria:
+                  updatedProduct.categorySlug ??
+                  updatedProduct.category ??
+                  p.categoria,
+                descripcion:
+                  updatedProduct.description ?? p.descripcion,
+                estado:
+                  updatedProduct.status === 'disabled'
+                    ? 'inactiva'
+                    : 'activa',
+              }
+            : p
+        )
+      )
+
+      handleCloseModal()
+    } catch (error) {
+      console.error('Error al editar la publicación:', {
+        message: error?.message,
+        status: error?.status,
+        data: error?.data,
+      })
+      alert(
+        getCatalogErrorMessage(
+          error,
+          error?.data?.detail || 'No se pudo guardar la edición'
+        )
+      )
+    }
+  }
+
+  async function handleUpdateStock(id, nuevoStock) {
+    const pub = publicaciones.find((p) => p.id === id)
+    if (!pub) return
+
+    try {
+      const updatedProduct = await updateSellerProductStock({
+        productId: id,
+        stock: nuevoStock,
+      })
+
+      if (!updatedProduct) return
+
+      let finalProduct = updatedProduct
+
+      if (nuevoStock === 0 && updatedProduct.status !== 'disabled') {
+        finalProduct = await updateSellerProductStatus({
+          productId: id,
+          enabled: false,
+        })
+      }
+
+      setPublicaciones((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                stock: Number(finalProduct.stock) || 0,
+                precio: Number(finalProduct.price) || 0,
+                titulo: finalProduct.name,
+                imagen: finalProduct.images?.[0] || p.imagen,
+                estado:
+                  finalProduct.status === 'disabled'
+                    ? 'inactiva'
+                    : 'activa',
+              }
+            : p
+        )
+      )
+    } catch (error) {
+      console.error('Error al actualizar stock de la publicación:', error)
+      alert(getCatalogErrorMessage(error, 'No se pudo actualizar el stock'))
+    }
+  }
+
   const publicacionesFiltradas = useMemo(() => {
     return publicaciones.filter((p) => {
       const coincideBusqueda = p.titulo.toLowerCase().includes(busqueda.toLowerCase())
@@ -71,10 +319,6 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
       return coincideBusqueda && coincideFiltro
     })
   }, [busqueda, filtrosActivos, publicaciones])
-
-  function handleCrearPublicacion() {
-    onOpenPublish?.()
-  }
 
   return (
     <View style={styles.container}>
@@ -168,7 +412,9 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
             <Text style={[styles.colHeader, styles.alignRight, { flex: 2 }]}>Precio</Text>
             <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Stock</Text>
             <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Vendidos</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Estado</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Estado</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Visible</Text>
+            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.4 }]}>Acciones</Text>
           </View>
 
           {publicacionesFiltradas.map((pub, idx) => (
@@ -191,15 +437,18 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
                 ${pub.precio.toLocaleString('es-AR')}
               </Text>
 
-              <Text style={[styles.colText, styles.alignCenter, { flex: 1 }]}>
-                {pub.stock}
-              </Text>
+              <View style={[styles.stockCell, { flex: 1 }]}>
+                <EditableStockStepper
+                  value={pub.stock}
+                  onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
+                />
+              </View>
 
               <Text style={[styles.colText, styles.alignCenter, { flex: 1 }]}>
                 {pub.vendidos}
               </Text>
 
-              <View style={[styles.estadoCell, { flex: 1 }]}>
+              <View style={[styles.estadoCell, { flex: 1.2 }]}>
                 <View
                   style={[
                     styles.estadoBadge,
@@ -218,17 +467,34 @@ export default function VentasTab({ sellerId, refreshKey, onOpenPublish }) {
                   </Text>
                 </View>
               </View>
+
+              <View style={[styles.switchCell, { flex: 1.2 }]}>
+                <StateSwitch
+                  value={pub.estado === 'activa'}
+                  onToggle={() => handleTogglePublicacion(pub.id)}
+                />
+              </View>
+
+              <View style={[styles.actionsCell, { flex: 1.4 }]}>
+                <TouchableOpacity
+                  style={styles.btnEditar}
+                  onPress={() => handleEditarPublicacion(pub)}
+                >
+                  <Text style={styles.btnEditarText}>Editar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
       )}
 
-      <View style={styles.aviso}>
-        <Text style={styles.avisoText}>
-          Las publicaciones se cargan desde el catálogo real. La edición y la baja
-          quedarán para una próxima etapa.
-        </Text>
-      </View>
+      <EditProductModal
+        visible={editModalVisible}
+        product={publicacionEnEdicion}
+        loading={loadingEditProduct}
+        onClose={handleCloseModal}
+        onSave={handleSaveChanges}
+      />
     </View>
   )
 }
@@ -470,6 +736,67 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
 
+  switchCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  actionsCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  btnEditar: {
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+
+  btnEditarText: {
+    color: COLORS.primaryLight,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  switchTrack: {
+    width: 46,
+    height: 24,
+    borderRadius: 999,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+
+  switchTrackOn: {
+    backgroundColor: COLORS.secondary,
+  },
+
+  switchTrackOff: {
+    backgroundColor: '#D9D9D9',
+  },
+
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  switchThumbOn: {
+    alignSelf: 'flex-end',
+  },
+
+  switchThumbOff: {
+    alignSelf: 'flex-start',
+  },
+
   emptyState: {
     backgroundColor: COLORS.white,
     borderRadius: 14,
@@ -516,25 +843,17 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
   },
 
-  aviso: {
-    backgroundColor: '#FFF9E8',
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.secondary,
-    borderRadius: 10,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-
-  avisoText: {
-    fontSize: FONT.small,
-    color: COLORS.dark,
-  },
-
   alignRight: {
     textAlign: 'right',
   },
 
   alignCenter: {
     textAlign: 'center',
+  },
+
+  stockCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 54,
   },
 })
