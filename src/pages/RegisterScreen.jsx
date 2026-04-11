@@ -28,11 +28,11 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false)
 
   function validate() {
-    if (!fullName.trim()) return 'Name is required'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'The email is not valid'
-    if (password.length < 8) return 'The password must have at least 8 characters'
-    if (!/[A-Z]/.test(password)) return 'The password must have at least one uppercase letter'
-    if (!/[0-9]/.test(password)) return 'The password must have at least one number'
+    if (!fullName.trim()) return 'Se requiere ingresar un nombre'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'El correo electrónico no es válido'
+    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres'
+    if (!/[A-Z]/.test(password)) return 'La contraseña debe tener al menos una letra mayúscula'
+    if (!/[0-9]/.test(password)) return 'La contraseña debe tener al menos un número'
     return null
   }
 
@@ -57,9 +57,9 @@ export default function RegisterScreen() {
       router.replace(buildPostAuthDestination(params))
     } catch (err) {
       if (err.response?.status === 409) {
-        setError('The email is already in use')
+        setError('No se pudo completar el registro con los datos proporcionados. Verificá los datos e intentá nuevamente.')
       } else {
-        setError('An error occurred. Please try again.')
+        setError('Ha ocurrido un error. Reintente nuevamente.')
       }
     } finally {
       setLoading(false)

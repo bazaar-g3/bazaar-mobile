@@ -29,12 +29,12 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false)
 
   const successMessage = params.passwordReset === 'success'
-    ? 'Your password was updated. Sign in with the new one.'
+    ? 'Se ha actualizado tu contraseña correctamente. Inicia sesión con la nueva contraseña.'
     : ''
 
   function validate() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address'
-    if (!password) return 'Password is required'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Ingrese una dirección de correo electrónico válida'
+    if (!password) return 'La contraseña es requerida'
     return null
   }
 
@@ -66,11 +66,11 @@ export default function LoginScreen() {
       router.replace(buildPostAuthDestination(params))
     } catch (err) {
       if (err.response?.status === 401) {
-        setError('Invalid email or password')
+        setError('Dirección de correo electrónico o contraseña incorrectas')
       } else if (err.response?.status === 422) {
-        setError('Enter a valid email address')
+        setError('Ingrese una dirección de correo electrónico válida')
       } else {
-        setError('Something went wrong. Please try again.')
+        setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: 'transparent',
   },
-  
+
   guestButtonText: {
     color: COLORS.primary,
     fontSize: 15,

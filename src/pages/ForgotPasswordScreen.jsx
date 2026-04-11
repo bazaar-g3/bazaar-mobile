@@ -22,7 +22,7 @@ export default function ForgotPasswordScreen() {
   const [success, setSuccess] = useState('')
 
   function validate() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Ingrese una dirección de correo electrónico válida'
     return null
   }
 
@@ -42,15 +42,15 @@ export default function ForgotPasswordScreen() {
       const normalizedEmail = email.trim().toLowerCase()
 
       setSuccess(
-        res.data.message || 'If the email exists, we will send a password recovery code shortly.'
+        res.data.message || 'Si el correo electrónico está registrado en el sistema, te enviaremos un código de recuperación de contraseña en breve.'
       )
 
       router.push({ pathname: '/reset-password', params: { email: normalizedEmail } })
     } catch (err) {
       if (err.response?.status === 422) {
-        setError('Enter a valid email address')
+        setError('Ingrese una dirección de correo electrónico válida')
       } else {
-        setError('Something went wrong. Please try again.')
+        setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
     } finally {
       setLoading(false)

@@ -15,7 +15,7 @@ import Logo from '../components/Logo'
 import { COLORS } from '../constants/colors'
 
 const PASSWORD_RULES_MESSAGE =
-  'Password must have at least 8 characters, one uppercase letter, and one number.'
+  'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número.'
 
 function getFirstParamValue(value) {
   return Array.isArray(value) ? value[0] : value
@@ -37,13 +37,13 @@ export default function ResetPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   function validate() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address'
-    if (!/^\d{6}$/.test(otpCode)) return 'Enter the 6-digit recovery code'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Ingrese una dirección de correo electrónico válida'
+    if (!/^\d{6}$/.test(otpCode)) return 'Ingrese el código de recuperación de 6 dígitos'
     if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
       return PASSWORD_RULES_MESSAGE
     }
     if (newPassword !== confirmPassword) {
-      return 'Passwords do not match'
+      return 'Las contraseñas ingresadas no coinciden'
     }
     return null
   }
@@ -70,11 +70,11 @@ export default function ResetPasswordScreen() {
       router.replace({ pathname: '/login', params: { passwordReset: 'success' } })
     } catch (err) {
       if (err.response?.status === 400) {
-        setError('This recovery code is invalid or expired. Request a new one.')
+        setError('Este código de recuperación es inválido o ha expirado. Solicita uno nuevo.')
       } else if (err.response?.status === 422) {
-        setError('Check the email, code, and password format.')
+        setError('Verifica el correo electrónico, el código y el formato de la contraseña.')
       } else {
-        setError('Something went wrong. Please try again.')
+        setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
     } finally {
       setLoading(false)
