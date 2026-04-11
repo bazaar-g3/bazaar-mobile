@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter'
 import { COLORS } from '../constants/colors'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 
@@ -32,6 +33,7 @@ export default function RegisterScreen() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'El correo electrónico no es válido'
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres'
     if (!/[A-Z]/.test(password)) return 'La contraseña debe tener al menos una letra mayúscula'
+    if (!/[a-z]/.test(password)) return 'La contraseña debe tener al menos una letra minúscula'
     if (!/[0-9]/.test(password)) return 'La contraseña debe tener al menos un número'
     return null
   }
@@ -140,6 +142,8 @@ export default function RegisterScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          <PasswordStrengthMeter password={password} />
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}

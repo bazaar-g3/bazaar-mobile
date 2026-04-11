@@ -269,13 +269,7 @@ export default function HomeScreen() {
               ) : (
                 <TouchableOpacity
                   style={styles.loginButton}
-                  onPress={() =>
-                    router.push(
-                      buildLoginRedirect({
-                        redirectPath: "/profile",
-                      })
-                    )
-                  }
+                  onPress={() => router.push('/login')}
                 >
                   <Text style={styles.loginButtonText}>Iniciar sesión</Text>
                 </TouchableOpacity>

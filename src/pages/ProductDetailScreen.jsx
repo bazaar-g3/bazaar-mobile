@@ -72,7 +72,6 @@ export default function ProductDetailScreen() {
               product.stock > 0
                 ? "Disponible para compra inmediata"
                 : "Sin stock disponible",
-              "Publicacion cargada desde el catalogo real",
             ],
             rating: "Nuevo",
             reviews: "sin reseñas",

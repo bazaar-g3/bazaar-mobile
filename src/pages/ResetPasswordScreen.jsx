@@ -12,10 +12,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter'
 import { COLORS } from '../constants/colors'
 
 const PASSWORD_RULES_MESSAGE =
-  'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número.'
+  'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número.'
 
 function getFirstParamValue(value) {
   return Array.isArray(value) ? value[0] : value
@@ -39,7 +40,12 @@ export default function ResetPasswordScreen() {
   function validate() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Ingrese una dirección de correo electrónico válida'
     if (!/^\d{6}$/.test(otpCode)) return 'Ingrese el código de recuperación de 6 dígitos'
-    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+    if (
+      newPassword.length < 8 ||
+      !/[A-Z]/.test(newPassword) ||
+      !/[a-z]/.test(newPassword) ||
+      !/[0-9]/.test(newPassword)
+    ) {
       return PASSWORD_RULES_MESSAGE
     }
     if (newPassword !== confirmPassword) {
@@ -160,6 +166,8 @@ export default function ResetPasswordScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          <PasswordStrengthMeter password={newPassword} />
 
           <View style={styles.inputWrapper}>
             <Ionicons
