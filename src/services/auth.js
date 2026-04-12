@@ -10,7 +10,21 @@ export async function loginWithOAuth({ provider, providerId, email, fullName, av
         avatarUrl,
     })
     const token = res.data.accessToken ?? res.data.access_token
+    const refreshToken = res.data.refreshToken
     if (!token) throw new Error('Missing access token')
     await AsyncStorage.setItem('token', token)
+    if (refreshToken) {
+        await AsyncStorage.setItem('refreshToken', refreshToken)
+    }
     return token
+}
+
+export async function logout() {
+    try {
+        await api.post('/auth/logout')
+    } catch {
+        // Si falla el logout en el servidor igual limpiamos local
+    } finally {
+        await AsyncStorage.multiRemove(['token', 'refreshToken'])
+    }
 }
