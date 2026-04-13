@@ -46,3 +46,6 @@ npx eas build --platform ios
 ## Variables de entorno
 
 Ver `.env.example`.
+
+# Comentarios
+agrego este comment para pushear y deployar
