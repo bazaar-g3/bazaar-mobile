@@ -21,6 +21,11 @@ Aplicación móvil para compradores y vendedores. Corre en Android e iOS con Rea
 | `OrdersScreen` | Historial de mis órdenes |
 | `ProfileScreen` | Perfil y logout |
 
+## Variables de entorno
+Ver `.env.example`.
+
+Se deben adjuntar las urls correspondientes para acceder a las APIs que componen el sistema. Para levantar el proyecto el producción, debe ser la URL del API Gateway.
+
 ## Setup local
 ```bash
 cp .env.example .env
@@ -28,24 +33,15 @@ npm install
 npx expo start
 ```
 
-Escaneá el QR con la app **Expo Go** en tu celular.
-
-## Notificaciones Push
-
-Al hacer login se registra el FCM token del dispositivo en `notifications-api`.
-Ver `src/services/notifications.js`.
-
-Al hacer logout se desregistra el token (DELETE /notifications/unregister-device).
-
 ## Compilar para producción
+
+### Deploy en plataforma web
+```bash
+
+```
+
+### Deploy para APK
 ```bash
 npx eas build --platform android
 npx eas build --platform ios
 ```
-
-## Variables de entorno
-
-Ver `.env.example`.
-
-# Comentarios
-agrego este comment para pushear y deployar

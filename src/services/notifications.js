@@ -11,11 +11,11 @@ Notifications.setNotificationHandler({
   }),
 })
 
-/**
- * Registra el dispositivo para recibir notificaciones push.
- * Llama a notifications-api para guardar el FCM token en Supabase.
- * Debe llamarse al iniciar sesión.
- */
+/*
+ Registra el dispositivo para recibir notificaciones push.
+ Llama a notifications-api para guardar el FCM token en Supabase.
+ Debe llamarse al iniciar sesión.
+*/
 export async function registerForPushNotifications() {
   if (Platform.OS === 'web') {
     return null
