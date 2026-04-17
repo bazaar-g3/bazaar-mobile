@@ -54,6 +54,7 @@ export default function ProductDetailScreen() {
         const product = await getCatalogProduct(String(id));
 
         if (!cancelled && product) {
+          const sellerProfile = await getPublicProfile(product.sellerId)
           setCatalogProduct({
             id: String(product.id),
             sellerId: Number(product.sellerId),
@@ -66,7 +67,7 @@ export default function ProductDetailScreen() {
             categoryName: product.category?.label || "Catalogo",
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
-            seller: `Vendedor #${product.sellerId}`,
+            seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
             features: [
               `Categoria: ${product.category?.label || "Catalogo"}`,
               product.stock > 0

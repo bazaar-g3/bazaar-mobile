@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
 import { COLORS } from '../constants/colors'
+import { listSellerProducts, PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 
 export default function PublicProfileScreen() {
   const { userId } = useLocalSearchParams()
@@ -20,6 +21,8 @@ export default function PublicProfileScreen() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [errorType, setErrorType] = useState(null) // null | '404' | 'generic'
+  const [products, setProducts] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
 
   const fetchProfile = async () => {
     setLoading(true)
@@ -27,6 +30,7 @@ export default function PublicProfileScreen() {
     try {
       const response = await api.get(`/users/${userId}/profile`)
       setProfile(response.data)
+      return true
     } catch (error) {
       if (error.response?.status === 404) {
         setErrorType('404')
@@ -38,8 +42,24 @@ export default function PublicProfileScreen() {
     }
   }
 
+  const fetchProducts = async () => {
+    setLoadingProducts(true)
+    try {
+      const result = await listSellerProducts({ sellerId: userId, status: 'active', onlyAvailable: false })
+      setProducts(result ?? [])
+    } catch {
+      setProducts([])
+    } finally {
+      setLoadingProducts(false)
+    }
+  }
+
   useEffect(() => {
-    fetchProfile()
+    async function load() {
+      const ok = await fetchProfile()
+      if (ok) fetchProducts()
+    }
+    load()
   }, [userId])
 
   if (loading) {
@@ -99,6 +119,34 @@ export default function PublicProfileScreen() {
           <Text style={styles.fullName}>{fullName}</Text>
           <Text style={styles.description}>{description}</Text>
         </View>
+
+        <Text style={styles.sectionTitle}>Publicaciones activas</Text>
+
+        {loadingProducts ? (
+          <ActivityIndicator size="small" color={COLORS.primaryLight} />
+        ) : products.length === 0 ? (
+          <Text style={styles.emptyText}>Este vendedor no tiene publicaciones activas</Text>
+        ) : (
+          products.map((product) => (
+            <TouchableOpacity
+              key={String(product.id)}
+              style={styles.productCard}
+              onPress={() => router.push(`/product/${product.id}`)}
+              activeOpacity={0.85}
+            >
+              <Image
+                source={{ uri: product.images?.[0] ?? PRODUCT_IMAGE_PLACEHOLDER }}
+                style={styles.productImage}
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productPrice}>
+                  ${Number(product.price).toLocaleString('es-AR')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   )
@@ -197,5 +245,51 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginTop: 28,
+    marginBottom: 14,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  productCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  productImage: {
+    width: 90,
+    height: 90,
+    resizeMode: 'cover',
+  },
+  productInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 6,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.secondary,
   },
 })

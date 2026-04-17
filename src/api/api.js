@@ -2,8 +2,7 @@ import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 
-// TODO: reemplazar con la URL del AWS API Gateway en producción
-const API_URL = process.env.EXPO_PUBLIC_API_GATEWAY_URL || 'http://localhost:8001'
+const API_URL = process.env.EXPO_PUBLIC_API_GATEWAY_URL
 
 const api = axios.create({
   baseURL: API_URL,
@@ -18,17 +17,34 @@ api.interceptors.request.use(async (config) => {
   return config
 })
 
-// Interceptor: si el token expiró limpia storage y redirige al login
+// Interceptor: si el token expiró intenta renovarlo con el refresh token
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
+    const originalRequest = error.config
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+
+      const refreshToken = await AsyncStorage.getItem('refreshToken')
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken })
+          const newToken = response.data.accessToken
+          await AsyncStorage.setItem('token', newToken)
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
+          return api(originalRequest)
+        } catch {
+          // El refresh también falló: limpiar todo y mandar al login
+          await AsyncStorage.multiRemove(['token', 'refreshToken'])
+          router.replace('/login')
+        }
+      } else {
         await AsyncStorage.removeItem('token')
         router.replace('/login')
       }
     }
+
     return Promise.reject(error)
   }
 )
