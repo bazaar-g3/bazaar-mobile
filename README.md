@@ -37,7 +37,8 @@ npx expo start
 
 ### Deploy en plataforma web
 ```bash
-
+npx expo export --platform web
+vercel --prod
 ```
 
 ### Deploy para APK
