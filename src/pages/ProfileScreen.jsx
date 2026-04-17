@@ -338,13 +338,9 @@ export default function ProfileScreen() {
 
     try {
       let finalAvatarUrl = profile?.avatarUrl
-      const isLocalUri =
-        avatarUri &&
-        (avatarUri.startsWith('blob:') ||
-          avatarUri.startsWith('data:') ||
-          avatarUri.startsWith('file'))
+      const isNewAvatar = avatarUri != null && avatarUri !== profile?.avatarUrl
 
-      if (isLocalUri) {
+      if (isNewAvatar) {
         finalAvatarUrl = await uploadAvatarToBackend(avatarUri)
       }
 
