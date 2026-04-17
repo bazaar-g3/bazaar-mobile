@@ -1,12 +1,9 @@
 import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
-import * as WebBrowser from 'expo-web-browser'
 import * as Google from 'expo-auth-session/providers/google'
 import { useState } from 'react'
 import { loginWithOAuth } from '../services/auth'
 import { COLORS } from '../constants/colors'
-
-WebBrowser.maybeCompleteAuthSession()
 
 export default function OAuthButtons({ onSuccess, onError }) {
     const [loadingProvider, setLoadingProvider] = useState(null)
