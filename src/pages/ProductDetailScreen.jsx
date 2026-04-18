@@ -318,19 +318,16 @@ export default function ProductDetailScreen() {
               onSelectImage={setSelectedImageIndex}
             />
 
-            <ProductInfoPanel
-              product={product}
-              safeFeatures={safeFeatures}
-              oldPrice={oldPrice}
-              discountPercent={discountPercent}
-              quantity={quantity}
-              isOwnProduct={isOwnProduct}
-              onSellerPress={() => router.push(`/user/${product.sellerId}`)}
-              onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
-              onIncreaseQuantity={() => setQuantity(quantity + 1)}
-              onManagePublication={handleManagePublication}
-              onAddToCart={handleAddToCart}
-            />
+          <ProductInfoPanel
+            product={product}
+            quantity={quantity}
+            isOwnProduct={isOwnProduct}
+            onSellerPress={() => router.push(`/user/${product.sellerId}`)}
+            onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
+            onIncreaseQuantity={() => setQuantity(quantity + 1)}
+            onManagePublication={handleManagePublication}
+            onAddToCart={handleAddToCart}
+          />
           </View>
         </ScrollView>
 

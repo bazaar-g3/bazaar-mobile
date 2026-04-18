@@ -4,9 +4,6 @@ import { styles } from "../../styles/productDetail/productDetailStyles";
 
 export default function ProductInfoPanel({
   product,
-  safeFeatures,
-  oldPrice,
-  discountPercent,
   quantity,
   isOwnProduct,
   onSellerPress,
@@ -19,21 +16,8 @@ export default function ProductInfoPanel({
     <View style={styles.rightColumn}>
       <Text style={styles.productTitle}>{product.name}</Text>
 
-      <View style={styles.metaRow}>
-        <View style={styles.promoBadge}>
-          <Text style={styles.promoBadgeText}>OFERTA DESTACADA</Text>
-        </View>
-        <Text style={styles.ratingText}>
-          ⭐ {product.rating} ({product.reviews})
-        </Text>
-      </View>
-
       <View style={styles.priceContainer}>
-        <Text style={styles.oldPrice}>${oldPrice}</Text>
         <Text style={styles.currentPrice}>${product.price}</Text>
-        <Text style={styles.savings}>
-          Ahorrá ${Number((oldPrice - product.price).toFixed(2))} ({discountPercent}% DTO)
-        </Text>
       </View>
 
       <TouchableOpacity onPress={onSellerPress}>
@@ -42,26 +26,12 @@ export default function ProductInfoPanel({
         </Text>
       </TouchableOpacity>
 
-      <View style={styles.stockRow}>
-        <View style={styles.categoryPill}>
-          <Text style={styles.categoryPillText}>{product.categoryName}</Text>
-        </View>
-        <Text style={styles.stockText}>Stock disponible: {product.stock}</Text>
-      </View>
-
       <Text style={styles.descriptionText}>{product.description}</Text>
-
-      <View style={styles.featuresBox}>
-        {safeFeatures.map((feature, index) => (
-          <Text key={index} style={styles.featureItem}>
-            • {feature}
-          </Text>
-        ))}
-      </View>
 
       {!isOwnProduct ? (
         <View style={styles.quantitySection}>
           <Text style={styles.quantityLabel}>Cantidad</Text>
+
           <View style={styles.quantitySelector}>
             <TouchableOpacity
               onPress={onDecreaseQuantity}
