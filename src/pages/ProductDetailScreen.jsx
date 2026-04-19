@@ -22,6 +22,7 @@ import { COLORS } from "../constants/colors";
 import Logo from "../components/Logo";
 import { FONT } from "../constants/theme";
 import { getPublicProfile } from "../services/user";
+import { useResponsive } from "../utils/responsive";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function ProductDetailScreen() {
   const id = normalizeRouteParam(params.id);
   const pendingAction = normalizeRouteParam(params.pendingAction);
   const pendingQuantity = normalizeRouteParam(params.quantity);
+  const { isSmall } = useResponsive();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -313,10 +315,10 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
 
-          <View style={styles.mainCard}>
-            <View style={styles.leftColumn}>
+          <View style={[styles.mainCard, isSmall && styles.mainCardSmall]}>
+            <View style={[styles.leftColumn, isSmall && styles.leftColumnSmall]}>
               <View style={styles.imageWrapper}>
-                <Image source={{ uri: selectedImage }} style={styles.productImage} />
+                <Image source={{ uri: selectedImage }} style={[styles.productImage, isSmall && styles.productImageSmall]} />
               </View>
 
               <View style={styles.thumbnailRow}>
@@ -336,7 +338,7 @@ export default function ProductDetailScreen() {
               </View>
             </View>
 
-            <View style={styles.rightColumn}>
+            <View style={[styles.rightColumn, isSmall && styles.rightColumnSmall]}>
               <Text style={styles.productTitle}>{product.name}</Text>
 
               <View style={styles.metaRow}>
@@ -512,9 +514,19 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  mainCardSmall: {
+    flexDirection: "column",
+  },
+
   leftColumn: {
     width: "44%",
     paddingRight: 16,
+  },
+
+  leftColumnSmall: {
+    width: "100%",
+    paddingRight: 0,
+    marginBottom: 16,
   },
 
   imageWrapper: {
@@ -529,6 +541,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 260,
     resizeMode: "contain",
+  },
+
+  productImageSmall: {
+    height: 180,
   },
 
   thumbnailRow: {
@@ -561,6 +577,10 @@ const styles = StyleSheet.create({
 
   rightColumn: {
     width: "56%",
+  },
+
+  rightColumnSmall: {
+    width: "100%",
   },
 
   productTitle: {
