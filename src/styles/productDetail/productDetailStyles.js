@@ -503,15 +503,101 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
+  shareIcon: {
+    fontSize: 20,
+    color: COLORS.textMuted,
+  },
+
   shareInlineText: {
     fontSize: 15,
     fontWeight: "600",
     color: COLORS.textMuted,
   },
 
-  shareIcon: {
+  shareModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+
+  shareModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+
+  shareModalContainer: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+
+  shareModalHandle: {
+    width: 44,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: COLORS.divider,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+
+  shareModalTitle: {
     fontSize: 20,
-    color: COLORS.textMuted,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+
+  shareModalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  shareModalPrimaryAction: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  shareModalPrimaryActionText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  shareModalSecondaryAction: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  shareModalSecondaryActionText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  shareModalCancelAction: {
+    backgroundColor: COLORS.background,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+
+  shareModalCancelActionText: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
   },
 
 });

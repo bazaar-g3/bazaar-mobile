@@ -8,10 +8,11 @@ import {
   Alert,
   Share,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
@@ -30,8 +31,9 @@ import ProductDetailHeader from "../components/productDetail/ProductDetailHeader
 import ProductImageGallery from "../components/productDetail/ProductImageGallery";
 import ProductInfoPanel from "../components/productDetail/ProductInfoPanel";
 import LoginPromptModal from "../components/productDetail/LoginPromptModal";
+import ShareProductModal from "../components/productDetail/ShareProductModal";
 
-const PRODUCT_SHARE_BASE_URL = "https://bazaar.app";
+const PRODUCT_SHARE_BASE_URL = "http://localhost:8081";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -48,6 +50,7 @@ export default function ProductDetailScreen() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,6 +162,14 @@ export default function ProductDetailScreen() {
 
   const selectedImage = safeImages[selectedImageIndex] || safeImages[0];
 
+  function getProductShareUrl(productId) {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      return window.location.href;
+    }
+
+    return `${PRODUCT_SHARE_BASE_URL}/product/${productId}`;
+  }
+
   function completeAddToCart(quantityToAdd, onDismiss) {
     Alert.alert(
       "Añadido",
@@ -185,7 +196,10 @@ export default function ProductDetailScreen() {
 
   async function handleAddToCart() {
     if (!isAvailable) {
-      Alert.alert("Producto no disponible", "Este producto ya no está disponible.");
+      Alert.alert(
+        "Producto no disponible",
+        "Este producto ya no está disponible."
+      );
       return;
     }
 
@@ -221,7 +235,7 @@ export default function ProductDetailScreen() {
     );
   }
 
-  async function handleShareProduct() {
+  async function copyProductLink() {
     if (!product || !isAvailable) {
       Alert.alert(
         "Producto no disponible",
@@ -230,8 +244,52 @@ export default function ProductDetailScreen() {
       return;
     }
 
+    const productUrl = getProductShareUrl(product.id);
+
     try {
-      const productUrl = `${PRODUCT_SHARE_BASE_URL}/product/${product.id}`;
+      if (
+        Platform.OS === "web" &&
+        typeof navigator !== "undefined" &&
+        navigator.clipboard?.writeText
+      ) {
+        await navigator.clipboard.writeText(productUrl);
+      } else {
+        await Clipboard.setStringAsync(productUrl);
+      }
+
+      setShowShareModal(false);
+      Alert.alert("Link copiado", "El link del producto fue copiado.");
+    } catch {
+      Alert.alert("Error", "No se pudo copiar el link.");
+    }
+  }
+
+  async function shareProductLink() {
+    if (!product || !isAvailable) {
+      Alert.alert(
+        "Producto no disponible",
+        "Este producto no está disponible para compartir."
+      );
+      return;
+    }
+
+    const productUrl = getProductShareUrl(product.id);
+
+    try {
+      setShowShareModal(false);
+
+      if (
+        Platform.OS === "web" &&
+        typeof navigator !== "undefined" &&
+        navigator.share
+      ) {
+        await navigator.share({
+          title: product.name,
+          text: `Mirá este producto en Bazaar: ${product.name}`,
+          url: productUrl,
+        });
+        return;
+      }
 
       await Share.share({
         title: product.name,
@@ -241,6 +299,18 @@ export default function ProductDetailScreen() {
     } catch {
       Alert.alert("Error", "No se pudo compartir el producto.");
     }
+  }
+
+  function handleOpenShareModal() {
+    if (!product || !isAvailable) {
+      Alert.alert(
+        "Producto no disponible",
+        "Este producto no está disponible para compartir."
+      );
+      return;
+    }
+
+    setShowShareModal(true);
   }
 
   useEffect(() => {
@@ -381,7 +451,7 @@ export default function ProductDetailScreen() {
               onIncreaseQuantity={() => setQuantity(quantity + 1)}
               onManagePublication={handleManagePublication}
               onAddToCart={handleAddToCart}
-              onShareProduct={handleShareProduct}
+              onShareProduct={handleOpenShareModal}
             />
           </View>
         </ScrollView>
@@ -390,6 +460,13 @@ export default function ProductDetailScreen() {
           visible={showLoginPrompt}
           onClose={() => setShowLoginPrompt(false)}
           onLogin={handleLoginRedirect}
+        />
+
+        <ShareProductModal
+          visible={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          onCopyLink={copyProductLink}
+          onShareLink={shareProductLink}
         />
       </View>
     </SafeAreaView>
