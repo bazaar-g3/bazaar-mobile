@@ -6,3 +6,4 @@ dist/
 *.orig.*
 web-build/
 .vercel
+.env*.local

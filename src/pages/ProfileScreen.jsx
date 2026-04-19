@@ -33,6 +33,7 @@ const MENU_ITEMS = [
   { key: 'Perfil', emoji: '👤' },
   { key: 'Compras', emoji: '🛍️' },
   { key: 'Ventas', emoji: '🏷️' },
+  { key: 'Wishlist', emoji: '❤️' },
   { key: 'Tarjetas', emoji: '💳' },
 ]
 
@@ -383,6 +384,14 @@ export default function ProfileScreen() {
     setActiveTab('Ventas')
   }, [])
 
+  const handleTabSelect = useCallback((key) => {
+    if (key === 'Wishlist') {
+      router.push('/wishlist')
+      return
+    }
+    setActiveTab(key)
+  }, [router])
+
   const renderActiveProductsSummary = () => (
     <View style={styles.summarySection}>
       <View style={styles.summaryHeader}>
@@ -651,7 +660,7 @@ export default function ProfileScreen() {
                   styles.sidebarItem,
                   activeTab === key && styles.sidebarItemActive,
                 ]}
-                onPress={() => setActiveTab(key)}
+                onPress={() => handleTabSelect(key)}
               >
                 <Text style={styles.sidebarEmoji}>{emoji}</Text>
                 <Text

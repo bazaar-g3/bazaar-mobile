@@ -26,6 +26,7 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { getWishlist } from "../services/wishlist";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState(null);
+  const [wishlistIds, setWishlistIds] = useState(new Set());
 
   const profileButtonRef = useRef(null);
   const [profileMenuPosition, setProfileMenuPosition] = useState({
@@ -64,6 +66,17 @@ export default function HomeScreen() {
       const session = await getSessionStatus();
       setIsAuthenticated(Boolean(session?.isAuthenticated));
       setProfileImageUri(session?.profile?.avatarUrl ?? null);
+
+      if (session?.isAuthenticated) {
+        try {
+          const items = await getWishlist();
+          setWishlistIds(new Set(items.map(item => String(item.productId))));
+        } catch {
+          // non-critical
+        }
+      } else {
+        setWishlistIds(new Set());
+      }
     } catch (error) {
       const token = await AsyncStorage.getItem("token");
       setIsAuthenticated(Boolean(token));
@@ -384,6 +397,7 @@ export default function HomeScreen() {
                     key={product.id}
                     product={product}
                     variant="horizontal"
+                    isWishlisted={wishlistIds.has(String(product.id))}
                     onPress={() => router.push(`/product/${product.id}`)}
                   />
                 ))}
@@ -427,6 +441,7 @@ export default function HomeScreen() {
                     key={product.id}
                     product={product}
                     variant="horizontal"
+                    isWishlisted={wishlistIds.has(String(product.id))}
                     onPress={() => router.push(`/product/${product.id}`)}
                   />
                 ))}

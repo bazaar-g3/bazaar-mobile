@@ -10,7 +10,7 @@ const COLORS = {
   cardBorder: "#F0E8E2",
 };
 
-export default function ProductCard({ product, onPress, variant = "horizontal" }) {
+export default function ProductCard({ product, onPress, variant = "horizontal", isWishlisted = false }) {
   const badgeText = product.tag || "Recomendado";
 
   if (variant === "grid") {
@@ -24,6 +24,11 @@ export default function ProductCard({ product, onPress, variant = "horizontal" }
         <View style={styles.newBadge}>
           <Text style={styles.newBadgeText}>{product.tag || "Nuevo"}</Text>
         </View>
+        {isWishlisted && (
+          <View style={styles.wishlistedBadge}>
+            <Text style={styles.wishlistedBadgeText}>♥</Text>
+          </View>
+        )}
         <View style={styles.gridInfo}>
           <Text style={styles.gridProductName} numberOfLines={2}>
             {product.name}
@@ -40,7 +45,14 @@ export default function ProductCard({ product, onPress, variant = "horizontal" }
       onPress={() => onPress(product)}
       activeOpacity={0.9}
     >
-      <Image source={{ uri: product.image }} style={styles.recommendedImage} />
+      <View style={styles.imageWrapper}>
+        <Image source={{ uri: product.image }} style={styles.recommendedImage} />
+        {isWishlisted && (
+          <View style={styles.wishlistedBadge}>
+            <Text style={styles.wishlistedBadgeText}>♥</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.badge}>
         <Text style={styles.badgeText}>{badgeText}</Text>
       </View>
@@ -61,6 +73,9 @@ const styles = StyleSheet.create({
     marginRight: 14,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+  },
+  imageWrapper: {
+    position: "relative",
   },
   recommendedImage: {
     width: "100%",
@@ -124,6 +139,22 @@ const styles = StyleSheet.create({
   },
   gridInfo: {
     padding: 12,
+  },
+  wishlistedBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 999,
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wishlistedBadgeText: {
+    color: "#C62828",
+    fontSize: 14,
+    fontWeight: "800",
   },
   gridProductName: {
     color: COLORS.text,

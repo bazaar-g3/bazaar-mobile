@@ -18,6 +18,7 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
+import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 import { COLORS } from "../constants/colors";
 import Logo from "../components/Logo";
 import { FONT } from "../constants/theme";
@@ -37,6 +38,9 @@ export default function ProductDetailScreen() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [pendingLoginAction, setPendingLoginAction] = useState("add-to-cart");
 
   useEffect(() => {
     let cancelled = false;
@@ -176,6 +180,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = async () => {
+    setPendingLoginAction("add-to-cart");
     const isAuthenticated = await handleRequireAuthForCart();
 
     if (!isAuthenticated) {
@@ -183,6 +188,54 @@ export default function ProductDetailScreen() {
     }
 
     completeAddToCart(quantity);
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    async function loadWishlistState() {
+      const token = await AsyncStorage.getItem('token');
+      if (!token || cancelled) return;
+      try {
+        const wishlisted = await isInWishlist(id);
+        if (!cancelled) setIsWishlisted(wishlisted);
+      } catch {
+        // non-critical
+      }
+    }
+
+    loadWishlistState();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const handleToggleWishlist = async () => {
+    const token = await AsyncStorage.getItem('token');
+
+    if (!token) {
+      setPendingLoginAction("add-to-wishlist");
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (wishlistLoading) return;
+
+    const previousState = isWishlisted;
+    setIsWishlisted(!isWishlisted);
+    setWishlistLoading(true);
+
+    try {
+      if (previousState) {
+        await removeFromWishlist(id);
+      } else {
+        await addToWishlist(id);
+      }
+    } catch {
+      setIsWishlisted(previousState);
+      Alert.alert("Error", "No se pudo actualizar tu wishlist.");
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
   const handleManagePublication = () => {
@@ -201,8 +254,8 @@ export default function ProductDetailScreen() {
     router.push(
       buildLoginRedirect({
         redirectPath: `/product/${id}`,
-        pendingAction: "add-to-cart",
-        quantity,
+        pendingAction: pendingLoginAction,
+        quantity: pendingLoginAction === "add-to-cart" ? quantity : undefined,
       })
     );
   };
@@ -239,6 +292,19 @@ export default function ProductDetailScreen() {
         completeAddToCart(restoredQuantity, () => {
           router.replace(`/product/${id}`);
         });
+      }
+
+      if (pendingAction === "add-to-wishlist") {
+        setHandledPendingActionKey(actionKey);
+        try {
+          await addToWishlist(String(id));
+          setIsWishlisted(true);
+          Alert.alert("Guardado", "Producto agregado a tu wishlist.", [
+            { text: "OK", onPress: () => router.replace(`/product/${id}`) },
+          ]);
+        } catch {
+          router.replace(`/product/${id}`);
+        }
       }
     }
 
@@ -301,6 +367,22 @@ export default function ProductDetailScreen() {
             <View style={styles.logoCenter}>
               <Logo size={32} textSize={30} />
             </View>
+
+            {!isOwnProduct && (
+              <TouchableOpacity
+                onPress={handleToggleWishlist}
+                disabled={wishlistLoading}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[
+                  styles.wishlistIcon,
+                  isWishlisted && styles.wishlistIconActive,
+                  wishlistLoading && styles.wishlistIconLoading,
+                ]}>
+                  {isWishlisted ? "♥" : "♡"}
+                </Text>
+              </TouchableOpacity>
+            )}
 
           </View>
         </View>
@@ -942,5 +1024,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.primary,
     zIndex: 2,
+  },
+
+  wishlistIcon: {
+    fontSize: 26,
+    color: COLORS.textMuted,
+    zIndex: 2,
+  },
+
+  wishlistIconActive: {
+    color: COLORS.error,
+  },
+
+  wishlistIconLoading: {
+    opacity: 0.4,
   },
 });
