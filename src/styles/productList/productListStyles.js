@@ -9,35 +9,19 @@ export const styles = StyleSheet.create({
   },
 
   header: {
+    width: "100%",
     paddingHorizontal: 15,
     paddingTop: 15,
     paddingBottom: 15,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
-    minHeight: 132,
-  },
-
-  backButton: {
-    fontSize: FONT.medium,
-    fontWeight: "700",
-    color: COLORS.dark,
-    marginBottom: 10,
-    zIndex: 2,
   },
 
   logoCenter: {
-    position: "absolute",
-    top: 14,
-    left: 0,
-    right: 0,
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: "none",
-  },
-
-  logoNoMargin: {
-    marginBottom: 0,
+    marginBottom: 12,
   },
 
   searchBarContainer: {
@@ -46,7 +30,6 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 5,
     width: "100%",
-    marginTop: 26,
   },
 
   searchInput: {

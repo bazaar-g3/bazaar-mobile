@@ -18,13 +18,6 @@ export const styles = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  backButton: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.dark,
-    marginBottom: 10,
-  },
-
   breadcrumb: {
     marginBottom: 14,
   },
@@ -138,24 +131,11 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  oldPrice: {
-    fontSize: 15,
-    textDecorationLine: "line-through",
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-
   currentPrice: {
     fontSize: 32,
     fontWeight: "900",
     color: COLORS.secondary,
     marginBottom: 2,
-  },
-
-  savings: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: COLORS.secondary,
   },
 
   sellerText: {
@@ -171,26 +151,7 @@ export const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
   },
-
-  categoryPill: {
-    backgroundColor: COLORS.promoLight,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-
-  categoryPillText: {
-    color: COLORS.primary,
-    fontWeight: "800",
-    fontSize: 12,
-  },
-
-  stockText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.success,
-  },
-
+  
   descriptionText: {
     fontSize: 14,
     lineHeight: 21,
@@ -451,26 +412,25 @@ export const styles = StyleSheet.create({
   },
 
   topHeader: {
+    width: "100%",
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
-    paddingHorizontal: 16,
-    paddingVertical: 25,
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 15,
   },
 
   topHeaderContent: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     position: "relative",
   },
 
   logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
     alignItems: "center",
-    pointerEvents: "none",
+    justifyContent: "center",
+    marginBottom: 0,
   },
 
   headerBack: {
@@ -599,11 +559,12 @@ export const styles = StyleSheet.create({
   },
 
   iconButton: {
-    marginLeft: 12,
-    marginRight: 24,
+    position: "absolute",
+    left: 0,
+    top: "50%",
+    transform: [{ translateY: -18 }],
     padding: 6,
     justifyContent: "center",
     alignItems: "center",
   },
-
 });
