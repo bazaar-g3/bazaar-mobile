@@ -26,9 +26,11 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { useResponsive } from "../utils/responsive";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isSmall, isMedium } = useResponsive();
   const { refreshCatalog } = useLocalSearchParams();
 
   const [search, setSearch] = useState("");
@@ -233,21 +235,26 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, isSmall && styles.topBarSmall]}>
           <View style={styles.topBarContent}>
-            <View style={styles.leftPlaceholder} />
+            <View style={styles.leftPlaceholder}>
+              {(isSmall || isMedium) && (
+                <TouchableOpacity style={styles.publishButtonCircle} onPress={handlePublishPress}>
+                  <Text style={styles.publishButtonCircleText}>+</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <View style={styles.logoCenter}>
               <Logo size={34} textSize={32} style={styles.logoNoMargin} />
             </View>
 
             <View style={styles.iconsContainer}>
-              <TouchableOpacity
-                style={styles.publishButton}
-                onPress={handlePublishPress}
-              >
-                <Text style={styles.publishButtonText}>+ Publicar producto</Text>
-              </TouchableOpacity>
+              {!isSmall && !isMedium && (
+                <TouchableOpacity style={styles.publishButton} onPress={handlePublishPress}>
+                  <Text style={styles.publishButtonText}>+ Publicar producto</Text>
+                </TouchableOpacity>
+              )}
 
               {isAuthenticated ? (
                 <TouchableOpacity
@@ -502,26 +509,44 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
 
+  topBarSmall: {
+    paddingHorizontal: 8,
+  },
+
   topBarContent: {
     width: "100%",
     maxWidth: 1280,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    position: "relative",
     minHeight: 44,
   },
 
   leftPlaceholder: {
-    width: 44,
-    height: 44,
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+
+  publishButtonCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: "#B9D8D4",
+    backgroundColor: "#F2FBFA",
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  publishButtonCircleText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.primary,
+    lineHeight: 26,
   },
 
   logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
     alignItems: "center",
     justifyContent: "center",
     pointerEvents: "none",
@@ -532,6 +557,7 @@ const styles = StyleSheet.create({
   },
 
   iconsContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
@@ -574,7 +600,7 @@ const styles = StyleSheet.create({
 
   iconButton: {
     marginLeft: 12,
-    padding: 6,
+    padding: 3,
     justifyContent: "center",
     alignItems: "center",
   },

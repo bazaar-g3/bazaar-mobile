@@ -756,10 +756,11 @@ const styles = StyleSheet.create({
   mainWrapper: {
     flex: 1,
     flexDirection: 'row',
+    overflow: 'hidden',
   },
 
   sidebar: {
-    width: 180,
+    width: 140,
     backgroundColor: COLORS.white,
     paddingTop: SPACING.lg,
     paddingHorizontal: SPACING.md,
@@ -823,6 +824,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 22,
+    width: '100%',
     shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
@@ -854,6 +856,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SPACING.md,
+    flexWrap: 'wrap', // Permite que si no hay espacio, baje a la siguiente fila
+    gap: SPACING.md,   // Espaciado consistente
   },
 
   avatarContainer: {
@@ -889,6 +893,7 @@ const styles = StyleSheet.create({
 
   profileInfoText: {
     flex: 1,
+    minWidth: 200, 
   },
 
   userName: {
@@ -911,6 +916,7 @@ const styles = StyleSheet.create({
 
   inputGroup: {
     marginBottom: SPACING.md,
+    width: '100%',
   },
 
   label: {
@@ -943,6 +949,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FCFC',
     fontSize: FONT.regular,
     color: COLORS.text,
+    width: '100%',
   },
 
   inputError: {

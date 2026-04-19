@@ -20,6 +20,7 @@ import {
 } from "../services/catalog";
 import { getSessionStatus } from "../services/session";
 import { getPublicProfile } from "../services/user";
+import { useResponsive } from "../utils/responsive";
 import {
   buildLoginRedirect,
   normalizeRouteParam,
@@ -42,6 +43,7 @@ export default function ProductDetailScreen() {
   const id = normalizeRouteParam(params.id);
   const pendingAction = normalizeRouteParam(params.pendingAction);
   const pendingQuantity = normalizeRouteParam(params.quantity);
+  const { isSmall } = useResponsive();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -432,12 +434,124 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
 
-          <View style={styles.mainCard}>
-            <ProductImageGallery
-              images={safeImages}
-              selectedImage={selectedImage}
-              selectedImageIndex={selectedImageIndex}
-              onSelectImage={setSelectedImageIndex}
+          <View style={[styles.mainCard, isSmall && styles.mainCardSmall]}>
+            <View style={[styles.leftColumn, isSmall && styles.leftColumnSmall]}>
+              <View style={styles.imageWrapper}>
+                <Image source={{ uri: selectedImage }} style={[styles.productImage, isSmall && styles.productImageSmall]} />
+              </View>
+
+              <View style={styles.thumbnailRow}>
+                {safeImages.slice(0, 5).map((imageUri, index) => (
+                  <TouchableOpacity
+                    key={`${imageUri}-${index}`}
+                    style={[
+                      styles.thumbnail,
+                      index === selectedImageIndex ? styles.activeThumbnail : null,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedImageIndex(index)}
+                  >
+                    <Image source={{ uri: imageUri }} style={styles.thumbnailImg} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={[styles.rightColumn, isSmall && styles.rightColumnSmall]}>
+              <Text style={styles.productTitle}>{product.name}</Text>
+
+              <View style={styles.metaRow}>
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>OFERTA DESTACADA</Text>
+                </View>
+                <Text style={styles.ratingText}>
+                  ⭐ {product.rating} ({product.reviews})
+                </Text>
+              </View>
+
+              <View style={styles.priceContainer}>
+                <Text style={styles.oldPrice}>${oldPrice}</Text>
+                <Text style={styles.currentPrice}>${product.price}</Text>
+                <Text style={styles.savings}>
+                  Ahorrá ${Number((oldPrice - product.price).toFixed(2))} ({discountPercent}% DTO)
+                </Text>
+              </View>
+
+              <TouchableOpacity onPress={() => router.push(`/user/${product.sellerId}`)}>
+                <Text style={[styles.sellerText, { textDecorationLine: 'underline' }]}>
+                  Vendido por {product.seller}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.stockRow}>
+                <View style={styles.categoryPill}>
+                  <Text style={styles.categoryPillText}>{product.categoryName}</Text>
+                </View>
+                <Text style={styles.stockText}>Stock disponible: {product.stock}</Text>
+              </View>
+
+              <Text style={styles.descriptionText}>{product.description}</Text>
+
+              <View style={styles.featuresBox}>
+                {safeFeatures.map((feature, index) => (
+                  <Text key={index} style={styles.featureItem}>
+                    • {feature}
+                  </Text>
+                ))}
+              </View>
+
+              {!isOwnProduct ? (
+                <View style={styles.quantitySection}>
+                  <Text style={styles.quantityLabel}>Cantidad</Text>
+                  <View style={styles.quantitySelector}>
+                    <TouchableOpacity
+                      onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                      style={styles.qtyBtn}
+                    >
+                      <Text style={styles.qtyBtnText}>-</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.qtyValue}>{quantity}</Text>
+
+                    <TouchableOpacity
+                      onPress={() => setQuantity(quantity + 1)}
+                      style={styles.qtyBtn}
+                    >
+                      <Text style={styles.qtyBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+
+              <View style={styles.actions}>
+                {isOwnProduct ? (
+                  <TouchableOpacity
+                    style={styles.manageButton}
+                    onPress={handleManagePublication}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.manageButtonText}>GESTIONAR PUBLICACIÓN</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.cartButton}
+                    onPress={handleAddToCart}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.cartButtonText}>AÑADIR AL CARRITO</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {showLoginPrompt ? (
+          <View style={styles.loginPromptOverlay}>
+            <TouchableOpacity
+              style={styles.loginPromptBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowLoginPrompt(false)}
             />
 
             <ProductInfoPanel
