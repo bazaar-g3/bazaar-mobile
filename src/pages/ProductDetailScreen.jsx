@@ -9,6 +9,7 @@ import {
   Share,
   TouchableOpacity,
   Platform,
+  StyleSheet,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,14 +25,18 @@ import {
   buildLoginRedirect,
   normalizeRouteParam,
 } from "../utils/authRedirect";
+import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 
-import { styles } from "../styles/productDetail/productDetailStyles";
+import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
 
-import ProductDetailHeader from "../components/productDetail/ProductDetailHeader";
 import ProductImageGallery from "../components/productDetail/ProductImageGallery";
 import ProductInfoPanel from "../components/productDetail/ProductInfoPanel";
 import LoginPromptModal from "../components/productDetail/LoginPromptModal";
 import ShareProductModal from "../components/productDetail/ShareProductModal";
+
+import Logo from "../components/Logo";
+import { COLORS } from "../constants/colors";
+import { FONT } from "../constants/theme";
 
 const PRODUCT_SHARE_BASE_URL = "http://localhost:8081";
 
@@ -51,6 +56,9 @@ export default function ProductDetailScreen() {
   const [handledPendingActionKey, setHandledPendingActionKey] = useState("");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [pendingLoginAction, setPendingLoginAction] = useState("add-to-cart");
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +150,25 @@ export default function ProductDetailScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    async function loadWishlistState() {
+      const token = await AsyncStorage.getItem('token');
+      if (!token || cancelled) return;
+      try {
+        const wishlisted = await isInWishlist(id);
+        if (!cancelled) setIsWishlisted(wishlisted);
+      } catch {
+        // non-critical
+      }
+    }
+
+    loadWishlistState();
+    return () => { cancelled = true; };
+  }, [id]);
+
   const product = catalogProduct;
 
   const isOwnProduct =
@@ -203,9 +230,10 @@ export default function ProductDetailScreen() {
       return;
     }
 
-    const isAuthenticated = await handleRequireAuthForCart();
+    setPendingLoginAction("add-to-cart");
+    const authenticated = await handleRequireAuthForCart();
 
-    if (!isAuthenticated) return;
+    if (!authenticated) return;
 
     completeAddToCart(quantity);
   }
@@ -223,14 +251,43 @@ export default function ProductDetailScreen() {
     });
   }
 
+  const handleToggleWishlist = async () => {
+    const token = await AsyncStorage.getItem('token');
+
+    if (!token) {
+      setPendingLoginAction("add-to-wishlist");
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    if (wishlistLoading) return;
+
+    const previousState = isWishlisted;
+    setIsWishlisted(!isWishlisted);
+    setWishlistLoading(true);
+
+    try {
+      if (previousState) {
+        await removeFromWishlist(id);
+      } else {
+        await addToWishlist(id);
+      }
+    } catch {
+      setIsWishlisted(previousState);
+      Alert.alert("Error", "No se pudo actualizar tu wishlist.");
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
   function handleLoginRedirect() {
     setShowLoginPrompt(false);
 
     router.push(
       buildLoginRedirect({
         redirectPath: `/product/${id}`,
-        pendingAction: "add-to-cart",
-        quantity,
+        pendingAction: pendingLoginAction,
+        quantity: pendingLoginAction === "add-to-cart" ? quantity : undefined,
       })
     );
   }
@@ -345,6 +402,19 @@ export default function ProductDetailScreen() {
           router.replace(`/product/${id}`);
         });
       }
+
+      if (pendingAction === "add-to-wishlist") {
+        setHandledPendingActionKey(actionKey);
+        try {
+          await addToWishlist(String(id));
+          setIsWishlisted(true);
+          Alert.alert("Guardado", "Producto agregado a tu wishlist.", [
+            { text: "OK", onPress: () => router.replace(`/product/${id}`) },
+          ]);
+        } catch {
+          router.replace(`/product/${id}`);
+        }
+      }
     }
 
     resumePendingAction();
@@ -364,10 +434,10 @@ export default function ProductDetailScreen() {
 
   if (loadingCatalogProduct) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFoundContainer}>
+      <SafeAreaView style={sharedStyles.safeArea}>
+        <View style={sharedStyles.notFoundContainer}>
           <ActivityIndicator size="large" color="#000" />
-          <Text style={styles.notFoundText}>
+          <Text style={sharedStyles.notFoundText}>
             Cargando información del producto...
           </Text>
         </View>
@@ -377,18 +447,18 @@ export default function ProductDetailScreen() {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.notFoundContainer}>
-          <Text style={styles.notFoundEmoji}>📦</Text>
-          <Text style={styles.notFoundTitle}>Producto no encontrado</Text>
-          <Text style={styles.notFoundText}>
+      <SafeAreaView style={sharedStyles.safeArea}>
+        <View style={sharedStyles.notFoundContainer}>
+          <Text style={sharedStyles.notFoundEmoji}>📦</Text>
+          <Text style={sharedStyles.notFoundTitle}>Producto no encontrado</Text>
+          <Text style={sharedStyles.notFoundText}>
             No pudimos encontrar el producto que estás buscando.
           </Text>
           <TouchableOpacity
-            style={styles.backHomeButton}
+            style={sharedStyles.backHomeButton}
             onPress={() => router.replace("/home")}
           >
-            <Text style={styles.backHomeButtonText}>Volver al inicio</Text>
+            <Text style={sharedStyles.backHomeButtonText}>Volver al inicio</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -397,20 +467,30 @@ export default function ProductDetailScreen() {
 
   if (!isAvailable) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <ProductDetailHeader />
+      <SafeAreaView style={sharedStyles.safeArea}>
+        <View style={headerStyles.topHeader}>
+          <View style={headerStyles.topHeaderContent}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={headerStyles.headerBack}>← Volver</Text>
+            </TouchableOpacity>
+            <View style={headerStyles.logoCenter}>
+              <Logo size={32} textSize={30} />
+            </View>
+            <View style={headerStyles.placeholder} />
+          </View>
+        </View>
 
-        <View style={styles.notFoundContainer}>
-          <Text style={styles.notFoundEmoji}>⚠️</Text>
-          <Text style={styles.notFoundTitle}>Producto no disponible</Text>
-          <Text style={styles.notFoundText}>
+        <View style={sharedStyles.notFoundContainer}>
+          <Text style={sharedStyles.notFoundEmoji}>⚠️</Text>
+          <Text style={sharedStyles.notFoundTitle}>Producto no disponible</Text>
+          <Text style={sharedStyles.notFoundText}>
             Este producto fue dado de baja o deshabilitado y ya no está disponible.
           </Text>
           <TouchableOpacity
-            style={styles.backHomeButton}
+            style={sharedStyles.backHomeButton}
             onPress={() => router.replace("/home")}
           >
-            <Text style={styles.backHomeButtonText}>Volver al inicio</Text>
+            <Text style={sharedStyles.backHomeButtonText}>Volver al inicio</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -418,21 +498,49 @@ export default function ProductDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.safeArea}>
-        <ProductDetailHeader />
+    <SafeAreaView style={sharedStyles.safeArea}>
+      <View style={sharedStyles.safeArea}>
+        <View style={headerStyles.topHeader}>
+          <View style={headerStyles.topHeaderContent}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={headerStyles.headerBack}>← Volver</Text>
+            </TouchableOpacity>
+
+            <View style={headerStyles.logoCenter}>
+              <Logo size={32} textSize={30} />
+            </View>
+
+            {!isOwnProduct && (
+              <TouchableOpacity
+                onPress={handleToggleWishlist}
+                disabled={wishlistLoading}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[
+                  headerStyles.wishlistIcon,
+                  isWishlisted && headerStyles.wishlistIconActive,
+                  wishlistLoading && headerStyles.wishlistIconLoading,
+                ]}>
+                  {isWishlisted ? "♥" : "♡"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {isOwnProduct && <View style={headerStyles.placeholder} />}
+          </View>
+        </View>
 
         <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.content}
+          style={sharedStyles.container}
+          contentContainerStyle={sharedStyles.content}
         >
-          <View style={styles.breadcrumb}>
-            <Text style={styles.breadcrumbText}>
+          <View style={sharedStyles.breadcrumb}>
+            <Text style={sharedStyles.breadcrumbText}>
               INICIO &gt; {product.categoryName.toUpperCase()} &gt; {product.name.toUpperCase()}
             </Text>
           </View>
 
-          <View style={styles.mainCard}>
+          <View style={sharedStyles.mainCard}>
             <ProductImageGallery
               images={safeImages}
               selectedImage={selectedImage}
@@ -471,3 +579,53 @@ export default function ProductDetailScreen() {
     </SafeAreaView>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  topHeader: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: 16,
+    paddingVertical: 25,
+  },
+
+  topHeaderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+  },
+
+  logoCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+
+  headerBack: {
+    fontSize: FONT.medium,
+    fontWeight: "700",
+    color: COLORS.primary,
+    zIndex: 2,
+  },
+
+  placeholder: {
+    width: 26,
+  },
+
+  wishlistIcon: {
+    fontSize: 26,
+    color: COLORS.textMuted,
+    zIndex: 2,
+  },
+
+  wishlistIconActive: {
+    color: COLORS.error,
+  },
+
+  wishlistIconLoading: {
+    opacity: 0.4,
+  },
+});
