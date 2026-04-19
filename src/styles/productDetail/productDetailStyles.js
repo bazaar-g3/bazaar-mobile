@@ -479,4 +479,39 @@ export const styles = StyleSheet.create({
     color: COLORS.primary,
     zIndex: 2,
   },
+
+  shareButton: {
+    backgroundColor: COLORS.white,
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+
+  shareButtonText: {
+    color: COLORS.primary,
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
+  shareInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+
+  shareInlineText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+
+  shareIcon: {
+    fontSize: 20,
+    color: COLORS.textMuted,
+  },
+
 });

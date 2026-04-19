@@ -1,16 +1,20 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { styles } from "../../styles/productDetail/productDetailStyles";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../../constants/colors";
 
 export default function ProductInfoPanel({
   product,
   quantity,
   isOwnProduct,
+  isAvailable,
   onSellerPress,
   onDecreaseQuantity,
   onIncreaseQuantity,
   onManagePublication,
   onAddToCart,
+  onShareProduct,
 }) {
   return (
     <View style={styles.rightColumn}>
@@ -28,24 +32,33 @@ export default function ProductInfoPanel({
 
       <Text style={styles.descriptionText}>{product.description}</Text>
 
-      {!isOwnProduct ? (
+      {/* 🔥 BOTÓN COMPARTIR estilo consistente */}
+      <TouchableOpacity
+        onPress={onShareProduct}
+        style={styles.shareInline}
+        activeOpacity={0.7}
+      >
+        
+        <Ionicons
+          name="share-outline"
+          style={styles.shareIcon}
+        />
+    
+        <Text style={styles.shareInlineText}>Compartir</Text>
+      </TouchableOpacity>
+
+      {!isOwnProduct && isAvailable ? (
         <View style={styles.quantitySection}>
           <Text style={styles.quantityLabel}>Cantidad</Text>
 
           <View style={styles.quantitySelector}>
-            <TouchableOpacity
-              onPress={onDecreaseQuantity}
-              style={styles.qtyBtn}
-            >
+            <TouchableOpacity onPress={onDecreaseQuantity} style={styles.qtyBtn}>
               <Text style={styles.qtyBtnText}>-</Text>
             </TouchableOpacity>
 
             <Text style={styles.qtyValue}>{quantity}</Text>
 
-            <TouchableOpacity
-              onPress={onIncreaseQuantity}
-              style={styles.qtyBtn}
-            >
+            <TouchableOpacity onPress={onIncreaseQuantity} style={styles.qtyBtn}>
               <Text style={styles.qtyBtnText}>+</Text>
             </TouchableOpacity>
           </View>

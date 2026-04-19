@@ -1,7 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, View, Text, SafeAreaView, ScrollView, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  View,
+  Text,
+  SafeAreaView,
+  ScrollView,
+  Alert,
+  Share,
+  TouchableOpacity,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
@@ -20,6 +30,8 @@ import ProductDetailHeader from "../components/productDetail/ProductDetailHeader
 import ProductImageGallery from "../components/productDetail/ProductImageGallery";
 import ProductInfoPanel from "../components/productDetail/ProductInfoPanel";
 import LoginPromptModal from "../components/productDetail/LoginPromptModal";
+
+const PRODUCT_SHARE_BASE_URL = "https://bazaar.app";
 
 export default function ProductDetailScreen() {
   const router = useRouter();
@@ -75,14 +87,7 @@ export default function ProductDetailScreen() {
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
             seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
-            features: [
-              `Categoria: ${product.category?.label || "Catalogo"}`,
-              product.stock > 0
-                ? "Disponible para compra inmediata"
-                : "Sin stock disponible",
-            ],
-            rating: "Nuevo",
-            reviews: "sin reseñas",
+            status: product.status || "active",
           });
         }
       } catch {
@@ -141,25 +146,17 @@ export default function ProductDetailScreen() {
     product?.sellerId !== undefined &&
     Number(product.sellerId) === Number(currentUserId);
 
+  const isAvailable = !!product && product.status === "active";
+
   useEffect(() => {
     setSelectedImageIndex(0);
     setHandledPendingActionKey("");
   }, [product?.id, pendingAction, pendingQuantity]);
 
-  const oldPrice = useMemo(() => {
-    if (!product) return 0;
-    return Number((product.price * 1.3).toFixed(2));
-  }, [product]);
-
-  const discountPercent = useMemo(() => {
-    if (!product || !oldPrice) return 0;
-    return Math.round(((oldPrice - product.price) / oldPrice) * 100);
-  }, [product, oldPrice]);
-
-  const safeFeatures = product?.features || [];
   const safeImages = product?.images?.length
     ? product.images
     : [product?.image || PRODUCT_IMAGE_PLACEHOLDER];
+
   const selectedImage = safeImages[selectedImageIndex] || safeImages[0];
 
   function completeAddToCart(quantityToAdd, onDismiss) {
@@ -187,6 +184,11 @@ export default function ProductDetailScreen() {
   }
 
   async function handleAddToCart() {
+    if (!isAvailable) {
+      Alert.alert("Producto no disponible", "Este producto ya no está disponible.");
+      return;
+    }
+
     const isAuthenticated = await handleRequireAuthForCart();
 
     if (!isAuthenticated) return;
@@ -219,8 +221,30 @@ export default function ProductDetailScreen() {
     );
   }
 
+  async function handleShareProduct() {
+    if (!product || !isAvailable) {
+      Alert.alert(
+        "Producto no disponible",
+        "Este producto no está disponible para compartir."
+      );
+      return;
+    }
+
+    try {
+      const productUrl = `${PRODUCT_SHARE_BASE_URL}/product/${product.id}`;
+
+      await Share.share({
+        title: product.name,
+        message: `Mirá este producto en Bazaar: ${product.name}\n${productUrl}`,
+        url: productUrl,
+      });
+    } catch {
+      Alert.alert("Error", "No se pudo compartir el producto.");
+    }
+  }
+
   useEffect(() => {
-    if (!product || !pendingAction || !id) {
+    if (!product || !pendingAction || !id || !isAvailable) {
       return;
     }
 
@@ -266,6 +290,7 @@ export default function ProductDetailScreen() {
     id,
     handledPendingActionKey,
     router,
+    isAvailable,
   ]);
 
   if (loadingCatalogProduct) {
@@ -290,6 +315,34 @@ export default function ProductDetailScreen() {
           <Text style={styles.notFoundText}>
             No pudimos encontrar el producto que estás buscando.
           </Text>
+          <TouchableOpacity
+            style={styles.backHomeButton}
+            onPress={() => router.replace("/home")}
+          >
+            <Text style={styles.backHomeButtonText}>Volver al inicio</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isAvailable) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ProductDetailHeader onBack={() => router.back()} />
+
+        <View style={styles.notFoundContainer}>
+          <Text style={styles.notFoundEmoji}>⚠️</Text>
+          <Text style={styles.notFoundTitle}>Producto no disponible</Text>
+          <Text style={styles.notFoundText}>
+            Este producto fue dado de baja o deshabilitado y ya no está disponible.
+          </Text>
+          <TouchableOpacity
+            style={styles.backHomeButton}
+            onPress={() => router.replace("/home")}
+          >
+            <Text style={styles.backHomeButtonText}>Volver al inicio</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -318,16 +371,18 @@ export default function ProductDetailScreen() {
               onSelectImage={setSelectedImageIndex}
             />
 
-          <ProductInfoPanel
-            product={product}
-            quantity={quantity}
-            isOwnProduct={isOwnProduct}
-            onSellerPress={() => router.push(`/user/${product.sellerId}`)}
-            onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
-            onIncreaseQuantity={() => setQuantity(quantity + 1)}
-            onManagePublication={handleManagePublication}
-            onAddToCart={handleAddToCart}
-          />
+            <ProductInfoPanel
+              product={product}
+              quantity={quantity}
+              isOwnProduct={isOwnProduct}
+              isAvailable={isAvailable}
+              onSellerPress={() => router.push(`/user/${product.sellerId}`)}
+              onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
+              onIncreaseQuantity={() => setQuantity(quantity + 1)}
+              onManagePublication={handleManagePublication}
+              onAddToCart={handleAddToCart}
+              onShareProduct={handleShareProduct}
+            />
           </View>
         </ScrollView>
 
