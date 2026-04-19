@@ -2,9 +2,9 @@ import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 
-const CATALOG_API_URL = process.env.EXPO_PUBLIC_CATALOG_API_URL
 // El refresh siempre se hace contra el User API
 const USER_API_URL = process.env.EXPO_PUBLIC_API_GATEWAY_URL
+const CATALOG_API_URL = process.env.EXPO_PUBLIC_CATALOG_API_URL
 
 const catalogApi = axios.create({
   baseURL: CATALOG_API_URL,
