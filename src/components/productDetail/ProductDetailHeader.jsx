@@ -8,11 +8,6 @@ import { styles } from "../../styles/productDetail/productDetailStyles";
 
 export default function ProductDetailHeader() {
   const router = useRouter();
-
-  function handleGoHome() {
-    router.replace("/home");
-  }
-
   return (
     <View style={styles.topHeader}>
       <View style={styles.topHeaderContent}>
