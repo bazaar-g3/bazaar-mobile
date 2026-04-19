@@ -1,7 +1,10 @@
 import { Stack } from 'expo-router'
+import { View } from 'react-native'
 import { useFonts } from 'expo-font'
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
+import { CartProvider } from '../src/context/CartContext'
+import BottomNavBar from '../src/components/BottomNavBar'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -15,6 +18,11 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null
 
   return (
-    <Stack screenOptions={{ headerShown: false }} />
+    <CartProvider>
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }} />
+        <BottomNavBar />
+      </View>
+    </CartProvider>
   )
 }

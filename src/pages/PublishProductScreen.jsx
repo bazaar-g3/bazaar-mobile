@@ -490,14 +490,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
     minHeight: 44,
   },
 
   headerSidePlaceholder: {
-    width: 44,
-    height: 44,
+    flex: 1,
   },
 
   logoCenter: {
@@ -505,8 +502,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none',
   },
 
   content: {
@@ -707,11 +702,6 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
   },
 
-  imagesRow: {
-    flexDirection: 'row',
-    gap: 14,
-  },
-
   emptyImageState: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -720,7 +710,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 16,
     padding: 14,
-    minWidth: 320,
     backgroundColor: '#F8FCFC',
   },
 
@@ -730,57 +719,15 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
   },
 
-  previewCard: {
-    position: 'relative',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: '#F8FCFC',
-  },
-
-  previewImage: {
-    width: 170,
-    height: 130,
+  emptyPreviewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
     backgroundColor: COLORS.imagePlaceholder,
   },
 
-  primaryBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: COLORS.primary,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-
-  primaryBadgeText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-
-  removeImageButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(11, 58, 70, 0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  removeImageButtonText: {
-    color: COLORS.white,
-    fontWeight: '800',
-    fontSize: FONT.small,
-  },
-
   actions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.sm,
     marginTop: SPACING.sm,
   },
@@ -788,9 +735,8 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: COLORS.secondary,
     borderRadius: 10,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 18,
-    minWidth: 220,
     alignItems: 'center',
   },
 
@@ -803,9 +749,8 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#EDF5F4',
     borderRadius: 10,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 18,
-    minWidth: 140,
     alignItems: 'center',
   },
 
