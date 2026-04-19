@@ -550,15 +550,8 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  shareModalSubtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-
   shareModalPrimaryAction: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.logoR,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
@@ -574,7 +567,7 @@ export const styles = StyleSheet.create({
   shareModalSecondaryAction: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.logoB,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",

@@ -164,7 +164,7 @@ export default function ProductDetailScreen() {
 
   function getProductShareUrl(productId) {
     if (Platform.OS === "web" && typeof window !== "undefined") {
-      return window.location.href;
+      return `${window.location.origin}/product/${productId}`;
     }
 
     return `${PRODUCT_SHARE_BASE_URL}/product/${productId}`;

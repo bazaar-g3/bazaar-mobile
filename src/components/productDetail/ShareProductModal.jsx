@@ -26,9 +26,6 @@ export default function ShareProductModal({
           <View style={styles.shareModalHandle} />
 
           <Text style={styles.shareModalTitle}>Compartir producto</Text>
-          <Text style={styles.shareModalSubtitle}>
-            Elegí qué querés hacer con el link.
-          </Text>
 
           <TouchableOpacity
             style={styles.shareModalPrimaryAction}
