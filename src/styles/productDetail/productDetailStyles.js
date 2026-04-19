@@ -284,7 +284,7 @@ export const styles = StyleSheet.create({
   },
 
   manageButtonText: {
-    color: COLORS.lightPurple,
+    color: COLORS.white,
     fontWeight: "900",
     fontSize: 15,
   },
@@ -591,6 +591,19 @@ export const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  headerHomeIcon: {
+    fontSize: 24,
+    color: COLORS.textPrimary,
+  },
+
+  iconButton: {
+    marginLeft: 12,
+    marginRight: 24,
+    padding: 6,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
 });

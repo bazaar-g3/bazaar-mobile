@@ -274,6 +274,7 @@ export default function ProductDetailScreen() {
     }
 
     const productUrl = getProductShareUrl(product.id);
+    const shareMessage = `${product.name}\n${productUrl}`;
 
     try {
       setShowShareModal(false);
@@ -284,17 +285,15 @@ export default function ProductDetailScreen() {
         navigator.share
       ) {
         await navigator.share({
-          title: product.name,
-          text: `Mirá este producto en Bazaar: ${product.name}`,
-          url: productUrl,
+          title: '¡Mirá este producto en Bazaar!',
+          text: shareMessage,
         });
         return;
       }
 
       await Share.share({
-        title: product.name,
-        message: `Mirá este producto en Bazaar: ${product.name}\n${productUrl}`,
-        url: productUrl,
+        title: '¡Mirá este producto en Bazaar!',
+        message: shareMessage,
       });
     } catch {
       Alert.alert("Error", "No se pudo compartir el producto.");
