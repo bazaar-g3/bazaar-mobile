@@ -8,14 +8,9 @@ export default function ProductListHeader({
   searchText,
   setSearchText,
   onSearch,
-  onBack,
 }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} activeOpacity={0.8}>
-        <Text style={styles.backButton}>← Volver</Text>
-      </TouchableOpacity>
-
       <View style={styles.logoCenter}>
         <Logo size={34} textSize={32} style={styles.logoNoMargin} />
       </View>

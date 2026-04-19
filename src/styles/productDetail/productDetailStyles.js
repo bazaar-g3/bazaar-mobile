@@ -18,13 +18,6 @@ export const styles = StyleSheet.create({
     paddingBottom: 28,
   },
 
-  backButton: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.dark,
-    marginBottom: 10,
-  },
-
   breadcrumb: {
     marginBottom: 14,
   },
@@ -138,24 +131,11 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  oldPrice: {
-    fontSize: 15,
-    textDecorationLine: "line-through",
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-
   currentPrice: {
     fontSize: 32,
     fontWeight: "900",
     color: COLORS.secondary,
     marginBottom: 2,
-  },
-
-  savings: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: COLORS.secondary,
   },
 
   sellerText: {
@@ -164,54 +144,11 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  stockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  categoryPill: {
-    backgroundColor: COLORS.promoLight,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-
-  categoryPillText: {
-    color: COLORS.primary,
-    fontWeight: "800",
-    fontSize: 12,
-  },
-
-  stockText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.success,
-  },
-
   descriptionText: {
     fontSize: 14,
     lineHeight: 21,
     color: COLORS.text,
     marginBottom: 12,
-  },
-
-  featuresBox: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    marginBottom: 18,
-  },
-
-  featureItem: {
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    fontWeight: "600",
-    marginBottom: 5,
   },
 
   quantitySection: {
@@ -289,20 +226,6 @@ export const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  shippingInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    marginTop: 18,
-    gap: 10,
-  },
-
-  shippingText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: COLORS.dark,
-  },
-
   notFoundContainer: {
     flex: 1,
     justifyContent: "center",
@@ -344,155 +267,38 @@ export const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  loginPromptOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999,
-  },
-
-  loginPromptBackdrop: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.22)",
-  },
-
-  loginPromptWrapper: {
-    width: "100%",
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-
-  loginPromptBox: {
-    width: 320,
-    maxWidth: "92%",
-    backgroundColor: COLORS.primary,
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    elevation: 12,
-    alignItems: "center",
-  },
-
-  loginPromptTitle: {
-    color: COLORS.white,
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center",
-    lineHeight: 28,
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-
-  loginPromptText: {
-    color: COLORS.white,
-    fontSize: 16,
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-
-  loginPromptButtons: {
-    width: "100%",
-    gap: 10,
-  },
-
-  loginPromptLoginButton: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-
-  loginPromptLoginButtonText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-
-  loginPromptCancelButton: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-
-  loginPromptCancelButtonText: {
-    color: COLORS.primary,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-  loginPromptArrow: {
-    position: "absolute",
-    bottom: -12,
-    width: 22,
-    height: 22,
-    backgroundColor: COLORS.primary,
-    transform: [{ rotate: "45deg" }],
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: COLORS.primaryLight,
-  },
-
   topHeader: {
+    width: "100%",
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
-    paddingHorizontal: 16,
-    paddingVertical: 25,
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 15,
   },
 
   topHeaderContent: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    position: "relative",
+    justifyContent: "center",
   },
 
   logoCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+
+  iconButton: {
     position: "absolute",
     left: 0,
-    right: 0,
-    alignItems: "center",
-    pointerEvents: "none",
+    top: "50%",
+    transform: [{ translateY: -18 }],
+    padding: 6,
   },
 
-  headerBack: {
-    fontSize: FONT.medium,
-    fontWeight: "700",
-    color: COLORS.primary,
-    zIndex: 2,
-  },
-
-  shareButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-
-  shareButtonText: {
-    color: COLORS.primary,
-    fontWeight: "900",
-    fontSize: 15,
+  headerHomeIcon: {
+    fontSize: 24,
+    color: COLORS.textPrimary,
   },
 
   shareInline: {
@@ -513,97 +319,4 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.textMuted,
   },
-
-  shareModalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-
-  shareModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-  },
-
-  shareModalContainer: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 28,
-  },
-
-  shareModalHandle: {
-    width: 44,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: COLORS.divider,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-
-  shareModalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-    marginBottom: 6,
-  },
-
-  shareModalPrimaryAction: {
-    backgroundColor: COLORS.logoR,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  shareModalPrimaryActionText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-  shareModalSecondaryAction: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.logoB,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  shareModalSecondaryActionText: {
-    color: COLORS.primary,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-  shareModalCancelAction: {
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-
-  shareModalCancelActionText: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  headerHomeIcon: {
-    fontSize: 24,
-    color: COLORS.textPrimary,
-  },
-
-  iconButton: {
-    marginLeft: 12,
-    marginRight: 24,
-    padding: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
 });
