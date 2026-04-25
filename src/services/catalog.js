@@ -123,7 +123,7 @@ export async function getCatalogProduct(productId) {
 export async function listRecentProducts() {
   return listCatalogProducts({
     status: 'active',
-    onlyAvailable: true,
+    onlyAvailable: false,
     sort: 'recent',
     limit: 20,
     offset: 0,
@@ -215,7 +215,7 @@ export async function createProduct({
 export async function listRecommendedProducts() {
   return listCatalogProducts({
     status: 'active',
-    onlyAvailable: true,
+    onlyAvailable: false,
     sort: 'recent',
     limit: 10,
     offset: 0,

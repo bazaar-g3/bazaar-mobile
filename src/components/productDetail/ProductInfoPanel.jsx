@@ -15,6 +15,9 @@ export default function ProductInfoPanel({
   onAddToCart,
   onShareProduct,
 }) {
+
+  const isOutOfStock = product.stock === 0;
+
   return (
     <View style={styles.rightColumn}>
       <Text style={styles.productTitle}>{product.name}</Text>
@@ -40,9 +43,9 @@ export default function ProductInfoPanel({
         <Text style={styles.shareInlineText}>Compartir</Text>
       </TouchableOpacity>
 
-      {!isOwnProduct && isAvailable ? (
+      {!isOwnProduct && isAvailable && !isOutOfStock ? (
         <View style={styles.quantitySection}>
-          <Text style={styles.quantityLabel}>Cantidad</Text>
+          <Text style={styles.quantityLabel}>Cantidad (Stock: {product.stock})</Text>
 
           <View style={styles.quantitySelector}>
             <TouchableOpacity onPress={onDecreaseQuantity} style={styles.qtyBtn}>
@@ -51,7 +54,11 @@ export default function ProductInfoPanel({
 
             <Text style={styles.qtyValue}>{quantity}</Text>
 
-            <TouchableOpacity onPress={onIncreaseQuantity} style={styles.qtyBtn}>
+            <TouchableOpacity 
+              onPress={onIncreaseQuantity} 
+              style={styles.qtyBtn}
+              disabled={quantity >= product.stock} 
+            >
               <Text style={styles.qtyBtnText}>+</Text>
             </TouchableOpacity>
           </View>
@@ -68,13 +75,24 @@ export default function ProductInfoPanel({
             <Text style={styles.manageButtonText}>GESTIONAR PUBLICACIÓN</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={styles.cartButton}
-            onPress={onAddToCart}
-            activeOpacity={0.9}
-          >
-            <Text style={styles.cartButtonText}>AÑADIR AL CARRITO</Text>
-          </TouchableOpacity>
+          <View>
+            {isOutOfStock && (
+              <Text style={{ color: 'red', marginBottom: 10, fontWeight: 'bold' }}>
+                No hay stock disponible
+              </Text>
+            )}
+            
+            <TouchableOpacity
+              style={[styles.cartButton, isOutOfStock && { backgroundColor: '#ccc' }]}
+              onPress={onAddToCart}
+              activeOpacity={0.9}
+              disabled={isOutOfStock || !isAvailable} // Se deshabilita la acción
+            >
+              <Text style={styles.cartButtonText}>
+                {isOutOfStock ? "SIN STOCK" : "AÑADIR AL CARRITO"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>

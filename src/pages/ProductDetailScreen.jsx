@@ -230,6 +230,11 @@ export default function ProductDetailScreen() {
       return;
     }
 
+    if (product.stock <= 0) {
+      Alert.alert("Sin stock", "No hay unidades disponibles de este producto por el momento.");
+      return;
+    }
+
     setPendingLoginAction("add-to-cart");
     const authenticated = await handleRequireAuthForCart();
 
@@ -555,7 +560,11 @@ export default function ProductDetailScreen() {
               isAvailable={isAvailable}
               onSellerPress={() => router.push(`/user/${product.sellerId}`)}
               onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
-              onIncreaseQuantity={() => setQuantity(quantity + 1)}
+              onIncreaseQuantity={() => {
+                if (quantity < product.stock) {
+                  setQuantity(quantity + 1);
+                }
+              }}
               onManagePublication={handleManagePublication}
               onAddToCart={handleAddToCart}
               onShareProduct={handleOpenShareModal}

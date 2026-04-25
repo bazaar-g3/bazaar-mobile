@@ -279,16 +279,7 @@ export default function VentasTab({
       })
 
       if (!updatedProduct) return
-
       let finalProduct = updatedProduct
-
-      if (nuevoStock === 0 && updatedProduct.status !== 'disabled') {
-        finalProduct = await updateSellerProductStatus({
-          productId: id,
-          enabled: false,
-        })
-      }
-
       setPublicaciones((prev) =>
         prev.map((p) =>
           p.id === id

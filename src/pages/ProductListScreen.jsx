@@ -88,7 +88,7 @@ export default function ProductListScreen() {
       try {
         const requestParams = {
           status: "active",
-          onlyAvailable: true,
+          //onlyAvailable: true,
           limit: LIMIT,
           offset: currentOffset,
         };
