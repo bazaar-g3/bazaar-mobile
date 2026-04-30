@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { COLORS } from '../constants/colors'
 import { buildLoginRedirect } from '../utils/authRedirect'
+import { useCartContext } from '../context/CartContext'
 
 const TABS = [
   { label: 'Inicio',   icon: 'home-outline',    activeIcon: 'home',          path: '/home' },
@@ -14,6 +15,7 @@ const TABS = [
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
+  const { count } = useCartContext()
 
   const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password']
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null
@@ -49,10 +51,10 @@ export default function BottomNavBar() {
                 size={26}
                 color={isActive ? COLORS.primary : COLORS.textMuted}
               />
-              {isCart && (
+              {isCart && count > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
-                    ...
+                    {count > 99 ? '99+' : count}
                   </Text>
                 </View>
               )}

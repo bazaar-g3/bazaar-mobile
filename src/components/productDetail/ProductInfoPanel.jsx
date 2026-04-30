@@ -8,6 +8,8 @@ export default function ProductInfoPanel({
   quantity,
   isOwnProduct,
   isAvailable,
+  maxAddable = product?.stock ?? 0,        
+  cartLimitReached = false,  
   onSellerPress,
   onDecreaseQuantity,
   onIncreaseQuantity,
@@ -45,7 +47,7 @@ export default function ProductInfoPanel({
 
       {!isOwnProduct && isAvailable && !isOutOfStock ? (
         <View style={styles.quantitySection}>
-          <Text style={styles.quantityLabel}>Cantidad (Stock: {product.stock})</Text>
+          <Text style={styles.quantityLabel}>Cantidad (Disponible: {maxAddable})</Text>
 
           <View style={styles.quantitySelector}>
             <TouchableOpacity onPress={onDecreaseQuantity} style={styles.qtyBtn}>
@@ -57,7 +59,7 @@ export default function ProductInfoPanel({
             <TouchableOpacity 
               onPress={onIncreaseQuantity} 
               style={styles.qtyBtn}
-              disabled={quantity >= product.stock} 
+              disabled={quantity >= maxAddable} 
             >
               <Text style={styles.qtyBtnText}>+</Text>
             </TouchableOpacity>
@@ -81,15 +83,27 @@ export default function ProductInfoPanel({
                 No hay stock disponible
               </Text>
             )}
-            
+            {!isOutOfStock && cartLimitReached && (
+              <Text style={{ color: 'red', marginBottom: 10, fontWeight: 'bold' }}>
+                Ya tenés el máximo disponible en tu carrito
+              </Text>
+            )}
+
             <TouchableOpacity
-              style={[styles.cartButton, isOutOfStock && { backgroundColor: '#ccc' }]}
+              style={[
+                styles.cartButton,
+                (isOutOfStock || cartLimitReached) && { backgroundColor: '#ccc' },
+              ]}
               onPress={onAddToCart}
               activeOpacity={0.9}
-              disabled={isOutOfStock || !isAvailable} // Se deshabilita la acción
+              disabled={isOutOfStock || !isAvailable || cartLimitReached}
             >
               <Text style={styles.cartButtonText}>
-                {isOutOfStock ? "SIN STOCK" : "AÑADIR AL CARRITO"}
+                {isOutOfStock
+                  ? "SIN STOCK"
+                  : cartLimitReached
+                  ? "MÁXIMO EN CARRITO"
+                  : "AÑADIR AL CARRITO"}
               </Text>
             </TouchableOpacity>
           </View>

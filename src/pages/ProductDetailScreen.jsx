@@ -15,6 +15,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 
+import { useCartContext } from "../context/CartContext";
+import { getCartErrorMessage } from "../services/cart";
+
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
   getCatalogProduct,
@@ -59,6 +62,8 @@ export default function ProductDetailScreen() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [pendingLoginAction, setPendingLoginAction] = useState("add-to-cart");
+  const { addItem, items: cartItems } = useCartContext();
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,10 +183,22 @@ export default function ProductDetailScreen() {
 
   const isAvailable = !!product && product.status === "active";
 
+  const quantityInCart = product
+    ? cartItems.find(it => String(it.product_id) === String(product.id))?.quantity ?? 0
+    : 0;
+  const maxAddable = product ? Math.max(product.stock - quantityInCart, 0) : 0;
+  const cartLimitReached = isAvailable && product && product.stock > 0 && maxAddable === 0;
+
   useEffect(() => {
     setSelectedImageIndex(0);
     setHandledPendingActionKey("");
   }, [product?.id, pendingAction, pendingQuantity]);
+
+  useEffect(() => {
+    if (quantity > maxAddable && maxAddable > 0) {
+      setQuantity(maxAddable);
+    }
+  }, [maxAddable, quantity]);
 
   const safeImages = product?.images?.length
     ? product.images
@@ -197,12 +214,24 @@ export default function ProductDetailScreen() {
     return `${PRODUCT_SHARE_BASE_URL}/product/${productId}`;
   }
 
-  function completeAddToCart(quantityToAdd, onDismiss) {
-    Alert.alert(
-      "Añadido",
-      `${quantityToAdd} unidad(es) agregadas al carrito.`,
-      onDismiss ? [{ text: "OK", onPress: onDismiss }] : undefined
-    );
+  async function completeAddToCart(quantityToAdd, onDismiss) {
+    if (!product) return;
+    setAddingToCart(true);
+    try {
+      await addItem(product.id, quantityToAdd);
+      Alert.alert(
+        "Añadido",
+        `${quantityToAdd} unidad(es) agregadas al carrito.`,
+        onDismiss ? [{ text: "OK", onPress: onDismiss }] : undefined
+      );
+    } catch (e) {
+      Alert.alert(
+        "Error",
+        getCartErrorMessage(e, "No se pudo agregar al carrito.")
+      );
+    } finally {
+      setAddingToCart(false);
+    }
   }
 
   async function handleRequireAuthForCart() {
@@ -223,24 +252,32 @@ export default function ProductDetailScreen() {
 
   async function handleAddToCart() {
     if (!isAvailable) {
+      Alert.alert("Producto no disponible", "Este producto ya no está disponible.");
+      return;
+    }
+    if (product.stock <= 0) {
+      Alert.alert("Sin stock", "No hay unidades disponibles de este producto por el momento.");
+      return;
+    }
+    if (cartLimitReached) {
       Alert.alert(
-        "Producto no disponible",
-        "Este producto ya no está disponible."
+        "Límite alcanzado",
+        "Ya tenés el máximo disponible de este producto en tu carrito."
       );
       return;
     }
-
-    if (product.stock <= 0) {
-      Alert.alert("Sin stock", "No hay unidades disponibles de este producto por el momento.");
+    if (quantity > maxAddable) {
+      Alert.alert(
+        "Cantidad no disponible",
+        `Solo podés agregar ${maxAddable} unidad/es más (ya tenés ${quantityInCart} en el carrito).`
+      );
       return;
     }
 
     setPendingLoginAction("add-to-cart");
     const authenticated = await handleRequireAuthForCart();
-
     if (!authenticated) return;
-
-    completeAddToCart(quantity);
+    await completeAddToCart(quantity);
   }
 
   function handleManagePublication() {
@@ -403,7 +440,7 @@ export default function ProductDetailScreen() {
         setHandledPendingActionKey(actionKey);
         setQuantity(restoredQuantity);
 
-        completeAddToCart(restoredQuantity, () => {
+        await completeAddToCart(restoredQuantity, () => {
           router.replace(`/product/${id}`);
         });
       }
@@ -558,10 +595,12 @@ export default function ProductDetailScreen() {
               quantity={quantity}
               isOwnProduct={isOwnProduct}
               isAvailable={isAvailable}
+              maxAddable={maxAddable}                    
+              cartLimitReached={cartLimitReached}        
               onSellerPress={() => router.push(`/user/${product.sellerId}`)}
               onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
               onIncreaseQuantity={() => {
-                if (quantity < product.stock) {
+                if (quantity < maxAddable) {
                   setQuantity(quantity + 1);
                 }
               }}

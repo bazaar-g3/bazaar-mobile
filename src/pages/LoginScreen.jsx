@@ -17,9 +17,11 @@ import { COLORS } from '../constants/colors'
 import Logo from '../components/Logo'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 import OAuthButtons from '../components/OAuthButtons'
+import { useCartContext } from '../context/CartContext'
 
 export default function LoginScreen() {
   const router = useRouter()
+  const { refresh: refreshCart } = useCartContext()
   const params = useLocalSearchParams()
 
   const [email, setEmail] = useState('')
@@ -61,6 +63,12 @@ export default function LoginScreen() {
         await registerForPushNotifications()
       } catch (notificationError) {
         console.warn('Push notification registration failed after login', notificationError)
+      }
+
+      try {
+        await refreshCart()
+      } catch (cartError) {
+        console.warn('Cart refresh failed after login', cartError)
       }
 
       router.replace(buildPostAuthDestination(params))
