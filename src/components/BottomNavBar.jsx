@@ -7,9 +7,10 @@ import { buildLoginRedirect } from '../utils/authRedirect'
 import { useCartContext } from '../context/CartContext'
 
 const TABS = [
-  { label: 'Inicio',   icon: 'home-outline',    activeIcon: 'home',          path: '/home' },
-  { label: 'Carrito',  icon: 'cart-outline',     activeIcon: 'cart',          path: '/cart', requiresAuth: true },
-  { label: 'Perfil',   icon: 'person-outline',   activeIcon: 'person',        path: '/profile', requiresAuth: true },
+  { label: 'Inicio',      icon: 'home-outline',    activeIcon: 'home',    path: '/home' },
+  { label: 'Carrito',     icon: 'cart-outline',    activeIcon: 'cart',    path: '/cart',   requiresAuth: true },
+  { label: 'Mis órdenes', icon: 'receipt-outline', activeIcon: 'receipt', path: '/orders', requiresAuth: true },
+  { label: 'Perfil',      icon: 'person-outline',  activeIcon: 'person',  path: '/profile', requiresAuth: true },
 ]
 
 export default function BottomNavBar() {
