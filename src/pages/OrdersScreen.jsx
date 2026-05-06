@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
@@ -21,20 +22,27 @@ import { COLORS } from '../constants/colors'
 import { FONT, SPACING } from '../constants/theme'
 
 const STATUS_CONFIG = {
-  pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary },
-  confirmed:          { label: 'Confirmada',           color: COLORS.primary },
-  in_preparation:     { label: 'En preparación',       color: COLORS.primaryLight },
-  shipped:            { label: 'Enviada',              color: COLORS.logoB },
-  delivered:          { label: 'Entregada',            color: COLORS.success },
-  payment_rejected:   { label: 'Pago rechazado',       color: COLORS.error },
-  cancelled:          { label: 'Cancelada',            color: COLORS.textMuted },
-  refund_in_progress: { label: 'Reembolso en proceso', color: COLORS.secondary },
-  refund_processed:   { label: 'Reembolso procesado',  color: COLORS.success },
+  pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary,    icon: 'time-outline' },
+  confirmed:          { label: 'Confirmada',           color: COLORS.primary,      icon: 'checkmark-circle-outline' },
+  in_preparation:     { label: 'En preparación',       color: COLORS.primaryLight, icon: 'construct-outline' },
+  shipped:            { label: 'Enviada',              color: COLORS.logoB,        icon: 'bicycle-outline' },
+  delivered:          { label: 'Entregada',            color: COLORS.success,      icon: 'home-outline' },
+  payment_rejected:   { label: 'Pago rechazado',       color: COLORS.error,        icon: 'close-circle-outline' },
+  cancelled:          { label: 'Cancelada',            color: COLORS.textMuted,    icon: 'ban-outline' },
+  refund_in_progress: { label: 'Reembolso en proceso', color: COLORS.secondary,    icon: 'refresh-outline' },
+  refund_processed:   { label: 'Reembolso procesado',  color: COLORS.success,      icon: 'wallet-outline' },
 }
 
+// Filtros reducidos para mobile — los más relevantes primero
 const FILTERS = [
-  { key: null, label: 'Todas' },
-  ...Object.entries(STATUS_CONFIG).map(([key, { label }]) => ({ key, label })),
+  { key: null,               label: 'Todas' },
+  { key: 'pending_payment',  label: 'Pendiente' },
+  { key: 'confirmed',        label: 'Confirmada' },
+  { key: 'in_preparation',   label: 'Preparación' },
+  { key: 'shipped',          label: 'Enviada' },
+  { key: 'delivered',        label: 'Entregada' },
+  { key: 'payment_rejected', label: 'Rechazada' },
+  { key: 'cancelled',        label: 'Cancelada' },
 ]
 
 function formatDate(iso) {
@@ -52,11 +60,12 @@ function formatDateTime(iso) {
   })
 }
 
-function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? { label: status, color: COLORS.textMuted }
+function StatusBadge({ status, small = false }) {
+  const config = STATUS_CONFIG[status] ?? { label: status, color: COLORS.textMuted, icon: 'ellipse-outline' }
   return (
-    <View style={[styles.badge, { backgroundColor: config.color }]}>
-      <Text style={styles.badgeText}>{config.label}</Text>
+    <View style={[styles.badge, { backgroundColor: config.color }, small && styles.badgeSmall]}>
+      <Ionicons name={config.icon} size={small ? 11 : 12} color={COLORS.white} />
+      <Text style={[styles.badgeText, small && styles.badgeTextSmall]}>{config.label}</Text>
     </View>
   )
 }
@@ -138,11 +147,7 @@ export default function OrdersScreen() {
     )
   }
 
-  const containerStyle = [
-    styles.container,
-    { paddingHorizontal: isSmall ? SPACING.md : SPACING.lg },
-    isTablet && styles.containerTablet,
-  ]
+  const hPad = isSmall ? SPACING.md : SPACING.lg
 
   const renderOrder = ({ item }) => (
     <TouchableOpacity
@@ -151,81 +156,88 @@ export default function OrdersScreen() {
       activeOpacity={0.75}
     >
       <View style={styles.orderCardTop}>
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} small />
         <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
       </View>
       <Text style={styles.orderId} numberOfLines={1}>
-        Orden #{String(item.id).slice(0, 8).toUpperCase()}
+        #{String(item.id).slice(0, 8).toUpperCase()}
       </Text>
       <View style={styles.orderCardBottom}>
         <Text style={styles.orderTotal}>${Number(item.total).toFixed(2)}</Text>
-        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
       </View>
     </TouchableOpacity>
   )
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <View style={containerStyle}>
-        <Text style={[styles.title, { fontSize: isSmall ? FONT.large : FONT.title }]}>
+    <SafeAreaView style={styles.screen}>
+      {/* ── Header fijo ─────────────────────────────────────────── */}
+      <View style={[styles.header, { paddingHorizontal: hPad }]}>
+        <Text style={[styles.title, { fontSize: isSmall ? FONT.large : 26 }]}>
           Mis órdenes
         </Text>
+        {loading && orders.length > 0 && (
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        )}
+      </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filterContent}
-        >
-          {FILTERS.map((f) => {
-            const isActive = activeFilter === f.key
-            return (
-              <TouchableOpacity
-                key={String(f.key)}
-                style={[styles.filterTab, isActive && styles.filterTabActive]}
-                onPress={() => setActiveFilter(f.key)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+      {/* ── Filtros full-width (scroll horizontal sin padding lateral) ─ */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={[styles.filterContent, { paddingHorizontal: hPad }]}
+        bounces={false}
+      >
+        {FILTERS.map((f) => {
+          const isActive = activeFilter === f.key
+          const cfg = f.key ? STATUS_CONFIG[f.key] : null
+          return (
+            <TouchableOpacity
+              key={String(f.key)}
+              style={[
+                styles.filterChip,
+                isActive && { backgroundColor: cfg?.color ?? COLORS.primary, borderColor: cfg?.color ?? COLORS.primary },
+              ]}
+              onPress={() => setActiveFilter(f.key)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
 
+      {/* ── Lista ────────────────────────────────────────────────── */}
+      <View style={[styles.listContainer, isTablet && styles.listContainerTablet]}>
         {loading && orders.length === 0 ? (
-          <ActivityIndicator
-            size="large"
-            color={COLORS.primary}
-            style={{ marginTop: SPACING.xl }}
-          />
+          <View style={styles.fullCenter}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
         ) : error && orders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>
-              No pudimos cargar tus órdenes. Probá de nuevo.
-            </Text>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => loadOrders(activeFilter)}
-            >
+            <Ionicons name="cloud-offline-outline" size={52} color={COLORS.textMuted} />
+            <Text style={styles.emptyTitle}>Sin conexión</Text>
+            <Text style={styles.emptyText}>No pudimos cargar tus órdenes.</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => loadOrders(activeFilter)}>
               <Text style={styles.actionButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
         ) : orders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={48} color={COLORS.textMuted} />
+            <Ionicons name="receipt-outline" size={52} color={COLORS.textMuted} />
+            <Text style={styles.emptyTitle}>
+              {activeFilter ? 'Sin resultados' : 'Sin órdenes'}
+            </Text>
             <Text style={styles.emptyText}>
               {activeFilter
                 ? 'No tenés órdenes con ese estado.'
                 : 'Todavía no realizaste ninguna compra.'}
             </Text>
             {!activeFilter && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/home')}
-              >
+              <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/home')}>
                 <Text style={styles.actionButtonText}>Ir al catálogo</Text>
               </TouchableOpacity>
             )}
@@ -235,7 +247,7 @@ export default function OrdersScreen() {
             data={orders}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderOrder}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingHorizontal: hPad }]}
             showsVerticalScrollIndicator={false}
             refreshing={loading}
             onRefresh={() => loadOrders(activeFilter)}
@@ -243,21 +255,24 @@ export default function OrdersScreen() {
         )}
       </View>
 
+      {/* ── Modal de detalle ─────────────────────────────────────── */}
       <Modal
         visible={selectedOrder !== null}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={closeDetail}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+        <SafeAreaView style={styles.screen}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Detalle de orden</Text>
             <TouchableOpacity
               onPress={closeDetail}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.modalCloseBtn}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+              <Ionicons name="close" size={22} color={COLORS.textPrimary} />
             </TouchableOpacity>
+            <Text style={styles.modalTitle}>Detalle de orden</Text>
+            <View style={{ width: 44 }} />
           </View>
 
           {detailLoading ? (
@@ -265,7 +280,7 @@ export default function OrdersScreen() {
               <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
           ) : detailError ? (
-            <View style={styles.fullCenter}>
+            <View style={styles.emptyContainer}>
               <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyText}>No se pudo cargar el detalle.</Text>
               <TouchableOpacity
@@ -276,30 +291,39 @@ export default function OrdersScreen() {
               </TouchableOpacity>
             </View>
           ) : selectedOrder ? (
-            <ScrollView contentContainerStyle={styles.modalBody}>
-              <View style={styles.detailSection}>
-                <Text style={styles.orderId}>
+            <ScrollView
+              contentContainerStyle={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Orden ID + badge */}
+              <View style={styles.detailHero}>
+                <Text style={styles.detailOrderId}>
                   Orden #{String(selectedOrder.id).slice(0, 8).toUpperCase()}
                 </Text>
                 <StatusBadge status={selectedOrder.status} />
-                <Text style={styles.detailMeta}>
-                  Fecha: {formatDate(selectedOrder.created_at)}
-                </Text>
+                <Text style={styles.detailMeta}>{formatDate(selectedOrder.created_at)}</Text>
               </View>
 
-              {selectedOrder.delivery_address && (
+              {/* Dirección */}
+              {selectedOrder.delivery_address ? (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Dirección de entrega</Text>
-                  <Text style={styles.detailText}>
-                    {[
-                      selectedOrder.delivery_address.street,
-                      selectedOrder.delivery_address.city,
-                      selectedOrder.delivery_address.state,
-                    ].filter(Boolean).join(', ')}
-                  </Text>
+                  <View style={styles.detailSectionCard}>
+                    <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.detailText}>
+                      {typeof selectedOrder.delivery_address === 'string'
+                        ? selectedOrder.delivery_address
+                        : [
+                            selectedOrder.delivery_address.street,
+                            selectedOrder.delivery_address.city,
+                            selectedOrder.delivery_address.state,
+                          ].filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
                 </View>
-              )}
+              ) : null}
 
+              {/* Productos */}
               {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Productos</Text>
@@ -321,6 +345,7 @@ export default function OrdersScreen() {
                 </View>
               )}
 
+              {/* Total */}
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total</Text>
                 <Text style={styles.totalAmount}>
@@ -328,13 +353,17 @@ export default function OrdersScreen() {
                 </Text>
               </View>
 
+              {/* Historial */}
               {Array.isArray(selectedOrder.status_history) &&
                 selectedOrder.status_history.length > 0 && (
                   <View style={styles.detailSection}>
-                    <Text style={styles.sectionLabel}>Historial de estados</Text>
-                    {selectedOrder.status_history.map((h, i) => (
+                    <Text style={styles.sectionLabel}>Historial</Text>
+                    {[...selectedOrder.status_history].reverse().map((h, i) => (
                       <View key={i} style={styles.historyRow}>
-                        <View style={styles.historyDot} />
+                        <View style={[
+                          styles.historyDot,
+                          { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                        ]} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.historyStatus}>
                             {STATUS_CONFIG[h.status]?.label ?? h.status}
@@ -356,6 +385,10 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
   fullCenter: {
     flex: 1,
     alignItems: 'center',
@@ -363,117 +396,169 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     gap: SPACING.md,
   },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.white,
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: SPACING.md,
-    paddingBottom: SPACING.md,
-  },
-  containerTablet: {
-    maxWidth: 800,
-    alignSelf: 'center',
-    width: '100%',
+    paddingBottom: SPACING.sm,
   },
   title: {
     fontWeight: '900',
     color: COLORS.textPrimary,
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
   },
-  filterScroll: { marginBottom: SPACING.md },
-  filterContent: { gap: SPACING.xs, paddingRight: SPACING.md },
-  filterTab: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
+
+  // Filtros — full width, padding dentro del contentContainer
+  filterScroll: {
+    flexGrow: 0,
+    marginBottom: SPACING.sm,
+  },
+  filterContent: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    paddingBottom: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.divider,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.white,
   },
-  filterTabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterTabText: {
-    fontSize: FONT.small,
+  filterChipText: {
+    fontSize: 13,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-  filterTabTextActive: { color: COLORS.white },
-  listContent: { paddingBottom: SPACING.lg },
+  filterChipTextActive: {
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+
+  // Lista
+  listContainer: {
+    flex: 1,
+  },
+  listContainerTablet: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  listContent: {
+    paddingBottom: SPACING.xl,
+    paddingTop: SPACING.xs,
+  },
+
+  // Tarjetas de orden
   orderCard: {
     backgroundColor: COLORS.background,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
+    gap: 4,
   },
   orderCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
   },
   orderCardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: SPACING.xs,
+    marginTop: 2,
   },
   orderId: {
     fontSize: FONT.small,
     color: COLORS.textSecondary,
     fontWeight: '600',
-    marginBottom: 2,
+    letterSpacing: 0.3,
   },
   orderDate: {
-    fontSize: FONT.small,
+    fontSize: 12,
     color: COLORS.textMuted,
+    fontWeight: '500',
   },
   orderTotal: {
     fontSize: FONT.medium,
     fontWeight: '900',
     color: COLORS.textPrimary,
   },
+
+  // Badge de estado
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 999,
+  },
+  badgeSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   badgeText: {
     color: COLORS.white,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
+  badgeTextSmall: {
+    fontSize: 11,
+  },
+
+  // Estados vacíos
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.md,
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
   },
   emptyText: {
     fontSize: FONT.regular,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
   },
   actionButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
     borderRadius: 12,
+    marginTop: SPACING.xs,
   },
   actionButtonText: {
     color: COLORS.white,
     fontWeight: '800',
     fontSize: FONT.regular,
   },
+
+  // Modal de detalle
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
+  },
+  modalCloseBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
   },
   modalTitle: {
     fontSize: FONT.medium,
@@ -482,39 +567,64 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: SPACING.lg,
-    gap: SPACING.sm,
+    gap: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
-  detailSection: {
+
+  // Detalle
+  detailHero: {
+    alignItems: 'flex-start',
     gap: SPACING.xs,
-    marginBottom: SPACING.md,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
   },
-  sectionLabel: {
-    fontSize: FONT.small,
-    fontWeight: '800',
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
+  detailOrderId: {
+    fontSize: FONT.large,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   detailMeta: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
+    fontWeight: '500',
   },
-  detailText: {
-    fontSize: FONT.regular,
-    color: COLORS.textPrimary,
+  detailSection: {
+    gap: SPACING.xs,
   },
-  detailItem: {
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  detailSectionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.xs,
     backgroundColor: COLORS.background,
     borderRadius: 10,
     padding: SPACING.sm,
-    marginBottom: SPACING.xs,
+  },
+  detailText: {
+    flex: 1,
+    fontSize: FONT.regular,
+    color: COLORS.textPrimary,
+    lineHeight: 20,
+  },
+  detailItem: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: SPACING.sm,
+    gap: 6,
   },
   detailItemName: {
     fontSize: FONT.regular,
     fontWeight: '700',
     color: COLORS.textPrimary,
-    marginBottom: 4,
   },
   detailItemRow: {
     flexDirection: 'row',
@@ -527,7 +637,7 @@ const styles = StyleSheet.create({
   },
   detailItemSubtotal: {
     fontSize: FONT.regular,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.textPrimary,
   },
   totalRow: {
@@ -536,8 +646,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: COLORS.divider,
-    paddingTop: SPACING.md,
-    marginBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingVertical: SPACING.md,
   },
   totalLabel: {
     fontSize: FONT.medium,
@@ -549,26 +660,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: COLORS.textPrimary,
   },
+
+  // Historial
   historyRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.sm,
-    marginBottom: SPACING.xs,
+    paddingVertical: SPACING.xs,
   },
   historyDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: COLORS.primary,
-    marginTop: 4,
+    marginTop: 5,
+    flexShrink: 0,
   },
   historyStatus: {
     fontSize: FONT.regular,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.textPrimary,
   },
   historyDate: {
-    fontSize: FONT.small,
+    fontSize: 12,
     color: COLORS.textMuted,
+    marginTop: 2,
   },
 })
