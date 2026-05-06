@@ -367,21 +367,35 @@ export default function OrdersScreen() {
               {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Productos</Text>
-                  {selectedOrder.items.map((item, i) => (
-                    <View key={i} style={styles.detailItem}>
-                      <Text style={styles.detailItemName} numberOfLines={2}>
-                        {item.product_name ?? item.name ?? `Producto ${String(item.product_id ?? '').slice(0, 8)}`}
-                      </Text>
-                      <View style={styles.detailItemRow}>
-                        <Text style={styles.detailItemMeta}>
-                          {item.quantity} × ${Number(item.unit_price).toFixed(2)}
-                        </Text>
-                        <Text style={styles.detailItemSubtotal}>
-                          ${Number(item.subtotal ?? item.quantity * item.unit_price).toFixed(2)}
-                        </Text>
+                  {selectedOrder.items.map((item, i) => {
+                    const displayName = item.product_name ?? item.name ?? null
+                    const shortId = String(item.product_id ?? '').slice(0, 8)
+                    return (
+                      <View key={i} style={styles.detailItem}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            closeDetail()
+                            router.push(`/product/${item.product_id}`)
+                          }}
+                          activeOpacity={0.7}
+                          style={styles.detailItemNameRow}
+                        >
+                          <Text style={styles.detailItemName} numberOfLines={2}>
+                            {displayName ?? `Producto ${shortId}`}
+                          </Text>
+                          <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                        </TouchableOpacity>
+                        <View style={styles.detailItemRow}>
+                          <Text style={styles.detailItemMeta}>
+                            {item.quantity} × ${Number(item.unit_price).toFixed(2)}
+                          </Text>
+                          <Text style={styles.detailItemSubtotal}>
+                            ${Number(item.subtotal ?? item.quantity * item.unit_price).toFixed(2)}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
-                  ))}
+                    )
+                  })}
                 </View>
               )}
 
@@ -661,10 +675,20 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     gap: 6,
   },
+  detailItemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.xs,
+  },
   detailItemName: {
+    flex: 1,
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: COLORS.primary,        // azul = indica que es tappable
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'solid',
+    textDecorationColor: COLORS.primary,
   },
   detailItemRow: {
     flexDirection: 'row',
