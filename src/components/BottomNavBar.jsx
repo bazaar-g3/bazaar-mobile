@@ -18,7 +18,7 @@ export default function BottomNavBar() {
   const pathname = usePathname()
   const { count } = useCartContext()
 
-  const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password']
+  const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password', '/checkout']
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null
 
   async function handlePress(tab) {
