@@ -25,6 +25,18 @@ export async function checkout(deliveryAddress, idempotencyKey) {
   return data
 }
 
+/**
+ * Obtiene las ventas confirmadas del vendedor (órdenes que contienen sus productos).
+ * @param {number} sellerCatalogId - El ID entero del vendedor en catalog-api (= profile.id).
+ * @returns {Array<{ order_id, created_at, buyer_id, delivery_address, items, seller_subtotal }>}
+ */
+export async function getSellerSales(sellerCatalogId) {
+  const { data } = await ordersApi.get('/orders/seller-sales', {
+    params: { seller_catalog_id: sellerCatalogId },
+  })
+  return data
+}
+
 export function getOrdersErrorMessage(error, fallback = 'No se pudieron cargar las órdenes.') {
   const detail = error?.response?.data?.detail
   if (typeof detail === 'string') return detail

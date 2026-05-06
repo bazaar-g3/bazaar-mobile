@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
+  Modal,
+  ScrollView,
   View,
   Text,
   TextInput,
@@ -18,6 +20,8 @@ import {
   updateSellerProductStock,
   updateSellerProduct,
 } from '../services/catalog'
+import { getSellerSales } from '../services/orders'
+import { getPublicProfile } from '../services/user'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
 import EditProductModal from '../components/EditProductModal'
@@ -55,6 +59,14 @@ export default function VentasTab({
   const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
   const [loadingEditProduct, setLoadingEditProduct] = useState(false)
 
+  // --- Pedidos recibidos (ventas confirmadas) ---
+  const [pedidosModalVisible, setPedidosModalVisible] = useState(false)
+  const [pedidos, setPedidos] = useState([])
+  const [loadingPedidos, setLoadingPedidos] = useState(false)
+  const [pedidosError, setPedidosError] = useState('')
+  // Mapa buyer_id → nombre legible, para evitar refetch
+  const [buyerNames, setBuyerNames] = useState({})
+
   const alreadyAutoOpenedRef = useRef('')
 
   const loadPublicaciones = useCallback(async () => {
@@ -86,6 +98,56 @@ export default function VentasTab({
   useEffect(() => {
     loadPublicaciones()
   }, [loadPublicaciones, refreshKey])
+
+  // --- Lógica de pedidos recibidos ---
+
+  function formatDeliveryAddress(addr) {
+    if (!addr) return 'Dirección no disponible'
+    const parts = [`${addr.calle} ${addr.altura}`]
+    if (addr.departamento) parts[0] += ` Dpto. ${addr.departamento}`
+    if (addr.zona) parts.push(addr.zona)
+    parts.push(`CP ${addr.codigo_postal}`)
+    return parts.join(', ')
+  }
+
+  async function loadPedidos() {
+    if (!sellerId) return
+
+    setLoadingPedidos(true)
+    setPedidosError('')
+    setPedidos([])
+
+    try {
+      const sales = await getSellerSales(sellerId)
+      setPedidos(sales)
+
+      // Cargar nombres de compradores en segundo plano
+      const uniqueBuyerIds = [...new Set(sales.map((s) => s.buyer_id))]
+      const names = {}
+      await Promise.all(
+        uniqueBuyerIds.map(async (buyerId) => {
+          const profile = await getPublicProfile(buyerId)
+          names[buyerId] = profile?.name || profile?.username || profile?.email || 'Comprador'
+        })
+      )
+      setBuyerNames(names)
+    } catch (error) {
+      setPedidosError(
+        error?.response?.data?.detail || error?.message || 'No se pudieron cargar los pedidos.'
+      )
+    } finally {
+      setLoadingPedidos(false)
+    }
+  }
+
+  function handleOpenPedidos() {
+    setPedidosModalVisible(true)
+    loadPedidos()
+  }
+
+  function handleClosePedidos() {
+    setPedidosModalVisible(false)
+  }
 
   function toggleFiltro(filtro) {
     setFiltrosActivos((prev) =>
@@ -315,9 +377,14 @@ export default function VentasTab({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.titulo}>Gestión de publicaciones</Text>
-        <TouchableOpacity style={styles.btnPublicar} onPress={handleCrearPublicacion}>
-          <Text style={styles.btnPublicarText}>+ Publicar</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.btnPedidos} onPress={handleOpenPedidos}>
+            <Text style={styles.btnPedidosText}>📦 Pedidos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnPublicar} onPress={handleCrearPublicacion}>
+            <Text style={styles.btnPublicarText}>+ Publicar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.toolbar}>
@@ -486,6 +553,108 @@ export default function VentasTab({
         onClose={handleCloseModal}
         onSave={handleSaveChanges}
       />
+
+      {/* Modal de pedidos recibidos */}
+      <Modal
+        visible={pedidosModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={handleClosePedidos}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pedidosModal}>
+            {/* Header del modal */}
+            <View style={styles.pedidosModalHeader}>
+              <Text style={styles.pedidosModalTitulo}>Pedidos recibidos</Text>
+              <TouchableOpacity onPress={handleClosePedidos} style={styles.pedidosCloseBtn}>
+                <Text style={styles.pedidosCloseBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingPedidos ? (
+              <View style={styles.pedidosCentered}>
+                <ActivityIndicator size="large" color={COLORS.primaryLight} />
+                <Text style={styles.pedidosSubtitulo}>Cargando pedidos...</Text>
+              </View>
+            ) : pedidosError ? (
+              <View style={styles.pedidosCentered}>
+                <Text style={styles.pedidosError}>{pedidosError}</Text>
+                <TouchableOpacity style={styles.btnReintentar} onPress={loadPedidos}>
+                  <Text style={styles.btnReintentarText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : pedidos.length === 0 ? (
+              <View style={styles.pedidosCentered}>
+                <Text style={styles.pedidosEmptyIcon}>🛒</Text>
+                <Text style={styles.pedidosTituloVacio}>Sin pedidos todavía</Text>
+                <Text style={styles.pedidosSubtitulo}>
+                  Aquí verás los pedidos confirmados de tus compradores.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.pedidosList}
+                contentContainerStyle={styles.pedidosListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.pedidosConteo}>
+                  {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''} confirmado{pedidos.length !== 1 ? 's' : ''}
+                </Text>
+
+                {pedidos.map((pedido) => {
+                  const buyerName = buyerNames[pedido.buyer_id] || 'Cargando...'
+                  const fecha = new Date(pedido.created_at).toLocaleDateString('es-AR', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })
+                  return (
+                    <View key={String(pedido.order_id)} style={styles.pedidoCard}>
+                      {/* Fecha y subtotal del vendedor */}
+                      <View style={styles.pedidoCardHeader}>
+                        <Text style={styles.pedidoFecha}>{fecha}</Text>
+                        <Text style={styles.pedidoSubtotal}>
+                          ${Number(pedido.seller_subtotal).toLocaleString('es-AR')}
+                        </Text>
+                      </View>
+
+                      {/* Comprador */}
+                      <View style={styles.pedidoRow}>
+                        <Text style={styles.pedidoLabel}>Comprador</Text>
+                        <Text style={styles.pedidoValue}>{buyerName}</Text>
+                      </View>
+
+                      {/* Dirección de entrega */}
+                      <View style={styles.pedidoRow}>
+                        <Text style={styles.pedidoLabel}>Dirección</Text>
+                        <Text style={styles.pedidoValue}>
+                          {formatDeliveryAddress(pedido.delivery_address)}
+                        </Text>
+                      </View>
+
+                      {/* Productos comprados */}
+                      <View style={styles.pedidoProductosContainer}>
+                        <Text style={styles.pedidoLabel}>Productos</Text>
+                        {pedido.items.map((item, idx) => (
+                          <View key={idx} style={styles.pedidoProductoRow}>
+                            <Text style={styles.pedidoProductoName} numberOfLines={2}>
+                              {item.product_name || item.product_id}
+                            </Text>
+                            <Text style={styles.pedidoProductoQty}>
+                              x{item.quantity}
+                            </Text>
+                            <Text style={styles.pedidoProductoSubtotal}>
+                              ${Number(item.subtotal).toLocaleString('es-AR')}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -503,6 +672,12 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
 
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+
   titulo: {
     fontSize: FONT.large,
     fontWeight: '700',
@@ -518,6 +693,21 @@ const styles = StyleSheet.create({
 
   btnPublicarText: {
     color: COLORS.white,
+    fontWeight: '700',
+    fontSize: FONT.medium,
+  },
+
+  btnPedidos: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+  },
+
+  btnPedidosText: {
+    color: COLORS.primaryLight,
     fontWeight: '700',
     fontSize: FONT.medium,
   },
@@ -846,5 +1036,188 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 54,
+  },
+
+  // ── Modal de pedidos ─────────────────────────────────────────────────────────
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+
+  pedidosModal: {
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '85%',
+    overflow: 'hidden',
+  },
+
+  pedidosModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+
+  pedidosModalTitulo: {
+    fontSize: FONT.large,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+
+  pedidosCloseBtn: {
+    padding: SPACING.sm,
+  },
+
+  pedidosCloseBtnText: {
+    fontSize: FONT.medium,
+    color: COLORS.textMuted,
+  },
+
+  pedidosCentered: {
+    padding: SPACING.xl ?? 40,
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+
+  pedidosEmptyIcon: {
+    fontSize: 48,
+    marginBottom: SPACING.sm,
+  },
+
+  pedidosTituloVacio: {
+    fontSize: FONT.medium,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    textAlign: 'center',
+  },
+
+  pedidosSubtitulo: {
+    fontSize: FONT.small,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+
+  pedidosError: {
+    fontSize: FONT.small,
+    color: '#C0392B',
+    textAlign: 'center',
+  },
+
+  btnReintentar: {
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    borderRadius: 8,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+  },
+
+  btnReintentarText: {
+    color: COLORS.primaryLight,
+    fontWeight: '600',
+    fontSize: FONT.small,
+  },
+
+  pedidosList: {
+    flex: 1,
+  },
+
+  pedidosListContent: {
+    padding: SPACING.lg,
+    gap: SPACING.md,
+  },
+
+  pedidosConteo: {
+    fontSize: FONT.small,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.sm,
+  },
+
+  pedidoCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 14,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    gap: SPACING.sm,
+  },
+
+  pedidoCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.xs ?? 4,
+  },
+
+  pedidoFecha: {
+    fontSize: FONT.small,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+
+  pedidoSubtotal: {
+    fontSize: FONT.medium,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  pedidoRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
+  },
+
+  pedidoLabel: {
+    fontSize: FONT.small,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    minWidth: 80,
+  },
+
+  pedidoValue: {
+    fontSize: FONT.small,
+    color: COLORS.textPrimary,
+    flex: 1,
+    flexShrink: 1,
+  },
+
+  pedidoProductosContainer: {
+    gap: 4,
+  },
+
+  pedidoProductoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingLeft: 80,
+  },
+
+  pedidoProductoName: {
+    flex: 1,
+    fontSize: FONT.small,
+    color: COLORS.textPrimary,
+  },
+
+  pedidoProductoQty: {
+    fontSize: FONT.small,
+    color: COLORS.textMuted,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+
+  pedidoProductoSubtotal: {
+    fontSize: FONT.small,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    minWidth: 70,
+    textAlign: 'right',
   },
 })
