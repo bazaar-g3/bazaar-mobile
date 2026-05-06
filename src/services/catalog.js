@@ -105,7 +105,7 @@ export function mapCatalogProductToVentasItem(product) {
     precio: Number(product.price) || 0,
     estado: product.status === 'disabled' ? 'inactiva' : 'activa',
     stock: Number(product.stock) || 0,
-    vendidos: 0,
+    vendidos: product.sold_count ?? 0,
     imagen: product.images?.[0] || '📦',
   }
 }

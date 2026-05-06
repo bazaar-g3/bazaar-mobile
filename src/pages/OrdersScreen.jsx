@@ -149,25 +149,38 @@ export default function OrdersScreen() {
 
   const hPad = isSmall ? SPACING.md : SPACING.lg
 
-  const renderOrder = ({ item }) => (
-    <TouchableOpacity
-      style={styles.orderCard}
-      onPress={() => handleOrderPress(item)}
-      activeOpacity={0.75}
-    >
-      <View style={styles.orderCardTop}>
-        <StatusBadge status={item.status} small />
-        <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
-      </View>
-      <Text style={styles.orderId} numberOfLines={1}>
-        #{String(item.id).slice(0, 8).toUpperCase()}
-      </Text>
-      <View style={styles.orderCardBottom}>
-        <Text style={styles.orderTotal}>${Number(item.total).toFixed(2)}</Text>
-        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
-      </View>
-    </TouchableOpacity>
-  )
+  const renderOrder = ({ item }) => {
+    const isRejected = item.status === 'payment_rejected'
+    return (
+      <TouchableOpacity
+        style={[styles.orderCard, isRejected && styles.orderCardRejected]}
+        onPress={() => handleOrderPress(item)}
+        activeOpacity={0.75}
+      >
+        <View style={styles.orderCardTop}>
+          <StatusBadge status={item.status} small />
+          <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
+        </View>
+        <Text style={styles.orderId} numberOfLines={1}>
+          #{String(item.id).slice(0, 8).toUpperCase()}
+        </Text>
+        <View style={styles.orderCardBottom}>
+          <Text style={styles.orderTotal}>${Number(item.total).toFixed(2)}</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+        </View>
+
+        {/* Aviso inline para pago rechazado */}
+        {isRejected && (
+          <View style={styles.orderCardRejectedHint}>
+            <Ionicons name="alert-circle-outline" size={13} color={COLORS.error} />
+            <Text style={styles.orderCardRejectedHintText}>
+              Tocá para reintentar la compra
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -303,6 +316,27 @@ export default function OrdersScreen() {
                 <StatusBadge status={selectedOrder.status} />
                 <Text style={styles.detailMeta}>{formatDate(selectedOrder.created_at)}</Text>
               </View>
+
+              {/* Banner de pago rechazado */}
+              {selectedOrder.status === 'payment_rejected' && (
+                <View style={styles.rejectedBanner}>
+                  <View style={styles.rejectedBannerTop}>
+                    <Ionicons name="close-circle" size={22} color={COLORS.error} />
+                    <Text style={styles.rejectedBannerTitle}>Tu pago fue rechazado</Text>
+                  </View>
+                  <Text style={styles.rejectedBannerText}>
+                    No se pudo procesar el pago. Podés volver al carrito, revisar tus datos y reintentar la compra cuando quieras.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.rejectedBannerBtn}
+                    onPress={() => { closeDetail(); router.push('/cart') }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="cart-outline" size={16} color={COLORS.error} />
+                    <Text style={styles.rejectedBannerBtnText}>Volver al carrito</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Dirección */}
               {selectedOrder.delivery_address ? (
@@ -684,5 +718,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: 2,
+  },
+
+  // Tarjeta con pago rechazado
+  orderCardRejected: {
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fff8f8',
+  },
+  orderCardRejectedHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#fca5a5',
+  },
+  orderCardRejectedHintText: {
+    fontSize: 12,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+
+  // Banner de pago rechazado en el modal
+  rejectedBanner: {
+    backgroundColor: '#fff0f0',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  rejectedBannerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  rejectedBannerTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.error,
+  },
+  rejectedBannerText: {
+    fontSize: FONT.small,
+    color: '#b91c1c',
+    lineHeight: 20,
+  },
+  rejectedBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.white,
+  },
+  rejectedBannerBtnText: {
+    fontSize: FONT.small,
+    fontWeight: '800',
+    color: COLORS.error,
   },
 })
