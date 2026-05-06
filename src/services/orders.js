@@ -13,8 +13,8 @@ export async function getOrderById(orderId) {
 
 /**
  * Inicia el proceso de checkout.
- * @param {string} deliveryAddress - Dirección de entrega (mín 5 chars).
- * @param {string} idempotencyKey  - UUID único por intento de pago.
+ * @param {{ calle: string, altura: string, codigo_postal: string, zona?: string, departamento?: string }} deliveryAddress
+ * @param {string} idempotencyKey - UUID único por intento de pago.
  * @returns {{ order_id, status, total, delivery_address, items, init_point }}
  */
 export async function checkout(deliveryAddress, idempotencyKey) {

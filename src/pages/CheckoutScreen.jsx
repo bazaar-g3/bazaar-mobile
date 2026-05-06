@@ -54,8 +54,14 @@ export default function CheckoutScreen() {
   const { items, total, clearLocal } = useCartContext()
 
   const [checkingSession, setCheckingSession] = useState(true)
-  const [address, setAddress] = useState('')
-  const [addressError, setAddressError] = useState(null)
+  const [address, setAddress] = useState({
+    calle: '',
+    altura: '',
+    codigo_postal: '',
+    zona: '',
+    departamento: '',
+  })
+  const [addressErrors, setAddressErrors] = useState({})
   const [idempotencyKey, setIdempotencyKey] = useState(generateUUID)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState(null)
@@ -85,12 +91,29 @@ export default function CheckoutScreen() {
     }
   }, [])
 
-  // Validación de dirección
-  function validateAddress(value) {
-    const trimmed = (value ?? '').trim()
-    if (trimmed.length < 5) return 'La dirección debe tener al menos 5 caracteres.'
-    if (trimmed.length > 500) return 'La dirección es demasiado larga.'
-    return null
+  // Validación por campo
+  function validateAddressFields(addr) {
+    const errors = {}
+    if (!addr.calle?.trim() || addr.calle.trim().length < 2)
+      errors.calle = 'Ingresá el nombre de la calle.'
+    if (!addr.altura?.trim())
+      errors.altura = 'Ingresá la altura.'
+    const cp = addr.codigo_postal?.trim() ?? ''
+    if (cp.length < 4 || cp.length > 8)
+      errors.codigo_postal = 'El código postal debe tener entre 4 y 8 caracteres.'
+    else if (!/^[a-zA-Z0-9-]+$/.test(cp))
+      errors.codigo_postal = 'Solo letras, números y guiones.'
+    return errors
+  }
+
+  function setField(field, value) {
+    setAddress((prev) => ({ ...prev, [field]: value }))
+    // Revalidar el campo tocado en tiempo real solo si ya había error
+    setAddressErrors((prev) => {
+      if (!prev[field]) return prev
+      const newErrors = validateAddressFields({ ...address, [field]: value })
+      return { ...prev, [field]: newErrors[field] ?? undefined }
+    })
   }
 
   /**
@@ -126,17 +149,25 @@ export default function CheckoutScreen() {
   }
 
   async function handleSubmit() {
-    const err = validateAddress(address)
-    if (err) {
-      setAddressError(err)
+    const errors = validateAddressFields(address)
+    if (Object.keys(errors).length > 0) {
+      setAddressErrors(errors)
       return
     }
-    setAddressError(null)
+    setAddressErrors({})
     setApiError(null)
     setSubmitting(true)
 
+    const deliveryAddress = {
+      calle: address.calle.trim(),
+      altura: address.altura.trim(),
+      codigo_postal: address.codigo_postal.trim(),
+      zona: address.zona?.trim() || null,
+      departamento: address.departamento?.trim() || null,
+    }
+
     try {
-      const result = await checkout(address.trim(), idempotencyKey)
+      const result = await checkout(deliveryAddress, idempotencyKey)
       setOrderResult(result)
 
       // Abrir MercadoPago Checkout Pro en el browser nativo / pestaña web
@@ -163,6 +194,7 @@ export default function CheckoutScreen() {
     // Generar nueva idempotency key para el reintento
     setIdempotencyKey(generateUUID())
     setApiError(null)
+    setAddressErrors({})
     setScreen('form')
   }
 
@@ -327,26 +359,92 @@ export default function CheckoutScreen() {
 
           {/* Dirección de entrega */}
           <Text style={styles.sectionLabel}>Dirección de entrega</Text>
+
+          {/* Calle + Altura en la misma fila */}
+          <View style={styles.addressRow}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                style={[
+                  styles.input,
+                  addressErrors.calle && styles.inputError,
+                  { fontSize: isSmall ? FONT.small : FONT.regular },
+                ]}
+                placeholder="Calle / Avenida *"
+                placeholderTextColor={COLORS.textMuted}
+                value={address.calle}
+                onChangeText={(v) => setField('calle', v)}
+                onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+                returnKeyType="next"
+                maxLength={100}
+              />
+              {addressErrors.calle ? <Text style={styles.errorText}>{addressErrors.calle}</Text> : null}
+            </View>
+            <View style={{ width: 90 }}>
+              <TextInput
+                style={[
+                  styles.input,
+                  addressErrors.altura && styles.inputError,
+                  { fontSize: isSmall ? FONT.small : FONT.regular },
+                ]}
+                placeholder="Altura *"
+                placeholderTextColor={COLORS.textMuted}
+                value={address.altura}
+                onChangeText={(v) => setField('altura', v)}
+                onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+                returnKeyType="next"
+                keyboardType="default"
+                maxLength={10}
+              />
+              {addressErrors.altura ? <Text style={styles.errorText}>{addressErrors.altura}</Text> : null}
+            </View>
+          </View>
+
+          {/* Departamento (opcional) */}
           <TextInput
             style={[
               styles.input,
-              addressError && styles.inputError,
               { fontSize: isSmall ? FONT.small : FONT.regular },
             ]}
-            placeholder="Ej: Av. Corrientes 1234, CABA"
+            placeholder="Departamento / Piso (opcional)"
             placeholderTextColor={COLORS.textMuted}
-            value={address}
-            onChangeText={(text) => {
-              setAddress(text)
-              if (addressError) setAddressError(validateAddress(text))
-            }}
-            onBlur={() => setAddressError(validateAddress(address))}
-            returnKeyType="done"
-            multiline={false}
-            maxLength={500}
+            value={address.departamento}
+            onChangeText={(v) => setField('departamento', v)}
+            returnKeyType="next"
+            maxLength={20}
           />
-          {addressError ? (
-            <Text style={styles.errorText}>{addressError}</Text>
+
+          {/* Zona / Barrio (opcional) */}
+          <TextInput
+            style={[
+              styles.input,
+              { fontSize: isSmall ? FONT.small : FONT.regular },
+            ]}
+            placeholder="Barrio (opcional)"
+            placeholderTextColor={COLORS.textMuted}
+            value={address.zona}
+            onChangeText={(v) => setField('zona', v)}
+            returnKeyType="next"
+            maxLength={100}
+          />
+
+          {/* Código Postal */}
+          <TextInput
+            style={[
+              styles.input,
+              addressErrors.codigo_postal && styles.inputError,
+              { fontSize: isSmall ? FONT.small : FONT.regular },
+            ]}
+            placeholder="Código Postal *"
+            placeholderTextColor={COLORS.textMuted}
+            value={address.codigo_postal}
+            onChangeText={(v) => setField('codigo_postal', v)}
+            onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+            returnKeyType="done"
+            keyboardType="default"
+            maxLength={8}
+          />
+          {addressErrors.codigo_postal ? (
+            <Text style={styles.errorText}>{addressErrors.codigo_postal}</Text>
           ) : null}
 
           {/* Error de API */}
@@ -492,6 +590,11 @@ const styles = StyleSheet.create({
   },
 
   // Dirección
+  addressRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'flex-start',
+  },
   input: {
     borderWidth: 1.5,
     borderColor: COLORS.divider,

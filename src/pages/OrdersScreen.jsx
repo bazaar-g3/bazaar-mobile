@@ -60,6 +60,18 @@ function formatDateTime(iso) {
   })
 }
 
+function formatDeliveryAddress(addr) {
+  if (!addr) return ''
+  // Retrocompatibilidad: si por alguna razón llega como string, lo devuelve directo
+  if (typeof addr === 'string') return addr
+  const { calle, altura, departamento, zona, codigo_postal } = addr
+  let line = `${calle ?? ''} ${altura ?? ''}`.trim()
+  if (departamento) line += `, Dpto. ${departamento}`
+  if (zona) line += `, ${zona}`
+  if (codigo_postal) line += ` (CP ${codigo_postal})`
+  return line
+}
+
 function StatusBadge({ status, small = false }) {
   const config = STATUS_CONFIG[status] ?? { label: status, color: COLORS.textMuted, icon: 'ellipse-outline' }
   return (
@@ -345,13 +357,7 @@ export default function OrdersScreen() {
                   <View style={styles.detailSectionCard}>
                     <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
                     <Text style={styles.detailText}>
-                      {typeof selectedOrder.delivery_address === 'string'
-                        ? selectedOrder.delivery_address
-                        : [
-                            selectedOrder.delivery_address.street,
-                            selectedOrder.delivery_address.city,
-                            selectedOrder.delivery_address.state,
-                          ].filter(Boolean).join(', ')}
+                      {formatDeliveryAddress(selectedOrder.delivery_address)}
                     </Text>
                   </View>
                 </View>
