@@ -7,9 +7,9 @@ const COLORS = {
   text: "#1F1F1F",
 };
 
-export default function SearchBar({ value, onChangeText, onSearch }) {
+export default function SearchBar({ value, onChangeText, onSearch, style }) {
   return (
-    <View style={styles.searchWrapper}>
+    <View style={[styles.searchWrapper, style]}>
       <TextInput
         value={value}
         onChangeText={onChangeText}

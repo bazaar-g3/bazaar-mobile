@@ -57,118 +57,11 @@ export const styles = StyleSheet.create({
 
   mainContainer: {
     flex: 1,
-    flexDirection: "row",
     backgroundColor: COLORS.background,
   },
 
-  sidebar: {
-    width: "25%",
-    backgroundColor: COLORS.white,
-    borderRightWidth: 1,
-    borderRightColor: COLORS.divider,
-    padding: 15,
-  },
-
-  filterSection: {
-    marginBottom: 24,
-  },
-
-  filterHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: COLORS.dark,
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 12,
-  },
-
-  filterTitle: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-
-  filterIcon: {
-    color: COLORS.white,
-    fontWeight: "900",
-  },
-
-  sidebarStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-  },
-
-  sidebarStatusText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
-  },
-
-  sidebarErrorText: {
-    color: COLORS.error,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: COLORS.textMuted,
-    borderRadius: 4,
-    marginRight: 10,
-    backgroundColor: COLORS.white,
-  },
-
-  checkboxActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-
-  filterItem: {
-    fontSize: 14,
-    color: COLORS.dark,
-  },
-
-  filterItemActive: {
-    fontWeight: "800",
-    color: COLORS.primary,
-  },
-
-  filterAction: {
-    paddingVertical: 8,
-  },
-
-  filterActionText: {
-    fontSize: 14,
-    color: COLORS.dark,
-    fontWeight: "700",
-  },
-
-  clearButton: {
-    marginTop: 10,
-    backgroundColor: COLORS.promoLight,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-
-  clearButtonText: {
-    color: COLORS.primary,
-    fontWeight: "800",
-    fontSize: 12,
-  },
-
   gridContainer: {
-    padding: 20,
-    width: "75%",
+    padding: 16,
     paddingBottom: 30,
   },
 

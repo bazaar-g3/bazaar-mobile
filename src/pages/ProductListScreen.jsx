@@ -11,12 +11,12 @@ import {
 } from "../services/catalog";
 
 import ProductListHeader from "../components/productList/ProductListHeader";
-import ProductListSidebar from "../components/productList/ProductListSidebar";
+import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import ProductListGrid from "../components/productList/ProductListGrid";
 
 import { mapProductToListItem } from "../utils/productList/productListHelpers";
 import { styles } from "../styles/productList/productListStyles";
-import { getPublicProfile } from "../services/user";
+import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 
 const LIMIT = 20;
 
@@ -24,12 +24,15 @@ export default function ProductListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  // Parámetros de URL (solo para inicializar el estado)
   const search = normalizeRouteParam(params.search);
   const categoryId = normalizeRouteParam(params.categoryId);
   const categoryName = normalizeRouteParam(params.categoryName);
   const categorySlug = normalizeRouteParam(params.categorySlug);
   const sortBy = normalizeRouteParam(params.sortBy);
   const section = normalizeRouteParam(params.section);
+  const initialMinPrice = params.minPrice ? Number(params.minPrice) : PRICE_MIN_LIMIT;
+  const initialMaxPrice = params.maxPrice ? Number(params.maxPrice) : PRICE_MAX_LIMIT;
 
   const [searchText, setSearchText] = useState(search ? String(search) : "");
   const [products, setProducts] = useState([]);
@@ -45,13 +48,35 @@ export default function ProductListScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // ── Modal de filtros ──
+  const [filtersVisible, setFiltersVisible] = useState(false);
+
+  // ── Estado local de filtros ──
+  const [activeCategory, setActiveCategory] = useState(
+    categorySlug || categoryId
+      ? { id: categoryId || categorySlug, label: categoryName || "", slug: categorySlug }
+      : null
+  );
+  const [activeSortBy, setActiveSortBy] = useState(sortBy || null);
+  const [activeSection, setActiveSection] = useState(section || null);
+  const [minPrice, setMinPrice] = useState(initialMinPrice);
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+
+  // Cantidad de filtros activos para el badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (activeCategory) count++;
+    if (activeSortBy || activeSection) count++;
+    if (minPrice > PRICE_MIN_LIMIT || maxPrice < PRICE_MAX_LIMIT) count++;
+    return count;
+  }, [activeCategory, activeSortBy, activeSection, minPrice, maxPrice]);
+
+  // ── Carga de categorías ──
   const loadCategories = useCallback(async () => {
     setLoadingCategories(true);
     setCategoriesError("");
-
     try {
       const response = await listProductCategories();
-
       setCategories(
         response.map((category) => ({
           id:
@@ -64,10 +89,7 @@ export default function ProductListScreen() {
       );
     } catch (error) {
       setCategoriesError(
-        getCatalogErrorMessage(
-          error,
-          "No pudimos cargar las categorías por el momento."
-        )
+        getCatalogErrorMessage(error, "No pudimos cargar las categorías por el momento.")
       );
       setCategories([]);
     } finally {
@@ -75,6 +97,7 @@ export default function ProductListScreen() {
     }
   }, []);
 
+  // ── Carga de productos ──
   const loadProducts = useCallback(
     async (currentOffset = 0, replace = true) => {
       if (replace) {
@@ -82,50 +105,45 @@ export default function ProductListScreen() {
       } else {
         setLoadingMore(true);
       }
-
       setProductsError("");
 
       try {
         const requestParams = {
           status: "active",
-          //onlyAvailable: true,
           limit: LIMIT,
           offset: currentOffset,
         };
 
         if (search) requestParams.search = search;
-        if (categorySlug) requestParams.category = categorySlug;
-        if (sortBy === "recent" || section === "recommended") {
+        if (activeCategory?.slug) requestParams.category = activeCategory.slug;
+        if (activeSortBy === "recent" || activeSection === "recommended") {
           requestParams.sort = "recent";
         }
+        // CA2: Filtros de precio (solo si difieren de los límites por defecto)
+        if (minPrice > PRICE_MIN_LIMIT) requestParams.minPrice = minPrice;
+        if (maxPrice < PRICE_MAX_LIMIT) requestParams.maxPrice = maxPrice;
 
         const response = await listCatalogProducts(requestParams);
         const mappedProducts = response.map((product) =>
           mapProductToListItem(product, {
-            recommended: section === "recommended",
+            recommended: activeSection === "recommended",
           })
         );
 
-        setProducts((prev) =>
-          replace ? mappedProducts : [...prev, ...mappedProducts]
-        );
+        setProducts((prev) => (replace ? mappedProducts : [...prev, ...mappedProducts]));
         setHasMore(response.length === LIMIT);
         setOffset(currentOffset);
       } catch (error) {
         setProductsError(
-          getCatalogErrorMessage(
-            error,
-            "No pudimos cargar los productos por el momento."
-          )
+          getCatalogErrorMessage(error, "No pudimos cargar los productos por el momento.")
         );
-
         if (replace) setProducts([]);
       } finally {
         setLoadingProducts(false);
         setLoadingMore(false);
       }
     },
-    [search, categorySlug, sortBy, section]
+    [search, activeCategory, activeSortBy, activeSection, minPrice, maxPrice]
   );
 
   const loadMore = () => {
@@ -146,13 +164,14 @@ export default function ProductListScreen() {
     loadProducts();
   }, [loadProducts]);
 
+  // ── Títulos dinámicos ──
   const screenTitle = useMemo(() => {
     if (search) return `RESULTADOS PARA "${String(search).toUpperCase()}"`;
-    if (categoryName) return `CATEGORÍA: ${String(categoryName).toUpperCase()}`;
-    if (sortBy === "recent") return "PRODUCTOS RECIENTES";
-    if (section === "recommended") return "PRODUCTOS RECOMENDADOS";
+    if (activeCategory?.label) return `CATEGORÍA: ${String(activeCategory.label).toUpperCase()}`;
+    if (activeSortBy === "recent") return "PRODUCTOS RECIENTES";
+    if (activeSection === "recommended") return "PRODUCTOS RECOMENDADOS";
     return "TODOS LOS PRODUCTOS";
-  }, [search, categoryName, sortBy, section]);
+  }, [search, activeCategory, activeSortBy, activeSection]);
 
   const screenSubtitle = useMemo(() => {
     if (loadingProducts) return "Cargando productos...";
@@ -162,25 +181,22 @@ export default function ProductListScreen() {
     return `${products.length} productos encontrados`;
   }, [loadingProducts, productsError, products.length]);
 
+  // ── Handlers ──
   const handleSearch = () => {
     const trimmedSearch = searchText.trim();
-
     router.push({
       pathname: "/products",
       params: trimmedSearch ? { search: trimmedSearch } : {},
     });
   };
 
+  // CA1: Toggle categoría (deselecciona si ya estaba activa)
   const handleCategoryFilter = (selectedCategory) => {
-    router.push({
-      pathname: "/products",
-      params: {
-        categoryId: selectedCategory.id,
-        categoryName: selectedCategory.label,
-        ...(selectedCategory.slug
-          ? { categorySlug: selectedCategory.slug }
-          : {}),
-      },
+    setActiveCategory((prev) => {
+      const isSame = prev?.slug
+        ? prev.slug === selectedCategory.slug
+        : prev?.id === selectedCategory.id;
+      return isSame ? null : selectedCategory;
     });
   };
 
@@ -190,7 +206,6 @@ export default function ProductListScreen() {
 
   const handleAddToCart = async (productId) => {
     const session = await getSessionStatus();
-
     if (!session.isAuthenticated) {
       router.push(
         buildLoginRedirect({
@@ -201,19 +216,22 @@ export default function ProductListScreen() {
       );
       return;
     }
-
     Alert.alert("Añadido", "1 unidad agregada al carrito.");
   };
 
-  const clearFilters = () => {
-    router.push("/products");
+  // CA2: Cambio de precio desde el slider
+  const handlePriceChange = (newMin, newMax) => {
+    setMinPrice(newMin);
+    setMaxPrice(newMax);
   };
 
-  const isCategoryActive = (cat) => {
-    if (categorySlug && cat.slug) {
-      return String(categorySlug) === String(cat.slug);
-    }
-    return String(categoryId || "") === String(cat.id);
+  // CA4: Limpiar todos los filtros
+  const clearFilters = () => {
+    setActiveCategory(null);
+    setActiveSortBy(null);
+    setActiveSection(null);
+    setMinPrice(PRICE_MIN_LIMIT);
+    setMaxPrice(PRICE_MAX_LIMIT);
   };
 
   return (
@@ -222,31 +240,11 @@ export default function ProductListScreen() {
         searchText={searchText}
         setSearchText={setSearchText}
         onSearch={handleSearch}
-        onBack={() => router.back()}
+        onOpenFilters={() => setFiltersVisible(true)}
+        activeFiltersCount={activeFiltersCount}
       />
 
       <View style={styles.mainContainer}>
-        <ProductListSidebar
-          loadingCategories={loadingCategories}
-          categoriesError={categoriesError}
-          categories={categories}
-          isCategoryActive={isCategoryActive}
-          onSelectCategory={handleCategoryFilter}
-          onSortRecent={() =>
-            router.push({
-              pathname: "/products",
-              params: { sortBy: "recent" },
-            })
-          }
-          onSortRecommended={() =>
-            router.push({
-              pathname: "/products",
-              params: { section: "recommended" },
-            })
-          }
-          onClearFilters={clearFilters}
-        />
-
         <ProductListGrid
           screenTitle={screenTitle}
           screenSubtitle={screenSubtitle}
@@ -261,6 +259,31 @@ export default function ProductListScreen() {
           onAddToCart={handleAddToCart}
         />
       </View>
+
+      {/* CA1/CA2/CA3/CA4: Modal de filtros */}
+      <ProductFiltersModal
+        visible={filtersVisible}
+        onClose={() => setFiltersVisible(false)}
+        loadingCategories={loadingCategories}
+        categoriesError={categoriesError}
+        categories={categories}
+        activeCategory={activeCategory}
+        onSelectCategory={handleCategoryFilter}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        onPriceChange={handlePriceChange}
+        activeSortBy={activeSortBy}
+        activeSection={activeSection}
+        onSortRecent={() => {
+          setActiveSortBy("recent");
+          setActiveSection(null);
+        }}
+        onSortRecommended={() => {
+          setActiveSection("recommended");
+          setActiveSortBy(null);
+        }}
+        onClearFilters={clearFilters}
+      />
     </SafeAreaView>
   );
 }

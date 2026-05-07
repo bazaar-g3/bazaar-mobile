@@ -1,7 +1,11 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { styles } from "../../styles/productList/productListStyles";
+import PriceRangeSlider from "./PriceRangeSlider";
+
+const PRICE_MIN_LIMIT = 0;
+const PRICE_MAX_LIMIT = 50000;
 
 export default function ProductListSidebar({
   loadingCategories,
@@ -12,9 +16,14 @@ export default function ProductListSidebar({
   onSortRecent,
   onSortRecommended,
   onClearFilters,
+  minPrice,
+  maxPrice,
+  onPriceChange,
 }) {
   return (
     <View style={styles.sidebar}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* ── CATEGORÍAS ── */}
       <View style={styles.filterSection}>
         <View style={styles.filterHeader}>
           <Text style={styles.filterTitle}>CATEGORÍAS</Text>
@@ -31,7 +40,6 @@ export default function ProductListSidebar({
         ) : (
           categories.map((cat) => {
             const active = isCategoryActive(cat);
-
             return (
               <TouchableOpacity
                 key={cat.id}
@@ -49,6 +57,24 @@ export default function ProductListSidebar({
         )}
       </View>
 
+      {/* ── PRECIO ── */}
+      <View style={styles.filterSection}>
+        <View style={styles.filterHeader}>
+          <Text style={styles.filterTitle}>PRECIO</Text>
+          <Text style={styles.filterIcon}>−</Text>
+        </View>
+
+        <PriceRangeSlider
+          minValue={minPrice}
+          maxValue={maxPrice}
+          minLimit={PRICE_MIN_LIMIT}
+          maxLimit={PRICE_MAX_LIMIT}
+          step={500}
+          onChange={onPriceChange}
+        />
+      </View>
+
+      {/* ── ORDENAR ── */}
       <View style={styles.filterSection}>
         <View style={styles.filterHeader}>
           <Text style={styles.filterTitle}>ORDENAR</Text>
@@ -67,6 +93,7 @@ export default function ProductListSidebar({
           <Text style={styles.clearButtonText}>Limpiar filtros</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
     </View>
   );
 }

@@ -15,6 +15,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/ProductCard";
 import Logo from "../components/Logo";
+import ProductFiltersModal from "../components/productList/ProductFiltersModal";
+import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 import { COLORS } from "../constants/colors";
 import { SPACING, FONT } from "../constants/theme";
 import {
@@ -52,6 +54,42 @@ export default function HomeScreen() {
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState(null);
   const [wishlistIds, setWishlistIds] = useState(new Set());
+
+  // ── Estado del modal de filtros ──
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [filterCategory, setFilterCategory] = useState(null);
+  const [filterSortBy, setFilterSortBy] = useState(null);
+  const [filterSection, setFilterSection] = useState(null);
+  const [filterMinPrice, setFilterMinPrice] = useState(PRICE_MIN_LIMIT);
+  const [filterMaxPrice, setFilterMaxPrice] = useState(PRICE_MAX_LIMIT);
+
+  const activeFiltersCount =
+    (filterCategory ? 1 : 0) +
+    (filterSortBy || filterSection ? 1 : 0) +
+    (filterMinPrice > PRICE_MIN_LIMIT || filterMaxPrice < PRICE_MAX_LIMIT ? 1 : 0);
+
+  const handleApplyFilters = () => {
+    setFiltersVisible(false);
+    const params = {};
+    if (filterCategory) {
+      params.categoryId = filterCategory.id;
+      params.categoryName = filterCategory.label;
+      if (filterCategory.slug) params.categorySlug = filterCategory.slug;
+    }
+    if (filterSortBy === "recent") params.sortBy = "recent";
+    if (filterSection === "recommended") params.section = "recommended";
+    if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
+    if (filterMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = filterMaxPrice;
+    router.push({ pathname: "/products", params });
+  };
+
+  const handleClearFilters = () => {
+    setFilterCategory(null);
+    setFilterSortBy(null);
+    setFilterSection(null);
+    setFilterMinPrice(PRICE_MIN_LIMIT);
+    setFilterMaxPrice(PRICE_MAX_LIMIT);
+  };
 
   const profileButtonRef = useRef(null);
   const [profileMenuPosition, setProfileMenuPosition] = useState({
@@ -318,13 +356,36 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.searchContainer}>
-          <SearchBar
-            value={search}
-            onChangeText={setSearch}
-            onSearch={handleSearch}
-            placeholder="Buscar productos..."
-            containerStyle={styles.customSearchBar}
-          />
+          <View style={styles.searchRow}>
+            <View style={styles.searchBarWrapper}>
+              <SearchBar
+                value={search}
+                onChangeText={setSearch}
+                onSearch={handleSearch}
+                style={{ flex: 1 }}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                activeFiltersCount > 0 && styles.filterButtonActive,
+              ]}
+              onPress={() => setFiltersVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.filterButtonText,
+                activeFiltersCount > 0 && styles.filterButtonTextActive,
+              ]}>
+                ⊟ Filtros
+              </Text>
+              {activeFiltersCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -457,6 +518,38 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal de filtros avanzados */}
+      <ProductFiltersModal
+        visible={filtersVisible}
+        onClose={() => setFiltersVisible(false)}
+        onApply={handleApplyFilters}
+        loadingCategories={loadingCategories}
+        categoriesError={categoriesError}
+        categories={categories.map((c) => ({
+          id: c.id,
+          label: c.name,
+          slug: c.slug,
+        }))}
+        activeCategory={filterCategory}
+        onSelectCategory={(cat) =>
+          setFilterCategory((prev) => {
+            const isSame = prev?.slug ? prev.slug === cat.slug : prev?.id === cat.id;
+            return isSame ? null : cat;
+          })
+        }
+        minPrice={filterMinPrice}
+        maxPrice={filterMaxPrice}
+        onPriceChange={(min, max) => {
+          setFilterMinPrice(min);
+          setFilterMaxPrice(max);
+        }}
+        activeSortBy={filterSortBy}
+        activeSection={filterSection}
+        onSortRecent={() => { setFilterSortBy("recent"); setFilterSection(null); }}
+        onSortRecommended={() => { setFilterSection("recommended"); setFilterSortBy(null); }}
+        onClearFilters={handleClearFilters}
+      />
 
       <Modal
         visible={profileMenuVisible}
@@ -650,8 +743,62 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
 
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  searchBarWrapper: {
+    flex: 1,
+  },
+
   customSearchBar: {
     marginBottom: 0,
+  },
+
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    height: 46,
+  },
+
+  filterButtonActive: {
+    borderColor: COLORS.secondary,
+    backgroundColor: "rgba(255,152,0,0.15)",
+  },
+
+  filterButtonText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: COLORS.white,
+  },
+
+  filterButtonTextActive: {
+    color: COLORS.secondary,
+  },
+
+  filterBadge: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+
+  filterBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "900",
   },
 
   container: {
