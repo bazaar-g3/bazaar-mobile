@@ -47,7 +47,10 @@ export default function ProductInfoPanel({
 
       {!isOwnProduct && isAvailable && !isOutOfStock ? (
         <View style={styles.quantitySection}>
-          <Text style={styles.quantityLabel}>Cantidad (Disponible: {maxAddable})</Text>
+          <Text style={styles.quantityLabel}>
+            Cantidad (Disponible: {product.stock}
+            {maxAddable < product.stock ? ` · ${product.stock - maxAddable} en tu carrito` : ''})
+          </Text>
 
           <View style={styles.quantitySelector}>
             <TouchableOpacity onPress={onDecreaseQuantity} style={styles.qtyBtn}>
