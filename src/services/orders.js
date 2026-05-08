@@ -45,11 +45,15 @@ export function getOrdersErrorMessage(error, fallback = 'No se pudieron cargar l
 
 export function getCheckoutErrorMessage(error) {
   const detail = error?.response?.data?.detail
-  if (typeof detail === 'string') return detail
   const status = error?.response?.status
+
+  // detail puede ser string (mensaje directo) u objeto {message, items} (stock insuficiente)
+  if (typeof detail === 'string') return detail
+  if (detail?.message) return detail.message
+
   if (status === 400) return 'El carrito tiene productos no disponibles.'
   if (status === 402) return 'Error al iniciar el pago. Intentá de nuevo.'
-  if (status === 409) return 'Ya existe una orden activa para esta compra.'
-  if (status === 503) return 'El servicio de pagos no está disponible. Intentá en unos minutos.'
+  if (status === 409) return 'Stock insuficiente para uno o más productos.'
+  if (status === 503) return 'No se pudo verificar el stock. Intentá nuevamente en unos segundos.'
   return error?.message || 'No se pudo iniciar el pago.'
 }
