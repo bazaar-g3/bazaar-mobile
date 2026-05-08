@@ -34,7 +34,6 @@ const MENU_ITEMS = [
   { key: 'Compras', emoji: '🛍️' },
   { key: 'Ventas', emoji: '🏷️' },
   { key: 'Wishlist', emoji: '❤️' },
-  { key: 'Tarjetas', emoji: '💳' },
 ]
 
 export default function ProfileScreen() {
@@ -47,7 +46,7 @@ export default function ProfileScreen() {
   } = useLocalSearchParams()
 
   const [activeTab, setActiveTab] = useState('Perfil')
-  const [isMenuOpen, setIsMenuOpen] = useState(true)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   const [profile, setProfile] = useState(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
@@ -474,10 +473,6 @@ export default function ProfileScreen() {
       )
     }
 
-    if (activeTab === 'Tarjetas') {
-      return <Text style={styles.emptyText}>No tenés tarjetas asociadas.</Text>
-    }
-
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -650,6 +645,16 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.mainWrapper}>
+        {/* Backdrop que cierra el drawer al tocar fuera */}
+        {isMenuOpen && (
+          <TouchableOpacity
+            style={styles.drawerBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsMenuOpen(false)}
+          />
+        )}
+
+        {/* Drawer lateral — overlay absoluto, no empuja el contenido */}
         {isMenuOpen && (
           <View style={styles.sidebar}>
             <Text style={styles.sidebarTitle}>Mi cuenta</Text>
@@ -660,7 +665,10 @@ export default function ProfileScreen() {
                   styles.sidebarItem,
                   activeTab === key && styles.sidebarItemActive,
                 ]}
-                onPress={() => handleTabSelect(key)}
+                onPress={() => {
+                  handleTabSelect(key)
+                  setIsMenuOpen(false)
+                }}
               >
                 <Text style={styles.sidebarEmoji}>{emoji}</Text>
                 <Text
@@ -764,17 +772,35 @@ const styles = StyleSheet.create({
 
   mainWrapper: {
     flex: 1,
-    flexDirection: 'row',
-    overflow: 'hidden',
+  },
+
+  drawerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 10,
   },
 
   sidebar: {
-    width: 140,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 200,
     backgroundColor: COLORS.white,
     paddingTop: SPACING.lg,
     paddingHorizontal: SPACING.md,
     borderRightWidth: 1,
     borderRightColor: '#E6ECEC',
+    zIndex: 11,
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   sidebarTitle: {

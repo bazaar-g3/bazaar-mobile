@@ -464,86 +464,88 @@ export default function VentasTab({
           )}
         </View>
       ) : (
-        <View style={styles.lista}>
-          <View style={styles.filaHeader}>
-            <Text style={[styles.colHeader, { flex: 4 }]}>Publicación</Text>
-            <Text style={[styles.colHeader, styles.alignRight, { flex: 2 }]}>Precio</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Stock</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1 }]}>Vendidos</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Estado</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.2 }]}>Visible</Text>
-            <Text style={[styles.colHeader, styles.alignCenter, { flex: 1.4 }]}>Acciones</Text>
-          </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.lista}>
+            <View style={styles.filaHeader}>
+              <Text style={[styles.colHeader, styles.colPublicacion]}>Publicación</Text>
+              <Text style={[styles.colHeader, styles.alignRight, styles.colPrecio]}>Precio</Text>
+              <Text style={[styles.colHeader, styles.alignCenter, styles.colStock]}>Stock</Text>
+              <Text style={[styles.colHeader, styles.alignCenter, styles.colVendidos]}>Vendidos</Text>
+              <Text style={[styles.colHeader, styles.alignCenter, styles.colEstado]}>Estado</Text>
+              <Text style={[styles.colHeader, styles.alignCenter, styles.colVisible]}>Visible</Text>
+              <Text style={[styles.colHeader, styles.alignCenter, styles.colAcciones]}>Acciones</Text>
+            </View>
 
-          {publicacionesFiltradas.map((pub, idx) => (
-            <View
-              key={pub.id}
-              style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}
-            >
-              <View style={[styles.colTitulo, { flex: 4 }]}>
-                {isRemoteImage(pub.imagen) ? (
-                  <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
-                ) : (
-                  <Text style={styles.pubEmoji}>{pub.imagen}</Text>
-                )}
-                <Text style={styles.pubTitulo} numberOfLines={2}>
-                  {pub.titulo}
-                </Text>
-              </View>
-
-              <Text style={[styles.colText, styles.precioText, styles.alignRight, { flex: 2 }]}>
-                ${pub.precio.toLocaleString('es-AR')}
-              </Text>
-
-              <View style={[styles.stockCell, { flex: 1 }]}>
-                <EditableStockStepper
-                  value={pub.stock}
-                  onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
-                />
-              </View>
-
-              <Text style={[styles.colText, styles.alignCenter, { flex: 1 }]}>
-                {pub.vendidos}
-              </Text>
-
-              <View style={[styles.estadoCell, { flex: 1.2 }]}>
-                <View
-                  style={[
-                    styles.estadoBadge,
-                    pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.estadoText,
-                      pub.estado === 'activa'
-                        ? styles.estadoTextActiva
-                        : styles.estadoTextInactiva,
-                    ]}
-                  >
-                    {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+            {publicacionesFiltradas.map((pub, idx) => (
+              <View
+                key={pub.id}
+                style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}
+              >
+                <View style={[styles.colTitulo, styles.colPublicacion]}>
+                  {isRemoteImage(pub.imagen) ? (
+                    <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
+                  ) : (
+                    <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+                  )}
+                  <Text style={styles.pubTitulo} numberOfLines={2}>
+                    {pub.titulo}
                   </Text>
                 </View>
-              </View>
 
-              <View style={[styles.switchCell, { flex: 1.2 }]}>
-                <StateSwitch
-                  value={pub.estado === 'activa'}
-                  onToggle={() => handleTogglePublicacion(pub.id)}
-                />
-              </View>
+                <Text style={[styles.colText, styles.precioText, styles.alignRight, styles.colPrecio]}>
+                  ${pub.precio.toLocaleString('es-AR')}
+                </Text>
 
-              <View style={[styles.actionsCell, { flex: 1.4 }]}>
-                <TouchableOpacity
-                  style={styles.btnEditar}
-                  onPress={() => handleEditarPublicacion(pub)}
-                >
-                  <Text style={styles.btnEditarText}>Editar</Text>
-                </TouchableOpacity>
+                <View style={[styles.stockCell, styles.colStock]}>
+                  <EditableStockStepper
+                    value={pub.stock}
+                    onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
+                  />
+                </View>
+
+                <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>
+                  {pub.vendidos}
+                </Text>
+
+                <View style={[styles.estadoCell, styles.colEstado]}>
+                  <View
+                    style={[
+                      styles.estadoBadge,
+                      pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.estadoText,
+                        pub.estado === 'activa'
+                          ? styles.estadoTextActiva
+                          : styles.estadoTextInactiva,
+                      ]}
+                    >
+                      {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.switchCell, styles.colVisible]}>
+                  <StateSwitch
+                    value={pub.estado === 'activa'}
+                    onToggle={() => handleTogglePublicacion(pub.id)}
+                  />
+                </View>
+
+                <View style={[styles.actionsCell, styles.colAcciones]}>
+                  <TouchableOpacity
+                    style={styles.btnEditar}
+                    onPress={() => handleEditarPublicacion(pub)}
+                  >
+                    <Text style={styles.btnEditarText}>Editar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        </ScrollView>
       )}
 
       <EditProductModal
@@ -1220,4 +1222,13 @@ const styles = StyleSheet.create({
     minWidth: 70,
     textAlign: 'right',
   },
+
+  // ── Column widths for horizontal-scroll table ─────────────────────────────
+  colPublicacion: { width: 180 },
+  colPrecio:      { width: 100 },
+  colStock:       { width: 90 },
+  colVendidos:    { width: 80 },
+  colEstado:      { width: 90 },
+  colVisible:     { width: 80 },
+  colAcciones:    { width: 90 },
 })

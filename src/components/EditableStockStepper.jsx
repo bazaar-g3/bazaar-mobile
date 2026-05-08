@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   },
 
   value: {
-    width: 14,
+    minWidth: 28,
     textAlign: 'center',
     fontSize: 13,
     color: COLORS.textSecondary,
