@@ -8,10 +8,14 @@ import { COLORS } from '../constants/colors'
 export default function OAuthButtons({ onSuccess, onError }) {
     const [loadingProvider, setLoadingProvider] = useState(null)
 
+    // iosClientId es obligatorio en iOS. Si no hay un client ID nativo de iOS
+    // configurado, usamos el webClientId como fallback — esto funciona en Expo Go
+    // porque el flujo pasa por el proxy de Expo. En producción con bare workflow
+    // conviene crear un OAuth client de tipo "iOS" en Google Cloud Console.
     const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
         webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,  // opcional
-        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,           // opcional
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     })
 
     async function handleGoogle() {
