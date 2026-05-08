@@ -14,6 +14,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import Logo from '../components/Logo'
+import DraggableImageList from '../components/DraggableImageList'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
 import {
@@ -406,36 +407,24 @@ export default function PublishProductScreen() {
 
             {fieldErrors.images ? <Text style={styles.fieldError}>{fieldErrors.images}</Text> : null}
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.imagesRow}>
-                {selectedImages.length === 0 ? (
-                  <View style={styles.emptyImageState}>
-                    <Image
-                      source={{ uri: PRODUCT_IMAGE_PLACEHOLDER }}
-                      style={styles.previewImage}
-                    />
-                    <Text style={styles.emptyImageText}>Todavía no seleccionaste imágenes.</Text>
-                  </View>
-                ) : (
-                  selectedImages.map((image, index) => (
-                    <View key={`${image.uri}-${index}`} style={styles.previewCard}>
-                      <Image source={{ uri: image.uri }} style={styles.previewImage} />
-                      {index === 0 ? (
-                        <View style={styles.primaryBadge}>
-                          <Text style={styles.primaryBadgeText}>Principal</Text>
-                        </View>
-                      ) : null}
-                      <TouchableOpacity
-                        style={styles.removeImageButton}
-                        onPress={() => handleRemoveImage(index)}
-                      >
-                        <Text style={styles.removeImageButtonText}>✕</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))
-                )}
+            {selectedImages.length === 0 ? (
+              <View style={styles.emptyImageState}>
+                <Image
+                  source={{ uri: PRODUCT_IMAGE_PLACEHOLDER }}
+                  style={styles.previewImage}
+                />
+                <Text style={styles.emptyImageText}>Todavía no seleccionaste imágenes.</Text>
               </View>
-            </ScrollView>
+            ) : (
+              <DraggableImageList
+                images={selectedImages}
+                onReorder={(newImages) => {
+                  setSelectedImages(newImages)
+                  setFieldErrors((current) => ({ ...current, images: undefined }))
+                }}
+                onRemove={handleRemoveImage}
+              />
+            )}
           </View>
 
           <View style={styles.actions}>
