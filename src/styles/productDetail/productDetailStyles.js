@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
   },
 
   mainCard: {
-    flexDirection: "row",
+    flexDirection: "column",
     backgroundColor: COLORS.white,
     borderRadius: 22,
     padding: 18,
@@ -42,8 +42,8 @@ export const styles = StyleSheet.create({
   },
 
   leftColumn: {
-    width: "44%",
-    paddingRight: 16,
+    width: "100%",
+    marginBottom: 18,
   },
 
   imageWrapper: {
@@ -62,7 +62,6 @@ export const styles = StyleSheet.create({
 
   thumbnailRow: {
     flexDirection: "row",
-    justifyContent: "center",
     marginTop: 14,
     gap: 10,
   },
@@ -75,6 +74,7 @@ export const styles = StyleSheet.create({
     borderColor: COLORS.divider,
     padding: 5,
     backgroundColor: COLORS.white,
+    flexShrink: 0,
   },
 
   activeThumbnail: {
@@ -89,7 +89,7 @@ export const styles = StyleSheet.create({
   },
 
   rightColumn: {
-    width: "56%",
+    width: "100%",
   },
 
   productTitle: {

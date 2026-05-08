@@ -726,6 +726,56 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.imagePlaceholder,
   },
 
+  previewCard: {
+    position: 'relative',
+    marginRight: 10,
+  },
+
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.imagePlaceholder,
+    resizeMode: 'cover',
+  },
+
+  primaryBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+
+  primaryBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 12,
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  removeImageButtonText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '900',
+    lineHeight: 14,
+  },
+
   actions: {
     flexDirection: 'column',
     gap: SPACING.sm,
