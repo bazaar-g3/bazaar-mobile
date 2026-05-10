@@ -131,7 +131,6 @@ export default function HomeScreen() {
 
     try {
       const catalogCategories = await listProductCategories();
-      console.log("Categorías recibidas:", catalogCategories);
 
       setCategories(
         catalogCategories.map((category) => ({

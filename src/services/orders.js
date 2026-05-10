@@ -57,3 +57,26 @@ export function getCheckoutErrorMessage(error) {
   if (status === 503) return 'No se pudo verificar el stock. Intentá nuevamente en unos segundos.'
   return error?.message || 'No se pudo iniciar el pago.'
 }
+
+/**
+ * Confirma la recepción del pedido (comprador).
+ * La orden pasa de 'shipped' a 'delivered'.
+ * @param {string} orderId - UUID de la orden.
+ */
+export async function confirmDelivery(orderId) {
+  const { data } = await ordersApi.post(`/orders/${orderId}/confirm-delivery`)
+  return data
+}
+
+/**
+ * Actualiza el estado de una orden (vendedor).
+ * @param {string} orderId
+ * @param {{ new_status: string, tracking_code?: string }} body
+ * @param {number} sellerCatalogId
+ */
+export async function updateOrderStatus(orderId, body, sellerCatalogId) {
+  const { data } = await ordersApi.patch(`/orders/${orderId}/status`, body, {
+    params: { seller_catalog_id: sellerCatalogId },
+  })
+  return data
+}

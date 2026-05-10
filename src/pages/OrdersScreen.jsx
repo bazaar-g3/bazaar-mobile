@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
 
-import { getOrders, getOrderById } from '../services/orders'
+import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
@@ -94,6 +94,8 @@ export default function OrdersScreen() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState(null)
+  const [confirmingDelivery, setConfirmingDelivery] = useState(false)
+  const [confirmDeliveryError, setConfirmDeliveryError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -149,6 +151,27 @@ export default function OrdersScreen() {
   function closeDetail() {
     setSelectedOrder(null)
     setDetailError(null)
+  }
+
+  async function handleConfirmDelivery() {
+    if (!selectedOrder) return
+    setConfirmingDelivery(true)
+    setConfirmDeliveryError(null)
+    try {
+      const updated = await confirmDelivery(selectedOrder.id)
+      // Actualizar la orden en el modal y en la lista sin re-fetchar todo
+      setSelectedOrder((prev) => ({ ...prev, status: updated.status }))
+      setOrders((prev) =>
+        prev.map((o) => (o.id === updated.order_id ? { ...o, status: updated.status } : o))
+      )
+    } catch (e) {
+      const detail = e?.response?.data?.detail
+      setConfirmDeliveryError(
+        typeof detail === 'string' ? detail : 'No se pudo confirmar la entrega. Intentá de nuevo.'
+      )
+    } finally {
+      setConfirmingDelivery(false)
+    }
   }
 
   if (checkingSession) {
@@ -363,6 +386,19 @@ export default function OrdersScreen() {
                 </View>
               ) : null}
 
+              {/* Código de seguimiento */}
+              {selectedOrder.tracking_code && (
+                <View style={styles.detailSection}>
+                  <Text style={styles.sectionLabel}>Código de seguimiento</Text>
+                  <View style={styles.detailSectionCard}>
+                    <Ionicons name="barcode-outline" size={16} color={COLORS.textSecondary} />
+                    <Text style={[styles.detailText, styles.trackingCode]}>
+                      {selectedOrder.tracking_code}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {/* Productos */}
               {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
                 <View style={styles.detailSection}>
@@ -406,6 +442,35 @@ export default function OrdersScreen() {
                   ${Number(selectedOrder.total).toFixed(2)}
                 </Text>
               </View>
+
+              {/* Confirmar entrega (CA7) */}
+              {selectedOrder.status === 'shipped' && (
+                <View style={styles.confirmDeliveryBox}>
+                  <Ionicons name="home-outline" size={22} color={COLORS.success} />
+                  <Text style={styles.confirmDeliveryTitle}>¿Ya recibiste tu pedido?</Text>
+                  <Text style={styles.confirmDeliveryText}>
+                    Confirmá la recepción para dar por finalizada la compra.
+                  </Text>
+                  {confirmDeliveryError ? (
+                    <Text style={styles.confirmDeliveryError}>{confirmDeliveryError}</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmDeliveryBtn,
+                      confirmingDelivery && styles.confirmDeliveryBtnDisabled,
+                    ]}
+                    onPress={handleConfirmDelivery}
+                    disabled={confirmingDelivery}
+                    activeOpacity={0.85}
+                  >
+                    {confirmingDelivery ? (
+                      <ActivityIndicator color={COLORS.white} size="small" />
+                    ) : (
+                      <Text style={styles.confirmDeliveryBtnText}>Confirmar que lo recibí</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Historial */}
               {Array.isArray(selectedOrder.status_history) &&
@@ -812,4 +877,57 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.error,
   },
+
+  // Código de seguimiento
+  trackingCode: {
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+
+  // Confirmar entrega
+  confirmDeliveryBox: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    padding: SPACING.md,
+    gap: SPACING.xs,
+    alignItems: 'flex-start',
+  },
+  confirmDeliveryTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.success,
+  },
+  confirmDeliveryText: {
+    fontSize: FONT.small,
+    color: '#166534',
+    lineHeight: 20,
+  },
+  confirmDeliveryError: {
+    fontSize: FONT.small,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  confirmDeliveryBtn: {
+    backgroundColor: COLORS.success,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 10,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginTop: SPACING.xs,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  confirmDeliveryBtnDisabled: {
+    opacity: 0.6,
+  },
+  confirmDeliveryBtnText: {
+    color: COLORS.white,
+    fontSize: FONT.regular,
+    fontWeight: '800',
+  },
+
 })
