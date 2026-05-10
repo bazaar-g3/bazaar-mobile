@@ -26,8 +26,20 @@ import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
 import EditProductModal from '../components/EditProductModal'
 import EditableStockStepper from '../components/EditableStockStepper'
+import { updateOrderStatus } from '../services/orders'
 
 const FILTROS = ['activa', 'inactiva']
+
+const SELLER_STATUS_LABELS = {
+  confirmed:      'Confirmada',
+  in_preparation: 'En preparación',
+  shipped:        'Enviada',
+}
+
+const SELLER_NEXT_STATUS = {
+  confirmed:      'in_preparation',
+  in_preparation: 'shipped',
+}
 
 function StateSwitch({ value, onToggle }) {
   return (
@@ -66,6 +78,11 @@ export default function VentasTab({
   const [pedidosError, setPedidosError] = useState('')
   // Mapa buyer_id → nombre legible, para evitar refetch
   const [buyerNames, setBuyerNames] = useState({})
+
+  const [updatingOrderId, setUpdatingOrderId] = useState(null)
+  const [trackingInput, setTrackingInput] = useState('')
+  const [trackingOrderId, setTrackingOrderId] = useState(null)
+  const [updateError, setUpdateError] = useState('')
 
   const alreadyAutoOpenedRef = useRef('')
 
@@ -147,6 +164,38 @@ export default function VentasTab({
 
   function handleClosePedidos() {
     setPedidosModalVisible(false)
+  }
+
+  async function handleUpdateOrderStatus(orderId, newStatus) {
+    if (newStatus === 'shipped') {
+      // Mostrar input de tracking antes de confirmar
+      setTrackingOrderId(orderId)
+      setTrackingInput('')
+      return
+    }
+    await doUpdateStatus(orderId, newStatus, null)
+  }
+
+  async function doUpdateStatus(orderId, newStatus, trackingCode) {
+    setUpdatingOrderId(orderId)
+    setUpdateError('')
+    try {
+      await updateOrderStatus(
+        orderId,
+        { new_status: newStatus, tracking_code: trackingCode || undefined },
+        sellerId
+      )
+      setTrackingOrderId(null)
+      loadPedidos() // refresca la lista
+    } catch (e) {
+      const detail = e?.response?.data?.detail
+      setUpdateError(
+        typeof detail === 'string' ? detail :
+        detail?.message ?? 'No se pudo actualizar el estado.'
+      )
+    } finally {
+      setUpdatingOrderId(false)
+    }
   }
 
   function toggleFiltro(filtro) {
@@ -649,6 +698,61 @@ export default function VentasTab({
                           </View>
                         ))}
                       </View>
+
+                      {/* Estado actual + botón de avance */}
+                      {SELLER_NEXT_STATUS[pedido.status] && (
+                        <View style={styles.pedidoStatusRow}>
+                          <View style={styles.pedidoStatusBadge}>
+                            <Text style={styles.pedidoStatusText}>
+                              {SELLER_STATUS_LABELS[pedido.status] ?? pedido.status}
+                            </Text>
+                          </View>
+
+                          {trackingOrderId === pedido.order_id ? (
+                            // Input de tracking code para shipped
+                            <View style={styles.trackingInputRow}>
+                              <TextInput
+                                style={styles.trackingInput}
+                                placeholder="Código de seguimiento (opcional)"
+                                placeholderTextColor={COLORS.textMuted}
+                                value={trackingInput}
+                                onChangeText={setTrackingInput}
+                                maxLength={100}
+                              />
+                              <TouchableOpacity
+                                style={styles.btnConfirmarEnvio}
+                                onPress={() => doUpdateStatus(pedido.order_id, 'shipped', trackingInput)}
+                                disabled={updatingOrderId === pedido.order_id}
+                              >
+                                {updatingOrderId === pedido.order_id
+                                  ? <ActivityIndicator size="small" color={COLORS.white} />
+                                  : <Text style={styles.btnConfirmarEnvioText}>Confirmar envío</Text>
+                                }
+                              </TouchableOpacity>
+                              <TouchableOpacity onPress={() => setTrackingOrderId(null)}>
+                                <Text style={styles.btnCancelarTracking}>Cancelar</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.btnAvanzarEstado}
+                              onPress={() => handleUpdateOrderStatus(pedido.order_id, SELLER_NEXT_STATUS[pedido.status])}
+                              disabled={updatingOrderId === pedido.order_id}
+                            >
+                              {updatingOrderId === pedido.order_id
+                                ? <ActivityIndicator size="small" color={COLORS.white} />
+                                : <Text style={styles.btnAvanzarEstadoText}>
+                                    → {SELLER_STATUS_LABELS[SELLER_NEXT_STATUS[pedido.status]]}
+                                  </Text>
+                              }
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+
+                      {updateError ? (
+                        <Text style={styles.pedidosError}>{updateError}</Text>
+                      ) : null}
                     </View>
                   )
                 })}
@@ -1231,4 +1335,74 @@ const styles = StyleSheet.create({
   colEstado:      { width: 90 },
   colVisible:     { width: 80 },
   colAcciones:    { width: 90 },
+
+  pedidoStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+  },
+  pedidoStatusBadge: {
+    backgroundColor: COLORS.background,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  pedidoStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  btnAvanzarEstado: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.md,
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  btnAvanzarEstadoText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  trackingInputRow: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  trackingInput: {
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    borderRadius: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: COLORS.textPrimary,
+  },
+  btnConfirmarEnvio: {
+    backgroundColor: COLORS.success,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    minHeight: 32,
+    justifyContent: 'center',
+  },
+  btnConfirmarEnvioText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  btnCancelarTracking: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 })
