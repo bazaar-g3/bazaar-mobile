@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Modal,
+  SafeAreaView,
   ScrollView,
   View,
   Text,
@@ -20,22 +21,24 @@ import {
   updateSellerProductStock,
   updateSellerProduct,
 } from '../services/catalog'
-import { getSellerSales } from '../services/orders'
+import { getSellerSales, updateOrderStatus } from '../services/orders'
 import { getPublicProfile } from '../services/user'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
 import EditProductModal from '../components/EditProductModal'
 import EditableStockStepper from '../components/EditableStockStepper'
-import { updateOrderStatus } from '../services/orders'
 
 const FILTROS = ['activa', 'inactiva']
 
+// Etiquetas legibles para cada estado de orden
 const SELLER_STATUS_LABELS = {
   confirmed:      'Confirmada',
   in_preparation: 'En preparación',
   shipped:        'Enviada',
+  delivered:      'Entregada',
 }
 
+// Siguiente estado posible para el vendedor (solo los que le corresponden)
 const SELLER_NEXT_STATUS = {
   confirmed:      'in_preparation',
   in_preparation: 'shipped',
@@ -71,17 +74,17 @@ export default function VentasTab({
   const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
   const [loadingEditProduct, setLoadingEditProduct] = useState(false)
 
-  // --- Pedidos recibidos (ventas confirmadas) ---
+  // --- Pedidos recibidos ---
   const [pedidosModalVisible, setPedidosModalVisible] = useState(false)
   const [pedidos, setPedidos] = useState([])
   const [loadingPedidos, setLoadingPedidos] = useState(false)
   const [pedidosError, setPedidosError] = useState('')
-  // Mapa buyer_id → nombre legible, para evitar refetch
   const [buyerNames, setBuyerNames] = useState({})
 
+  // --- Actualización de estado de pedidos ---
   const [updatingOrderId, setUpdatingOrderId] = useState(null)
+  const [trackingOrderId, setTrackingOrderId] = useState(null) // orden esperando tracking code
   const [trackingInput, setTrackingInput] = useState('')
-  const [trackingOrderId, setTrackingOrderId] = useState(null)
   const [updateError, setUpdateError] = useState('')
 
   const alreadyAutoOpenedRef = useRef('')
@@ -92,21 +95,13 @@ export default function VentasTab({
       setLoadingPublicaciones(false)
       return
     }
-
     setLoadingPublicaciones(true)
     setPublicacionesError('')
-
     try {
-      const products = await listSellerProducts({
-        sellerId,
-        onlyAvailable: false,
-      })
-
+      const products = await listSellerProducts({ sellerId, onlyAvailable: false })
       setPublicaciones(products.map(mapCatalogProductToVentasItem))
     } catch (error) {
-      setPublicacionesError(
-        getCatalogErrorMessage(error, 'No pudimos cargar tus publicaciones.')
-      )
+      setPublicacionesError(getCatalogErrorMessage(error, 'No pudimos cargar tus publicaciones.'))
     } finally {
       setLoadingPublicaciones(false)
     }
@@ -116,7 +111,7 @@ export default function VentasTab({
     loadPublicaciones()
   }, [loadPublicaciones, refreshKey])
 
-  // --- Lógica de pedidos recibidos ---
+  // --- Pedidos ---
 
   function formatDeliveryAddress(addr) {
     if (!addr) return 'Dirección no disponible'
@@ -129,16 +124,14 @@ export default function VentasTab({
 
   async function loadPedidos() {
     if (!sellerId) return
-
     setLoadingPedidos(true)
     setPedidosError('')
     setPedidos([])
-
+    setUpdateError('')
+    setTrackingOrderId(null)
     try {
       const sales = await getSellerSales(sellerId)
       setPedidos(sales)
-
-      // Cargar nombres de compradores en segundo plano
       const uniqueBuyerIds = [...new Set(sales.map((s) => s.buyer_id))]
       const names = {}
       await Promise.all(
@@ -164,16 +157,19 @@ export default function VentasTab({
 
   function handleClosePedidos() {
     setPedidosModalVisible(false)
+    setTrackingOrderId(null)
+    setUpdateError('')
   }
 
-  async function handleUpdateOrderStatus(orderId, newStatus) {
+  // Avanzar estado: si el próximo es "shipped", primero pedimos tracking code
+  function handleUpdateOrderStatus(orderId, newStatus) {
+    setUpdateError('')
     if (newStatus === 'shipped') {
-      // Mostrar input de tracking antes de confirmar
       setTrackingOrderId(orderId)
       setTrackingInput('')
       return
     }
-    await doUpdateStatus(orderId, newStatus, null)
+    doUpdateStatus(orderId, newStatus, null)
   }
 
   async function doUpdateStatus(orderId, newStatus, trackingCode) {
@@ -183,10 +179,15 @@ export default function VentasTab({
       await updateOrderStatus(
         orderId,
         { new_status: newStatus, tracking_code: trackingCode || undefined },
-        sellerId
+        sellerId,
       )
       setTrackingOrderId(null)
-      loadPedidos() // refresca la lista
+      // Actualizar el estado localmente sin recargar todo
+      setPedidos((prev) =>
+        prev.map((p) =>
+          p.order_id === orderId ? { ...p, status: newStatus } : p
+        )
+      )
     } catch (e) {
       const detail = e?.response?.data?.detail
       setUpdateError(
@@ -194,32 +195,25 @@ export default function VentasTab({
         detail?.message ?? 'No se pudo actualizar el estado.'
       )
     } finally {
-      setUpdatingOrderId(false)
+      setUpdatingOrderId(null)
     }
   }
 
+  // --- Publicaciones ---
+
   function toggleFiltro(filtro) {
     setFiltrosActivos((prev) =>
-      prev.includes(filtro)
-        ? prev.filter((f) => f !== filtro)
-        : [...prev, filtro]
+      prev.includes(filtro) ? prev.filter((f) => f !== filtro) : [...prev, filtro]
     )
   }
 
   async function handleTogglePublicacion(id) {
     const pub = publicaciones.find((p) => p.id === id)
     if (!pub) return
-
     const nuevoEnabled = pub.estado !== 'activa'
-
     try {
-      const updatedProduct = await updateSellerProductStatus({
-        productId: id,
-        enabled: nuevoEnabled,
-      })
-
+      const updatedProduct = await updateSellerProductStatus({ productId: id, enabled: nuevoEnabled })
       if (!updatedProduct) return
-
       setPublicaciones((prev) =>
         prev.map((p) =>
           p.id === id
@@ -235,7 +229,6 @@ export default function VentasTab({
         )
       )
     } catch (error) {
-      console.error('Error al cambiar estado de la publicación:', error)
       alert(getCatalogErrorMessage(error, 'No se pudo actualizar la publicación'))
     }
   }
@@ -246,21 +239,14 @@ export default function VentasTab({
 
   const handleEditarPublicacion = useCallback(async (pub) => {
     if (!pub?.id) return
-
     setLoadingEditProduct(true)
     setEditModalVisible(true)
     setPublicacionEnEdicion(null)
-
     try {
       const product = await getCatalogProduct(pub.id)
-
-      if (!product) {
-        throw new Error('No se pudo obtener el detalle del producto')
-      }
-
+      if (!product) throw new Error('No se pudo obtener el detalle del producto')
       setPublicacionEnEdicion(product)
     } catch (error) {
-      console.error('Error al cargar la publicación para editar:', error)
       alert(getCatalogErrorMessage(error, 'No se pudo cargar la publicación'))
       setEditModalVisible(false)
     } finally {
@@ -269,38 +255,15 @@ export default function VentasTab({
   }, [])
 
   useEffect(() => {
-    if (!initialOpenEdit || !initialProductId) {
-      return
-    }
-
-    if (loadingPublicaciones || publicaciones.length === 0) {
-      return
-    }
-
+    if (!initialOpenEdit || !initialProductId) return
+    if (loadingPublicaciones || publicaciones.length === 0) return
     const autoOpenKey = `${sellerId}-${initialProductId}-${refreshKey ?? 'base'}`
-    if (alreadyAutoOpenedRef.current === autoOpenKey) {
-      return
-    }
-
-    const publicacionObjetivo = publicaciones.find(
-      (pub) => String(pub.id) === String(initialProductId)
-    )
-
-    if (!publicacionObjetivo) {
-      return
-    }
-
+    if (alreadyAutoOpenedRef.current === autoOpenKey) return
+    const publicacionObjetivo = publicaciones.find((pub) => String(pub.id) === String(initialProductId))
+    if (!publicacionObjetivo) return
     alreadyAutoOpenedRef.current = autoOpenKey
     handleEditarPublicacion(publicacionObjetivo)
-  }, [
-    handleEditarPublicacion,
-    initialOpenEdit,
-    initialProductId,
-    loadingPublicaciones,
-    publicaciones,
-    refreshKey,
-    sellerId,
-  ])
+  }, [handleEditarPublicacion, initialOpenEdit, initialProductId, loadingPublicaciones, publicaciones, refreshKey, sellerId])
 
   function handleCloseModal() {
     setEditModalVisible(false)
@@ -309,107 +272,62 @@ export default function VentasTab({
   }
 
   async function handleSaveChanges(productoActualizado) {
-    if (!productoActualizado?.id) {
-      handleCloseModal()
-      return
-    }
-
+    if (!productoActualizado?.id) { handleCloseModal(); return }
     try {
       const updatedProduct = await updateSellerProduct({
         productId: productoActualizado.id,
         name: productoActualizado.name ?? productoActualizado.titulo,
-        description:
-          productoActualizado.description ?? productoActualizado.descripcion,
+        description: productoActualizado.description ?? productoActualizado.descripcion,
         price: productoActualizado.price ?? productoActualizado.precio,
         stock: productoActualizado.stock,
-        category:
-          productoActualizado.categorySlug ?? productoActualizado.categoria,
+        category: productoActualizado.categorySlug ?? productoActualizado.categoria,
         images: productoActualizado.images,
       })
-
-      if (!updatedProduct) {
-        handleCloseModal()
-        return
-      }
-
+      if (!updatedProduct) { handleCloseModal(); return }
       setPublicaciones((prev) =>
         prev.map((p) =>
           p.id === updatedProduct.id
             ? {
                 ...p,
                 titulo: updatedProduct.name ?? p.titulo,
-                precio:
-                  updatedProduct.price !== undefined
-                    ? Number(updatedProduct.price) || 0
-                    : p.precio,
-                stock:
-                  updatedProduct.stock !== undefined
-                    ? Number(updatedProduct.stock) || 0
-                    : p.stock,
+                precio: updatedProduct.price !== undefined ? Number(updatedProduct.price) || 0 : p.precio,
+                stock: updatedProduct.stock !== undefined ? Number(updatedProduct.stock) || 0 : p.stock,
                 imagen: updatedProduct.images?.[0] || p.imagen,
                 images: updatedProduct.images ?? p.images,
-                categoria:
-                  updatedProduct.categorySlug ??
-                  updatedProduct.category ??
-                  p.categoria,
-                descripcion:
-                  updatedProduct.description ?? p.descripcion,
-                estado:
-                  updatedProduct.status === 'disabled'
-                    ? 'inactiva'
-                    : 'activa',
+                categoria: updatedProduct.categorySlug ?? updatedProduct.category ?? p.categoria,
+                descripcion: updatedProduct.description ?? p.descripcion,
+                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
               }
             : p
         )
       )
-
       handleCloseModal()
     } catch (error) {
-      console.error('Error al editar la publicación:', {
-        message: error?.message,
-        status: error?.status,
-        data: error?.data,
-      })
-      alert(
-        getCatalogErrorMessage(
-          error,
-          error?.data?.detail || 'No se pudo guardar la edición'
-        )
-      )
+      alert(getCatalogErrorMessage(error, error?.data?.detail || 'No se pudo guardar la edición'))
     }
   }
 
   async function handleUpdateStock(id, nuevoStock) {
     const pub = publicaciones.find((p) => p.id === id)
     if (!pub) return
-
     try {
-      const updatedProduct = await updateSellerProductStock({
-        productId: id,
-        stock: nuevoStock,
-      })
-
+      const updatedProduct = await updateSellerProductStock({ productId: id, stock: nuevoStock })
       if (!updatedProduct) return
-      let finalProduct = updatedProduct
       setPublicaciones((prev) =>
         prev.map((p) =>
           p.id === id
             ? {
                 ...p,
-                stock: Number(finalProduct.stock) || 0,
-                precio: Number(finalProduct.price) || 0,
-                titulo: finalProduct.name,
-                imagen: finalProduct.images?.[0] || p.imagen,
-                estado:
-                  finalProduct.status === 'disabled'
-                    ? 'inactiva'
-                    : 'activa',
+                stock: Number(updatedProduct.stock) || 0,
+                precio: Number(updatedProduct.price) || 0,
+                titulo: updatedProduct.name,
+                imagen: updatedProduct.images?.[0] || p.imagen,
+                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
               }
             : p
         )
       )
     } catch (error) {
-      console.error('Error al actualizar stock de la publicación:', error)
       alert(getCatalogErrorMessage(error, 'No se pudo actualizar el stock'))
     }
   }
@@ -470,8 +388,7 @@ export default function VentasTab({
             )
           })}
           <Text style={styles.conteo}>
-            {publicacionesFiltradas.length} publicación
-            {publicacionesFiltradas.length !== 1 ? 'es' : ''}
+            {publicacionesFiltradas.length} publicación{publicacionesFiltradas.length !== 1 ? 'es' : ''}
           </Text>
         </View>
       </View>
@@ -489,22 +406,16 @@ export default function VentasTab({
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={COLORS.primaryLight} />
           <Text style={styles.emptyTitulo}>Cargando tus publicaciones...</Text>
-          <Text style={styles.emptySubtitulo}>
-            Estamos trayendo la información del catálogo real.
-          </Text>
+          <Text style={styles.emptySubtitulo}>Estamos trayendo la información del catálogo real.</Text>
         </View>
       ) : publicacionesFiltradas.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🔍</Text>
           <Text style={styles.emptyTitulo}>
-            {busqueda.length > 0
-              ? 'No encontramos publicaciones con ese nombre.'
-              : 'Todavía no tenés publicaciones.'}
+            {busqueda.length > 0 ? 'No encontramos publicaciones con ese nombre.' : 'Todavía no tenés publicaciones.'}
           </Text>
           <Text style={styles.emptySubtitulo}>
-            {busqueda.length > 0
-              ? 'Probá con otro término de búsqueda.'
-              : 'Podés crear una y empezar a vender cuando quieras.'}
+            {busqueda.length > 0 ? 'Probá con otro término de búsqueda.' : 'Podés crear una y empezar a vender cuando quieras.'}
           </Text>
           {busqueda.length === 0 && (
             <TouchableOpacity style={styles.btnCrearEmpty} onPress={handleCrearPublicacion}>
@@ -526,68 +437,36 @@ export default function VentasTab({
             </View>
 
             {publicacionesFiltradas.map((pub, idx) => (
-              <View
-                key={pub.id}
-                style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}
-              >
+              <View key={pub.id} style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}>
                 <View style={[styles.colTitulo, styles.colPublicacion]}>
-                  {isRemoteImage(pub.imagen) ? (
-                    <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
-                  ) : (
-                    <Text style={styles.pubEmoji}>{pub.imagen}</Text>
-                  )}
-                  <Text style={styles.pubTitulo} numberOfLines={2}>
-                    {pub.titulo}
-                  </Text>
+                  {isRemoteImage(pub.imagen)
+                    ? <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
+                    : <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+                  }
+                  <Text style={styles.pubTitulo} numberOfLines={2}>{pub.titulo}</Text>
                 </View>
-
                 <Text style={[styles.colText, styles.precioText, styles.alignRight, styles.colPrecio]}>
                   ${pub.precio.toLocaleString('es-AR')}
                 </Text>
-
                 <View style={[styles.stockCell, styles.colStock]}>
                   <EditableStockStepper
                     value={pub.stock}
                     onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
                   />
                 </View>
-
-                <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>
-                  {pub.vendidos}
-                </Text>
-
+                <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>{pub.vendidos}</Text>
                 <View style={[styles.estadoCell, styles.colEstado]}>
-                  <View
-                    style={[
-                      styles.estadoBadge,
-                      pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.estadoText,
-                        pub.estado === 'activa'
-                          ? styles.estadoTextActiva
-                          : styles.estadoTextInactiva,
-                      ]}
-                    >
+                  <View style={[styles.estadoBadge, pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva]}>
+                    <Text style={[styles.estadoText, pub.estado === 'activa' ? styles.estadoTextActiva : styles.estadoTextInactiva]}>
                       {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
                     </Text>
                   </View>
                 </View>
-
                 <View style={[styles.switchCell, styles.colVisible]}>
-                  <StateSwitch
-                    value={pub.estado === 'activa'}
-                    onToggle={() => handleTogglePublicacion(pub.id)}
-                  />
+                  <StateSwitch value={pub.estado === 'activa'} onToggle={() => handleTogglePublicacion(pub.id)} />
                 </View>
-
                 <View style={[styles.actionsCell, styles.colAcciones]}>
-                  <TouchableOpacity
-                    style={styles.btnEditar}
-                    onPress={() => handleEditarPublicacion(pub)}
-                  >
+                  <TouchableOpacity style={styles.btnEditar} onPress={() => handleEditarPublicacion(pub)}>
                     <Text style={styles.btnEditarText}>Editar</Text>
                   </TouchableOpacity>
                 </View>
@@ -605,170 +484,189 @@ export default function VentasTab({
         onSave={handleSaveChanges}
       />
 
-      {/* Modal de pedidos recibidos */}
+      {/* ── Modal de pedidos recibidos (pantalla completa) ─────────────── */}
       <Modal
         visible={pedidosModalVisible}
         animationType="slide"
-        transparent
+        presentationStyle="pageSheet"
         onRequestClose={handleClosePedidos}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.pedidosModal}>
-            {/* Header del modal */}
-            <View style={styles.pedidosModalHeader}>
-              <Text style={styles.pedidosModalTitulo}>Pedidos recibidos</Text>
-              <TouchableOpacity onPress={handleClosePedidos} style={styles.pedidosCloseBtn}>
-                <Text style={styles.pedidosCloseBtnText}>✕</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+          {/* Header */}
+          <View style={styles.pedidosModalHeader}>
+            <Text style={styles.pedidosModalTitulo}>Pedidos recibidos</Text>
+            <TouchableOpacity onPress={handleClosePedidos} style={styles.pedidosCloseBtn}>
+              <Text style={styles.pedidosCloseBtnText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingPedidos ? (
+            <View style={styles.pedidosCentered}>
+              <ActivityIndicator size="large" color={COLORS.primaryLight} />
+              <Text style={styles.pedidosSubtitulo}>Cargando pedidos...</Text>
+            </View>
+          ) : pedidosError ? (
+            <View style={styles.pedidosCentered}>
+              <Text style={styles.pedidosError}>{pedidosError}</Text>
+              <TouchableOpacity style={styles.btnReintentar} onPress={loadPedidos}>
+                <Text style={styles.btnReintentarText}>Reintentar</Text>
               </TouchableOpacity>
             </View>
+          ) : pedidos.length === 0 ? (
+            <View style={styles.pedidosCentered}>
+              <Text style={styles.pedidosEmptyIcon}>🛒</Text>
+              <Text style={styles.pedidosTituloVacio}>Sin pedidos todavía</Text>
+              <Text style={styles.pedidosSubtitulo}>
+                Aquí verás los pedidos confirmados de tus compradores.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.pedidosList}
+              contentContainerStyle={styles.pedidosListContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.pedidosConteo}>
+                {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''} activo{pedidos.length !== 1 ? 's' : ''}
+              </Text>
 
-            {loadingPedidos ? (
-              <View style={styles.pedidosCentered}>
-                <ActivityIndicator size="large" color={COLORS.primaryLight} />
-                <Text style={styles.pedidosSubtitulo}>Cargando pedidos...</Text>
-              </View>
-            ) : pedidosError ? (
-              <View style={styles.pedidosCentered}>
-                <Text style={styles.pedidosError}>{pedidosError}</Text>
-                <TouchableOpacity style={styles.btnReintentar} onPress={loadPedidos}>
-                  <Text style={styles.btnReintentarText}>Reintentar</Text>
-                </TouchableOpacity>
-              </View>
-            ) : pedidos.length === 0 ? (
-              <View style={styles.pedidosCentered}>
-                <Text style={styles.pedidosEmptyIcon}>🛒</Text>
-                <Text style={styles.pedidosTituloVacio}>Sin pedidos todavía</Text>
-                <Text style={styles.pedidosSubtitulo}>
-                  Aquí verás los pedidos confirmados de tus compradores.
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.pedidosList}
-                contentContainerStyle={styles.pedidosListContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={styles.pedidosConteo}>
-                  {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''} confirmado{pedidos.length !== 1 ? 's' : ''}
-                </Text>
+              {pedidos.map((pedido) => {
+                const buyerName = buyerNames[pedido.buyer_id] || 'Cargando...'
+                const fecha = new Date(pedido.created_at).toLocaleDateString('es-AR', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                })
+                const nextStatus = SELLER_NEXT_STATUS[pedido.status]
+                const isUpdating = updatingOrderId === pedido.order_id
+                const isAwaitingTracking = trackingOrderId === pedido.order_id
 
-                {pedidos.map((pedido) => {
-                  const buyerName = buyerNames[pedido.buyer_id] || 'Cargando...'
-                  const fecha = new Date(pedido.created_at).toLocaleDateString('es-AR', {
-                    day: '2-digit', month: 'short', year: 'numeric',
-                  })
-                  return (
-                    <View key={String(pedido.order_id)} style={styles.pedidoCard}>
-                      {/* Fecha y subtotal del vendedor */}
-                      <View style={styles.pedidoCardHeader}>
-                        <Text style={styles.pedidoFecha}>{fecha}</Text>
-                        <Text style={styles.pedidoSubtotal}>
-                          ${Number(pedido.seller_subtotal).toLocaleString('es-AR')}
-                        </Text>
+                return (
+                  <View key={String(pedido.order_id)} style={styles.pedidoCard}>
+                    {/* Fecha y subtotal */}
+                    <View style={styles.pedidoCardHeader}>
+                      <Text style={styles.pedidoFecha}>{fecha}</Text>
+                      <Text style={styles.pedidoSubtotal}>
+                        ${Number(pedido.seller_subtotal).toLocaleString('es-AR')}
+                      </Text>
+                    </View>
+
+                    {/* Comprador */}
+                    <View style={styles.pedidoRow}>
+                      <Text style={styles.pedidoLabel}>Comprador</Text>
+                      <Text style={styles.pedidoValue}>{buyerName}</Text>
+                    </View>
+
+                    {/* Dirección */}
+                    <View style={styles.pedidoRow}>
+                      <Text style={styles.pedidoLabel}>Dirección</Text>
+                      <Text style={styles.pedidoValue}>{formatDeliveryAddress(pedido.delivery_address)}</Text>
+                    </View>
+
+                    {/* Productos */}
+                    <View style={styles.pedidoProductosContainer}>
+                      <Text style={styles.pedidoLabel}>Productos</Text>
+                      {pedido.items.map((item, idx) => (
+                        <View key={idx} style={styles.pedidoProductoRow}>
+                          <Text style={styles.pedidoProductoName} numberOfLines={2}>
+                            {item.product_name || item.product_id}
+                          </Text>
+                          <Text style={styles.pedidoProductoQty}>x{item.quantity}</Text>
+                          <Text style={styles.pedidoProductoSubtotal}>
+                            ${Number(item.subtotal).toLocaleString('es-AR')}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* ── Estado + botón de avance ──────────────────────── */}
+                    <View style={styles.pedidoStatusSection}>
+                      {/* Badge de estado actual */}
+                      <View style={styles.pedidoStatusRow}>
+                        <View style={[
+                          styles.pedidoStatusBadge,
+                          pedido.status === 'delivered' && styles.pedidoStatusBadgeDelivered,
+                        ]}>
+                          <Text style={[
+                            styles.pedidoStatusText,
+                            pedido.status === 'delivered' && styles.pedidoStatusTextDelivered,
+                          ]}>
+                            {SELLER_STATUS_LABELS[pedido.status] ?? pedido.status}
+                          </Text>
+                        </View>
+
+                        {/* Botón de avance (solo si hay próximo estado) */}
+                        {nextStatus && !isAwaitingTracking && (
+                          <TouchableOpacity
+                            style={[styles.btnAvanzarEstado, isUpdating && styles.btnAvanzarEstadoDisabled]}
+                            onPress={() => handleUpdateOrderStatus(pedido.order_id, nextStatus)}
+                            disabled={isUpdating}
+                          >
+                            {isUpdating
+                              ? <ActivityIndicator size="small" color={COLORS.white} />
+                              : <Text style={styles.btnAvanzarEstadoText}>
+                                  → {SELLER_STATUS_LABELS[nextStatus]}
+                                </Text>
+                            }
+                          </TouchableOpacity>
+                        )}
                       </View>
 
-                      {/* Comprador */}
-                      <View style={styles.pedidoRow}>
-                        <Text style={styles.pedidoLabel}>Comprador</Text>
-                        <Text style={styles.pedidoValue}>{buyerName}</Text>
-                      </View>
-
-                      {/* Dirección de entrega */}
-                      <View style={styles.pedidoRow}>
-                        <Text style={styles.pedidoLabel}>Dirección</Text>
-                        <Text style={styles.pedidoValue}>
-                          {formatDeliveryAddress(pedido.delivery_address)}
-                        </Text>
-                      </View>
-
-                      {/* Productos comprados */}
-                      <View style={styles.pedidoProductosContainer}>
-                        <Text style={styles.pedidoLabel}>Productos</Text>
-                        {pedido.items.map((item, idx) => (
-                          <View key={idx} style={styles.pedidoProductoRow}>
-                            <Text style={styles.pedidoProductoName} numberOfLines={2}>
-                              {item.product_name || item.product_id}
-                            </Text>
-                            <Text style={styles.pedidoProductoQty}>
-                              x{item.quantity}
-                            </Text>
-                            <Text style={styles.pedidoProductoSubtotal}>
-                              ${Number(item.subtotal).toLocaleString('es-AR')}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-
-                      {/* Estado actual + botón de avance */}
-                      {SELLER_NEXT_STATUS[pedido.status] && (
-                        <View style={styles.pedidoStatusRow}>
-                          <View style={styles.pedidoStatusBadge}>
-                            <Text style={styles.pedidoStatusText}>
-                              {SELLER_STATUS_LABELS[pedido.status] ?? pedido.status}
-                            </Text>
-                          </View>
-
-                          {trackingOrderId === pedido.order_id ? (
-                            // Input de tracking code para shipped
-                            <View style={styles.trackingInputRow}>
-                              <TextInput
-                                style={styles.trackingInput}
-                                placeholder="Código de seguimiento (opcional)"
-                                placeholderTextColor={COLORS.textMuted}
-                                value={trackingInput}
-                                onChangeText={setTrackingInput}
-                                maxLength={100}
-                              />
-                              <TouchableOpacity
-                                style={styles.btnConfirmarEnvio}
-                                onPress={() => doUpdateStatus(pedido.order_id, 'shipped', trackingInput)}
-                                disabled={updatingOrderId === pedido.order_id}
-                              >
-                                {updatingOrderId === pedido.order_id
-                                  ? <ActivityIndicator size="small" color={COLORS.white} />
-                                  : <Text style={styles.btnConfirmarEnvioText}>Confirmar envío</Text>
-                                }
-                              </TouchableOpacity>
-                              <TouchableOpacity onPress={() => setTrackingOrderId(null)}>
-                                <Text style={styles.btnCancelarTracking}>Cancelar</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
+                      {/* Input de tracking code (aparece solo al marcar como enviada) */}
+                      {isAwaitingTracking && (
+                        <View style={styles.trackingContainer}>
+                          <Text style={styles.trackingLabel}>
+                            Ingresá el código de seguimiento (opcional):
+                          </Text>
+                          <TextInput
+                            style={styles.trackingInput}
+                            placeholder="Ej: AR123456789"
+                            placeholderTextColor={COLORS.textMuted}
+                            value={trackingInput}
+                            onChangeText={setTrackingInput}
+                            maxLength={100}
+                            autoFocus
+                          />
+                          <View style={styles.trackingActions}>
                             <TouchableOpacity
-                              style={styles.btnAvanzarEstado}
-                              onPress={() => handleUpdateOrderStatus(pedido.order_id, SELLER_NEXT_STATUS[pedido.status])}
-                              disabled={updatingOrderId === pedido.order_id}
+                              style={[styles.btnConfirmarEnvio, isUpdating && styles.btnAvanzarEstadoDisabled]}
+                              onPress={() => doUpdateStatus(pedido.order_id, 'shipped', trackingInput)}
+                              disabled={isUpdating}
                             >
-                              {updatingOrderId === pedido.order_id
+                              {isUpdating
                                 ? <ActivityIndicator size="small" color={COLORS.white} />
-                                : <Text style={styles.btnAvanzarEstadoText}>
-                                    → {SELLER_STATUS_LABELS[SELLER_NEXT_STATUS[pedido.status]]}
-                                  </Text>
+                                : <Text style={styles.btnConfirmarEnvioText}>Confirmar envío</Text>
                               }
                             </TouchableOpacity>
-                          )}
+                            <TouchableOpacity
+                              style={styles.btnCancelarTracking}
+                              onPress={() => setTrackingOrderId(null)}
+                              disabled={isUpdating}
+                            >
+                              <Text style={styles.btnCancelarTrackingText}>Cancelar</Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       )}
 
-                      {updateError ? (
-                        <Text style={styles.pedidosError}>{updateError}</Text>
-                      ) : null}
+                      {/* Error de actualización */}
+                      {updateError && isUpdating === false && updatingOrderId === null && trackingOrderId === null ? null
+                        : updateError && pedido.order_id === trackingOrderId ? (
+                          <Text style={styles.updateErrorText}>{updateError}</Text>
+                        ) : null
+                      }
                     </View>
-                  )
-                })}
-              </ScrollView>
-            )}
-          </View>
-        </View>
+                  </View>
+                )
+              })}
+            </ScrollView>
+          )}
+        </SafeAreaView>
       </Modal>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
   header: {
     flexDirection: 'row',
@@ -777,32 +675,27 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     gap: SPACING.md,
   },
-
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
   },
-
   titulo: {
     fontSize: FONT.large,
     fontWeight: '700',
     color: COLORS.textPrimary,
   },
-
   btnPublicar: {
     backgroundColor: COLORS.secondary,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     borderRadius: 10,
   },
-
   btnPublicarText: {
     color: COLORS.white,
     fontWeight: '700',
     fontSize: FONT.medium,
   },
-
   btnPedidos: {
     borderWidth: 1.5,
     borderColor: COLORS.primaryLight,
@@ -811,7 +704,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: COLORS.white,
   },
-
   btnPedidosText: {
     color: COLORS.primaryLight,
     fontWeight: '700',
@@ -827,7 +719,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.divider,
     gap: SPACING.sm,
   },
-
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -839,32 +730,15 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     backgroundColor: COLORS.white,
   },
-
-  searchIcon: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
-  },
-
-  searchInput: {
-    flex: 1,
-    fontSize: FONT.small,
-    color: COLORS.textPrimary,
-    outlineStyle: 'none',
-  },
-
-  clearSearch: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
-    paddingHorizontal: 4,
-  },
-
+  searchIcon: { fontSize: FONT.small, color: COLORS.textMuted },
+  searchInput: { flex: 1, fontSize: FONT.small, color: COLORS.textPrimary, outlineStyle: 'none' },
+  clearSearch: { fontSize: FONT.small, color: COLORS.textMuted, paddingHorizontal: 4 },
   filtrosRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
     flexWrap: 'wrap',
   },
-
   chip: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -873,27 +747,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.white,
   },
-
-  chipActivo: {
-    borderColor: COLORS.primaryLight,
-    backgroundColor: COLORS.promoLight,
-  },
-
-  chipText: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-  },
-
-  chipTextoActivo: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
-  conteo: {
-    marginLeft: 'auto',
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-  },
+  chipActivo: { borderColor: COLORS.primaryLight, backgroundColor: COLORS.promoLight },
+  chipText: { fontSize: FONT.small, color: COLORS.textSecondary },
+  chipTextoActivo: { color: COLORS.primary, fontWeight: '600' },
+  conteo: { marginLeft: 'auto', fontSize: FONT.small, color: COLORS.textSecondary },
 
   errorBanner: {
     backgroundColor: '#FFF7ED',
@@ -907,17 +764,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.md,
   },
-
-  errorBannerText: {
-    flex: 1,
-    fontSize: FONT.small,
-    color: COLORS.dark,
-  },
-
-  errorBannerAction: {
-    color: COLORS.secondary,
-    fontWeight: '700',
-  },
+  errorBannerText: { flex: 1, fontSize: FONT.small, color: COLORS.dark },
+  errorBannerAction: { color: COLORS.secondary, fontWeight: '700' },
 
   lista: {
     backgroundColor: COLORS.white,
@@ -927,7 +775,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.divider,
     marginBottom: SPACING.md,
   },
-
   filaHeader: {
     flexDirection: 'row',
     paddingVertical: SPACING.sm,
@@ -936,7 +783,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.divider,
     backgroundColor: COLORS.background,
   },
-
   colHeader: {
     fontSize: 12,
     fontWeight: '700',
@@ -944,7 +790,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
-
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -953,86 +798,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
-
-  filaAlterna: {
-    backgroundColor: '#FAFCFC',
-  },
-
-  colTitulo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-
-  pubEmoji: {
-    fontSize: 24,
-  },
-
-  pubImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: COLORS.imagePlaceholder,
-  },
-
-  pubTitulo: {
-    fontSize: FONT.small,
-    color: COLORS.textPrimary,
-    flex: 1,
-    flexShrink: 1,
-  },
-
-  colText: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-  },
-
-  precioText: {
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-
-  estadoCell: {
-    alignItems: 'center',
-  },
-
-  estadoBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-  },
-
-  estadoActiva: {
-    backgroundColor: COLORS.promoLight,
-  },
-
-  estadoInactiva: {
-    backgroundColor: COLORS.background,
-  },
-
-  estadoText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  estadoTextActiva: {
-    color: COLORS.success,
-  },
-
-  estadoTextInactiva: {
-    color: COLORS.textSecondary,
-  },
-
-  switchCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  actionsCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
+  filaAlterna: { backgroundColor: '#FAFCFC' },
+  colTitulo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  pubEmoji: { fontSize: 24 },
+  pubImage: { width: 44, height: 44, borderRadius: 10, backgroundColor: COLORS.imagePlaceholder },
+  pubTitulo: { fontSize: FONT.small, color: COLORS.textPrimary, flex: 1, flexShrink: 1 },
+  colText: { fontSize: FONT.small, color: COLORS.textSecondary },
+  precioText: { fontWeight: '700', color: COLORS.textPrimary },
+  estadoCell: { alignItems: 'center' },
+  estadoBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
+  estadoActiva: { backgroundColor: COLORS.promoLight },
+  estadoInactiva: { backgroundColor: COLORS.background },
+  estadoText: { fontSize: 12, fontWeight: '600' },
+  estadoTextActiva: { color: COLORS.success },
+  estadoTextInactiva: { color: COLORS.textSecondary },
+  switchCell: { alignItems: 'center', justifyContent: 'center' },
+  actionsCell: { alignItems: 'center', justifyContent: 'center' },
   btnEditar: {
     borderWidth: 1,
     borderColor: COLORS.primaryLight,
@@ -1041,48 +822,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
   },
-
-  btnEditarText: {
-    color: COLORS.primaryLight,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  switchTrack: {
-    width: 46,
-    height: 24,
-    borderRadius: 999,
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-
-  switchTrackOn: {
-    backgroundColor: COLORS.secondary,
-  },
-
-  switchTrackOff: {
-    backgroundColor: '#D9D9D9',
-  },
-
+  btnEditarText: { color: COLORS.primaryLight, fontSize: 12, fontWeight: '600' },
+  switchTrack: { width: 46, height: 24, borderRadius: 999, justifyContent: 'center', paddingHorizontal: 2 },
+  switchTrackOn: { backgroundColor: COLORS.secondary },
+  switchTrackOff: { backgroundColor: '#D9D9D9' },
   switchThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+    width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.white,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15, shadowRadius: 2, elevation: 2,
   },
-
-  switchThumbOn: {
-    alignSelf: 'flex-end',
-  },
-
-  switchThumbOff: {
-    alignSelf: 'flex-start',
-  },
+  switchThumbOn: { alignSelf: 'flex-end' },
+  switchThumbOff: { alignSelf: 'flex-start' },
 
   emptyState: {
     backgroundColor: COLORS.white,
@@ -1094,75 +844,29 @@ const styles = StyleSheet.create({
     borderColor: COLORS.divider,
     marginBottom: SPACING.md,
   },
-
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-
-  emptyTitulo: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
-  },
-
-  emptySubtitulo: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-  },
-
+  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyTitulo: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.xs, textAlign: 'center' },
+  emptySubtitulo: { fontSize: FONT.small, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.lg },
   btnCrearEmpty: {
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    borderRadius: 10,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: 28,
-    backgroundColor: COLORS.white,
+    borderWidth: 1, borderColor: COLORS.primaryLight, borderRadius: 10,
+    paddingVertical: SPACING.sm, paddingHorizontal: 28, backgroundColor: COLORS.white,
   },
+  btnCrearEmptyText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: FONT.small },
 
-  btnCrearEmptyText: {
-    color: COLORS.primaryLight,
-    fontWeight: '600',
-    fontSize: FONT.small,
-  },
+  alignRight: { textAlign: 'right' },
+  alignCenter: { textAlign: 'center' },
+  stockCell: { alignItems: 'center', justifyContent: 'center', minWidth: 54 },
 
-  alignRight: {
-    textAlign: 'right',
-  },
+  // ── Column widths ──────────────────────────────────────────────────────────
+  colPublicacion: { width: 180 },
+  colPrecio:      { width: 100 },
+  colStock:       { width: 90 },
+  colVendidos:    { width: 80 },
+  colEstado:      { width: 90 },
+  colVisible:     { width: 80 },
+  colAcciones:    { width: 90 },
 
-  alignCenter: {
-    textAlign: 'center',
-  },
-
-  stockCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 54,
-  },
-
-  // ── Modal de pedidos ─────────────────────────────────────────────────────────
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
-  },
-
-  pedidosModal: {
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
-    width: '100%',
-    maxWidth: 600,
-    maxHeight: '85%',
-    overflow: 'hidden',
-  },
-
+  // ── Modal de pedidos ───────────────────────────────────────────────────────
   pedidosModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1172,80 +876,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.divider,
   },
-
-  pedidosModalTitulo: {
-    fontSize: FONT.large,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-
-  pedidosCloseBtn: {
-    padding: SPACING.sm,
-  },
-
-  pedidosCloseBtnText: {
-    fontSize: FONT.medium,
-    color: COLORS.textMuted,
-  },
-
-  pedidosCentered: {
-    padding: SPACING.xl ?? 40,
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-
-  pedidosEmptyIcon: {
-    fontSize: 48,
-    marginBottom: SPACING.sm,
-  },
-
-  pedidosTituloVacio: {
-    fontSize: FONT.medium,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-
-  pedidosSubtitulo: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-
-  pedidosError: {
-    fontSize: FONT.small,
-    color: '#C0392B',
-    textAlign: 'center',
-  },
-
+  pedidosModalTitulo: { fontSize: FONT.large, fontWeight: '700', color: COLORS.textPrimary },
+  pedidosCloseBtn: { padding: SPACING.sm },
+  pedidosCloseBtnText: { fontSize: FONT.medium, color: COLORS.textMuted },
+  pedidosCentered: { padding: 40, alignItems: 'center', gap: SPACING.md },
+  pedidosEmptyIcon: { fontSize: 48, marginBottom: SPACING.sm },
+  pedidosTituloVacio: { fontSize: FONT.medium, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
+  pedidosSubtitulo: { fontSize: FONT.small, color: COLORS.textSecondary, textAlign: 'center' },
+  pedidosError: { fontSize: FONT.small, color: '#C0392B', textAlign: 'center' },
   btnReintentar: {
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    borderRadius: 8,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+    borderWidth: 1, borderColor: COLORS.primaryLight, borderRadius: 8,
+    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.lg,
   },
-
-  btnReintentarText: {
-    color: COLORS.primaryLight,
-    fontWeight: '600',
-    fontSize: FONT.small,
-  },
-
-  pedidosList: {
-    flex: 1,
-  },
-
-  pedidosListContent: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
-
-  pedidosConteo: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.sm,
-  },
+  btnReintentarText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: FONT.small },
+  pedidosList: { flex: 1 },
+  pedidosListContent: { padding: SPACING.lg, gap: SPACING.md },
+  pedidosConteo: { fontSize: FONT.small, color: COLORS.textMuted, marginBottom: SPACING.sm },
 
   pedidoCard: {
     backgroundColor: COLORS.background,
@@ -1255,144 +901,106 @@ const styles = StyleSheet.create({
     borderColor: COLORS.divider,
     gap: SPACING.sm,
   },
-
   pedidoCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xs ?? 4,
+    marginBottom: SPACING.xs,
   },
+  pedidoFecha: { fontSize: FONT.small, color: COLORS.textMuted, fontWeight: '500' },
+  pedidoSubtotal: { fontSize: FONT.medium, fontWeight: '700', color: COLORS.primary },
+  pedidoRow: { flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap' },
+  pedidoLabel: { fontSize: FONT.small, fontWeight: '700', color: COLORS.textSecondary, minWidth: 80 },
+  pedidoValue: { fontSize: FONT.small, color: COLORS.textPrimary, flex: 1, flexShrink: 1 },
+  pedidoProductosContainer: { gap: 4 },
+  pedidoProductoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingLeft: 80 },
+  pedidoProductoName: { flex: 1, fontSize: FONT.small, color: COLORS.textPrimary },
+  pedidoProductoQty: { fontSize: FONT.small, color: COLORS.textMuted, minWidth: 28, textAlign: 'right' },
+  pedidoProductoSubtotal: { fontSize: FONT.small, fontWeight: '600', color: COLORS.textPrimary, minWidth: 70, textAlign: 'right' },
 
-  pedidoFecha: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
-    fontWeight: '500',
-  },
-
-  pedidoSubtotal: {
-    fontSize: FONT.medium,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-
-  pedidoRow: {
-    flexDirection: 'row',
+  // ── Estado del pedido ──────────────────────────────────────────────────────
+  pedidoStatusSection: {
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
     gap: SPACING.sm,
-    flexWrap: 'wrap',
   },
-
-  pedidoLabel: {
-    fontSize: FONT.small,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    minWidth: 80,
-  },
-
-  pedidoValue: {
-    fontSize: FONT.small,
-    color: COLORS.textPrimary,
-    flex: 1,
-    flexShrink: 1,
-  },
-
-  pedidoProductosContainer: {
-    gap: 4,
-  },
-
-  pedidoProductoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingLeft: 80,
-  },
-
-  pedidoProductoName: {
-    flex: 1,
-    fontSize: FONT.small,
-    color: COLORS.textPrimary,
-  },
-
-  pedidoProductoQty: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
-    minWidth: 28,
-    textAlign: 'right',
-  },
-
-  pedidoProductoSubtotal: {
-    fontSize: FONT.small,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    minWidth: 70,
-    textAlign: 'right',
-  },
-
-  // ── Column widths for horizontal-scroll table ─────────────────────────────
-  colPublicacion: { width: 180 },
-  colPrecio:      { width: 100 },
-  colStock:       { width: 90 },
-  colVendidos:    { width: 80 },
-  colEstado:      { width: 90 },
-  colVisible:     { width: 80 },
-  colAcciones:    { width: 90 },
-
   pedidoStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
     flexWrap: 'wrap',
-    marginTop: SPACING.xs,
-    paddingTop: SPACING.xs,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
   },
   pedidoStatusBadge: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.white,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1.5,
     borderColor: COLORS.divider,
+  },
+  pedidoStatusBadgeDelivered: {
+    borderColor: COLORS.success,
+    backgroundColor: '#f0fdf4',
   },
   pedidoStatusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.textSecondary,
+  },
+  pedidoStatusTextDelivered: {
+    color: COLORS.success,
   },
   btnAvanzarEstado: {
     backgroundColor: COLORS.primary,
     borderRadius: 8,
-    paddingVertical: 6,
+    paddingVertical: 7,
     paddingHorizontal: SPACING.md,
-    minHeight: 32,
     justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 34,
+  },
+  btnAvanzarEstadoDisabled: {
+    opacity: 0.6,
   },
   btnAvanzarEstadoText: {
     color: COLORS.white,
     fontSize: 12,
     fontWeight: '700',
   },
-  trackingInputRow: {
-    flex: 1,
+
+  // Tracking code
+  trackingContainer: {
     gap: SPACING.xs,
   },
+  trackingLabel: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
   trackingInput: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.divider,
     borderRadius: 8,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    fontSize: 12,
+    paddingVertical: 8,
+    fontSize: FONT.small,
     color: COLORS.textPrimary,
+    backgroundColor: COLORS.white,
+  },
+  trackingActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
   },
   btnConfirmarEnvio: {
+    flex: 1,
     backgroundColor: COLORS.success,
     borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
     alignItems: 'center',
-    minHeight: 32,
     justifyContent: 'center',
+    minHeight: 36,
   },
   btnConfirmarEnvioText: {
     color: COLORS.white,
@@ -1400,9 +1008,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   btnCancelarTracking: {
+    borderWidth: 1.5,
+    borderColor: COLORS.divider,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: SPACING.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnCancelarTrackingText: {
     fontSize: 12,
     color: COLORS.textMuted,
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  updateErrorText: {
+    fontSize: 12,
+    color: COLORS.error,
+    fontWeight: '600',
   },
 })
