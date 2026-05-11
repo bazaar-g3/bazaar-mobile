@@ -1,7 +1,17 @@
+/**
+ * Normaliza un parámetro de ruta.
+ * @param {string|string[]} value - El valor a normalizar.
+ * @returns {string} - El valor normalizado.
+ */
 export function normalizeRouteParam(value) {
   return Array.isArray(value) ? value[0] : value
 }
 
+/**
+ * Construye la redirección para el inicio de sesión.
+ * @param {Object} params - Parámetros para la redirección.
+ * @returns {Object|string} - La ruta de redirección.
+ */
 export function buildLoginRedirect({
   redirectPath,
   redirectFrom,
@@ -24,6 +34,12 @@ export function buildLoginRedirect({
     : '/login'
 }
 
+/**
+ * Construye la navegación para la pantalla de autenticación.
+ * @param {string} pathname - La ruta actual.
+ * @param {Object} currentParams - Parámetros actuales.
+ * @returns {Object|string} - La ruta de navegación.
+ */
 export function buildAuthScreenNavigation(pathname, currentParams = {}) {
   const redirectPath = normalizeRouteParam(currentParams.redirectPath)
   const redirectFrom = normalizeRouteParam(currentParams.redirectFrom)
@@ -46,6 +62,12 @@ export function buildAuthScreenNavigation(pathname, currentParams = {}) {
     : pathname
 }
 
+/**
+ * Construye la ruta de destino después de la autenticación.
+ * @param {Object} currentParams - Parámetros actuales.
+ * @param {string} [fallback='/home'] - Ruta de fallback.
+ * @returns {Object|string} - La ruta de destino.
+ */
 export function buildPostAuthDestination(currentParams = {}, fallback = '/home') {
   const redirectPath = normalizeRouteParam(currentParams.redirectPath)
   if (!redirectPath) return fallback

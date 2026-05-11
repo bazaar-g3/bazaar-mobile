@@ -1,6 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import api from '../api/api'
 
+/**
+ * Obtiene el estado de la sesión del usuario.
+ * @returns {Promise<Object>} - Estado de la sesión.
+ */
 export async function getSessionStatus() {
   const token = await AsyncStorage.getItem('token')
 

@@ -1,6 +1,15 @@
 import api from '../api/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+/**
+ * Inicia sesión con OAuth.
+ * @param provider - Proveedor de OAuth.
+ * @param providerId - ID del proveedor.
+ * @param email - Correo electrónico del usuario.
+ * @param fullName - Nombre completo del usuario.
+ * @param avatarUrl - URL del avatar del usuario.
+ * @returns El token de acceso.
+ */
 export async function loginWithOAuth({ provider, providerId, email, fullName, avatarUrl }) {
     const res = await api.post('/auth/oauth/callback', {
         provider,
@@ -19,6 +28,9 @@ export async function loginWithOAuth({ provider, providerId, email, fullName, av
     return token
 }
 
+/**
+ * Cierra sesión del usuario.
+ */
 export async function logout() {
     try {
         await api.post('/auth/logout')

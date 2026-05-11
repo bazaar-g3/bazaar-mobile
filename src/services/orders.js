@@ -1,11 +1,21 @@
 import ordersApi from '../api/ordersApi'
 
+/**
+ * Obtiene la lista de órdenes.
+ * @param {string|null} status - Estado de las órdenes a filtrar.
+ * @returns {Promise<Array>} - Lista de órdenes.
+ */
 export async function getOrders(status = null) {
   const params = status ? { status } : {}
   const { data } = await ordersApi.get('/orders/', { params })
   return data
 }
 
+/**
+ * Obtiene los detalles de una orden por su ID.
+ * @param {string} orderId - ID de la orden.
+ * @returns {Promise<Object>} - Detalles de la orden.
+ */
 export async function getOrderById(orderId) {
   const { data } = await ordersApi.get(`/orders/${orderId}`)
   return data
@@ -37,12 +47,23 @@ export async function getSellerSales(sellerCatalogId) {
   return data
 }
 
+/**
+ * Obtiene un mensaje de error para las órdenes.
+ * @param {Object} error - El error recibido de la API.
+ * @param {string} [fallback='No se pudieron cargar las órdenes.'] - Mensaje de error por defecto.
+ * @returns {string} - El mensaje de error.
+ */
 export function getOrdersErrorMessage(error, fallback = 'No se pudieron cargar las órdenes.') {
   const detail = error?.response?.data?.detail
   if (typeof detail === 'string') return detail
   return error?.message || fallback
 }
 
+/**
+ * Obtiene un mensaje de error para el proceso de checkout.
+ * @param {Object} error - El error recibido de la API.
+ * @returns {string} - El mensaje de error.
+ */
 export function getCheckoutErrorMessage(error) {
   const detail = error?.response?.data?.detail
   const status = error?.response?.status

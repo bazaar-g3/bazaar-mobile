@@ -3,11 +3,23 @@ import catalogApi, { getCatalogApiBaseUrl } from '../api/catalogApi'
 
 export const PRODUCT_IMAGE_PLACEHOLDER = 'https://via.placeholder.com/500x350.png?text=Producto'
 
+/**
+ * Normaliza el nombre de un campo de issue.
+ * @param field - El nombre del campo.
+ * @returns El nombre del campo normalizado.
+ */
 function normalizeIssueField(field) {
   if (typeof field !== 'string') return ''
   return field.startsWith('images[') ? 'images' : field
 }
 
+/**
+ * Obtiene la extensión de un archivo a partir de su nombre, tipo MIME o URI.
+ * @param fileName - Nombre del archivo.
+ * @param mimeType - Tipo MIME del archivo.
+ * @param uri - URI del archivo.
+ * @returns La extensión del archivo.
+ */
 function getFileExtension({ fileName, mimeType, uri }) {
   if (typeof fileName === 'string' && fileName.includes('.')) {
     return fileName.split('.').pop()?.toLowerCase() ?? 'jpg'
@@ -25,6 +37,12 @@ function getFileExtension({ fileName, mimeType, uri }) {
   return 'jpg'
 }
 
+/**
+ * Agrega una imagen al FormData.
+ * @param formData - El objeto FormData.
+ * @param asset - El activo de la imagen.
+ * @param index - El índice de la imagen.
+ */
 async function appendImageToFormData(formData, asset, index) {
   const extension = getFileExtension(asset)
   const filename = asset.fileName || `product-image-${index + 1}.${extension}`
@@ -55,10 +73,20 @@ async function appendImageToFormData(formData, asset, index) {
   })
 }
 
+/**
+ * Obtiene el detalle de validación de la respuesta de error.
+ * @param error - El error recibido de la API.
+ * @returns El detalle de validación.
+ */
 function getResponseValidationDetail(error) {
   return error?.response?.data?.detail ?? error?.data?.detail
 }
 
+/**
+ * Obtiene los errores de validación del catálogo.
+ * @param error - El error recibido de la API.
+ * @returns Un objeto con los errores de validación.
+ */
 export function getCatalogValidationErrors(error) {
   const detail = getResponseValidationDetail(error)
   if (!Array.isArray(detail)) return {}
@@ -71,6 +99,12 @@ export function getCatalogValidationErrors(error) {
   }, {})
 }
 
+/**
+ * Obtiene un mensaje de error para el catálogo.
+ * @param error - El error recibido de la API.
+ * @param fallback - Mensaje de error por defecto.
+ * @returns El mensaje de error.
+ */
 export function getCatalogErrorMessage(error, fallback = 'No se pudo completar la operacion') {
   const validationErrors = getCatalogValidationErrors(error)
   const firstValidationMessage = Object.values(validationErrors)[0]
@@ -82,10 +116,21 @@ export function getCatalogErrorMessage(error, fallback = 'No se pudo completar l
   return error?.message || fallback
 }
 
+/**
+ * Verifica si un valor es una imagen remota.
+ * @param value - El valor a verificar.
+ * @returns Verdadero si es una imagen remota, falso en caso contrario.
+ */
 export function isRemoteImage(value) {
   return typeof value === 'string' && /^https?:\/\//i.test(value)
 }
 
+/**
+ * Mapea un producto del catálogo a una tarjeta de producto.
+ * @param product - El producto del catálogo.
+ * @param overrides - Valores que sobrescriben los del producto.
+ * @returns Un objeto con los datos de la tarjeta de producto.
+ */
 export function mapCatalogProductToCard(product, overrides = {}) {
   return {
     id: String(product.id),
@@ -98,6 +143,11 @@ export function mapCatalogProductToCard(product, overrides = {}) {
   }
 }
 
+/**
+ * Mapea un producto del catálogo a un ítem de ventas.
+ * @param product - El producto del catálogo.
+ * @returns Un objeto con los datos del ítem de ventas.
+ */
 export function mapCatalogProductToVentasItem(product) {
   return {
     id: String(product.id),
@@ -110,16 +160,30 @@ export function mapCatalogProductToVentasItem(product) {
   }
 }
 
+/**
+ * Lista los productos del catálogo.
+ * @param params - Parámetros de búsqueda.
+ * @returns Una lista de productos.
+ */
 export async function listCatalogProducts(params = {}) {
   const response = await catalogApi.get('/products/', { params })
   return response.data?.products ?? []
 }
 
+/**
+ * Obtiene el detalle de un producto del catálogo.
+ * @param productId - ID del producto.
+ * @returns El detalle del producto.
+ */
 export async function getCatalogProduct(productId) {
   const response = await catalogApi.get(`/products/${productId}`)
   return response.data?.product ?? null
 }
 
+/**
+ * Lista los productos recientes del catálogo.
+ * @returns Una lista de productos.
+ */
 export async function listRecentProducts() {
   return listCatalogProducts({
     status: 'active',
@@ -130,6 +194,14 @@ export async function listRecentProducts() {
   })
 }
 
+/**
+ * Lista los productos de un vendedor.
+ * @param sellerId - ID del vendedor.
+ * @param status - Estado de los productos.
+ * @param onlyAvailable - Si solo se deben incluir productos disponibles.
+ * @param limit - Límite de productos a devolver.
+ * @returns Una lista de productos.
+ */
 export async function listSellerProducts({
   sellerId,
   status,
@@ -152,11 +224,25 @@ export async function listSellerProducts({
   return listCatalogProducts(params)
 }
 
+/**
+ * Lista las categorías de productos.
+ * @returns Una lista de categorías.
+ */
 export async function listProductCategories() {
   const response = await catalogApi.get('/categories/')
   return response.data?.categories ?? []
 }
 
+/**
+ * Crea un nuevo producto.
+ * @param name - Nombre del producto.
+ * @param description - Descripción del producto.
+ * @param price - Precio del producto.
+ * @param stock - Stock del producto.
+ * @param categorySlug - Slug de la categoría del producto.
+ * @param images - Imágenes del producto.
+ * @returns El producto creado.
+ */
 export async function createProduct({
   name,
   description,
@@ -212,6 +298,10 @@ export async function createProduct({
   return data?.product
 }
 
+/**
+ * Lista los productos recomendados.
+ * @returns Una lista de productos.
+ */
 export async function listRecommendedProducts() {
   return listCatalogProducts({
     status: 'active',
@@ -222,6 +312,12 @@ export async function listRecommendedProducts() {
   })
 }
 
+/**
+ * Actualiza el estado de un producto del vendedor.
+ * @param productId - ID del producto.
+ * @param enabled - Si el producto debe estar habilitado o no.
+ * @returns El producto actualizado.
+ */
 export async function updateSellerProductStatus({ productId, enabled }) {
   const token = await AsyncStorage.getItem('token')
   if (!token) {
@@ -265,6 +361,12 @@ export async function updateSellerProductStatus({ productId, enabled }) {
   return data?.product ?? null
 }
 
+/**
+ * Actualiza el stock de un producto del vendedor.
+ * @param productId - ID del producto.
+ * @param stock - Nuevo stock del producto.
+ * @returns El producto actualizado.
+ */
 export async function updateSellerProductStock({ productId, stock }) {
   const token = await AsyncStorage.getItem('token')
   if (!token) {
@@ -308,6 +410,18 @@ export async function updateSellerProductStock({ productId, stock }) {
   return data?.product ?? null
 }
 
+/**
+ * Actualiza un producto del vendedor.
+ * @param productId - ID del producto.
+ * @param name - Nombre del producto.
+ * @param description - Descripción del producto.
+ * @param price - Precio del producto.
+ * @param stock - Stock del producto.
+ * @param category - Categoría del producto.
+ * @param images - Imágenes del producto.
+ * @param status - Estado del producto.
+ * @returns El producto actualizado.
+ */
 export async function updateSellerProduct({
   productId,
   name,
