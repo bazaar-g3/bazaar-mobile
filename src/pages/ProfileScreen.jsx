@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
-import VentasTab from './VentasTabScreen'
+import PublicacionesTab from './PublicacionesTabScreen'
 import Logo from '../components/Logo'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
@@ -25,6 +25,7 @@ import {
 } from '../services/catalog'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
+import SellerSalesScreen from './SellerSalesScreen'
 
 const PLACEHOLDER_AVATAR =
   'https://ui-avatars.com/api/?background=69BDB6&color=fff&size=128&name='
@@ -32,6 +33,7 @@ const PLACEHOLDER_AVATAR =
 const MENU_ITEMS = [
   { key: 'Perfil', emoji: '👤' },
   { key: 'Compras', emoji: '🛍️' },
+  { key: 'Publicaciones', emoji: '📌' },
   { key: 'Ventas', emoji: '🏷️' },
   { key: 'Wishlist', emoji: '❤️' },
 ]
@@ -192,7 +194,7 @@ export default function ProfileScreen() {
     }
 
     if (shouldOpenSalesEdit) {
-      setActiveTab('Ventas')
+      setActiveTab('Publicaciones')
     }
   }, [normalizedRequestedTab, shouldOpenSalesEdit])
 
@@ -380,7 +382,7 @@ export default function ProfileScreen() {
   }
 
   const handleGoToSalesTab = useCallback(() => {
-    setActiveTab('Ventas')
+    setActiveTab('Publicaciones')
   }, [])
 
   const handleTabSelect = useCallback((key) => {
@@ -396,7 +398,7 @@ export default function ProfileScreen() {
       <View style={styles.summaryHeader}>
         <Text style={styles.sectionTitle}>Publicaciones activas</Text>
         <TouchableOpacity onPress={handleGoToSalesTab}>
-          <Text style={styles.summaryAction}>Ver ventas</Text>
+          <Text style={styles.summaryAction}>Ver publicaciones</Text>
         </TouchableOpacity>
       </View>
 
@@ -461,9 +463,9 @@ export default function ProfileScreen() {
       return <Text style={styles.emptyText}>No tenés compras aún.</Text>
     }
 
-    if (activeTab === 'Ventas') {
+    if (activeTab === 'Publicaciones') {
       return (
-        <VentasTab
+        <PublicacionesTab
           sellerId={profile?.id}
           refreshKey={refreshCatalogKey}
           onOpenPublish={handleOpenPublish}
@@ -471,6 +473,10 @@ export default function ProfileScreen() {
           initialOpenEdit={shouldOpenSalesEdit}
         />
       )
+    }
+
+    if (activeTab === 'Ventas') {
+      return <SellerSalesScreen sellerId={profile?.id} />
     }
 
     return (
