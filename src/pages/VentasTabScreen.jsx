@@ -8,8 +8,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Image,
+  useWindowDimensions,
 } from 'react-native'
 import {
   getCatalogErrorMessage,
@@ -24,13 +24,12 @@ import {
 import { getSellerSales, updateOrderStatus } from '../services/orders'
 import { getPublicProfile } from '../services/user'
 import { COLORS } from '../constants/colors'
-import { SPACING, FONT } from '../constants/theme'
+import { styles } from "../styles/VentasTabStyles";
 import EditProductModal from '../components/EditProductModal'
 import EditableStockStepper from '../components/EditableStockStepper'
 
 const FILTROS = ['activa', 'inactiva']
 
-// Etiquetas legibles para cada estado de orden
 const SELLER_STATUS_LABELS = {
   confirmed:      'Confirmada',
   in_preparation: 'En preparación',
@@ -38,11 +37,12 @@ const SELLER_STATUS_LABELS = {
   delivered:      'Entregada',
 }
 
-// Siguiente estado posible para el vendedor (solo los que le corresponden)
 const SELLER_NEXT_STATUS = {
   confirmed:      'in_preparation',
   in_preparation: 'shipped',
 }
+
+const MOBILE_BREAKPOINT = 768
 
 function StateSwitch({ value, onToggle }) {
   return (
@@ -51,9 +51,7 @@ function StateSwitch({ value, onToggle }) {
       activeOpacity={0.85}
       style={[styles.switchTrack, value ? styles.switchTrackOn : styles.switchTrackOff]}
     >
-      <View
-        style={[styles.switchThumb, value ? styles.switchThumbOn : styles.switchThumbOff]}
-      />
+      <View style={[styles.switchThumb, value ? styles.switchThumbOn : styles.switchThumbOff]} />
     </TouchableOpacity>
   )
 }
@@ -65,6 +63,9 @@ export default function VentasTab({
   initialProductId = null,
   initialOpenEdit = false,
 }) {
+  const { width } = useWindowDimensions()
+  const isMobile = width < MOBILE_BREAKPOINT
+
   const [busqueda, setBusqueda] = useState('')
   const [filtrosActivos, setFiltrosActivos] = useState(['activa', 'inactiva'])
   const [publicaciones, setPublicaciones] = useState([])
@@ -74,27 +75,21 @@ export default function VentasTab({
   const [publicacionEnEdicion, setPublicacionEnEdicion] = useState(null)
   const [loadingEditProduct, setLoadingEditProduct] = useState(false)
 
-  // --- Pedidos recibidos ---
   const [pedidosModalVisible, setPedidosModalVisible] = useState(false)
   const [pedidos, setPedidos] = useState([])
   const [loadingPedidos, setLoadingPedidos] = useState(false)
   const [pedidosError, setPedidosError] = useState('')
   const [buyerNames, setBuyerNames] = useState({})
 
-  // --- Actualización de estado de pedidos ---
   const [updatingOrderId, setUpdatingOrderId] = useState(null)
-  const [trackingOrderId, setTrackingOrderId] = useState(null) // orden esperando tracking code
+  const [trackingOrderId, setTrackingOrderId] = useState(null)
   const [trackingInput, setTrackingInput] = useState('')
   const [updateError, setUpdateError] = useState('')
 
   const alreadyAutoOpenedRef = useRef('')
 
   const loadPublicaciones = useCallback(async () => {
-    if (!sellerId) {
-      setPublicaciones([])
-      setLoadingPublicaciones(false)
-      return
-    }
+    if (!sellerId) { setPublicaciones([]); setLoadingPublicaciones(false); return }
     setLoadingPublicaciones(true)
     setPublicacionesError('')
     try {
@@ -107,11 +102,7 @@ export default function VentasTab({
     }
   }, [sellerId])
 
-  useEffect(() => {
-    loadPublicaciones()
-  }, [loadPublicaciones, refreshKey])
-
-  // --- Pedidos ---
+  useEffect(() => { loadPublicaciones() }, [loadPublicaciones, refreshKey])
 
   function formatDeliveryAddress(addr) {
     if (!addr) return 'Dirección no disponible'
@@ -142,18 +133,13 @@ export default function VentasTab({
       )
       setBuyerNames(names)
     } catch (error) {
-      setPedidosError(
-        error?.response?.data?.detail || error?.message || 'No se pudieron cargar los pedidos.'
-      )
+      setPedidosError(error?.response?.data?.detail || error?.message || 'No se pudieron cargar los pedidos.')
     } finally {
       setLoadingPedidos(false)
     }
   }
 
-  function handleOpenPedidos() {
-    setPedidosModalVisible(true)
-    loadPedidos()
-  }
+  function handleOpenPedidos() { setPedidosModalVisible(true); loadPedidos() }
 
   function handleClosePedidos() {
     setPedidosModalVisible(false)
@@ -161,14 +147,9 @@ export default function VentasTab({
     setUpdateError('')
   }
 
-  // Avanzar estado: si el próximo es "shipped", primero pedimos tracking code
   function handleUpdateOrderStatus(orderId, newStatus) {
     setUpdateError('')
-    if (newStatus === 'shipped') {
-      setTrackingOrderId(orderId)
-      setTrackingInput('')
-      return
-    }
+    if (newStatus === 'shipped') { setTrackingOrderId(orderId); setTrackingInput(''); return }
     doUpdateStatus(orderId, newStatus, null)
   }
 
@@ -182,24 +163,25 @@ export default function VentasTab({
         sellerId,
       )
       setTrackingOrderId(null)
-      // Actualizar el estado localmente sin recargar todo
       setPedidos((prev) =>
         prev.map((p) =>
-          p.order_id === orderId ? { ...p, status: newStatus } : p
+          p.order_id === orderId
+            ? {
+                ...p,
+                status: newStatus,
+                // Guardamos el tracking code localmente para mostrarlo sin recargar
+                tracking_code: newStatus === 'shipped' ? (trackingCode || null) : p.tracking_code,
+              }
+            : p
         )
       )
     } catch (e) {
       const detail = e?.response?.data?.detail
-      setUpdateError(
-        typeof detail === 'string' ? detail :
-        detail?.message ?? 'No se pudo actualizar el estado.'
-      )
+      setUpdateError(typeof detail === 'string' ? detail : detail?.message ?? 'No se pudo actualizar el estado.')
     } finally {
       setUpdatingOrderId(null)
     }
   }
-
-  // --- Publicaciones ---
 
   function toggleFiltro(filtro) {
     setFiltrosActivos((prev) =>
@@ -210,22 +192,19 @@ export default function VentasTab({
   async function handleTogglePublicacion(id) {
     const pub = publicaciones.find((p) => p.id === id)
     if (!pub) return
-    const nuevoEnabled = pub.estado !== 'activa'
     try {
-      const updatedProduct = await updateSellerProductStatus({ productId: id, enabled: nuevoEnabled })
+      const updatedProduct = await updateSellerProductStatus({ productId: id, enabled: pub.estado !== 'activa' })
       if (!updatedProduct) return
       setPublicaciones((prev) =>
         prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
-                stock: Number(updatedProduct.stock) || 0,
-                precio: Number(updatedProduct.price) || 0,
-                titulo: updatedProduct.name,
-                imagen: updatedProduct.images?.[0] || p.imagen,
-              }
-            : p
+          p.id === id ? {
+            ...p,
+            estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+            stock: Number(updatedProduct.stock) || 0,
+            precio: Number(updatedProduct.price) || 0,
+            titulo: updatedProduct.name,
+            imagen: updatedProduct.images?.[0] || p.imagen,
+          } : p
         )
       )
     } catch (error) {
@@ -233,9 +212,7 @@ export default function VentasTab({
     }
   }
 
-  function handleCrearPublicacion() {
-    onOpenPublish?.()
-  }
+  function handleCrearPublicacion() { onOpenPublish?.() }
 
   const handleEditarPublicacion = useCallback(async (pub) => {
     if (!pub?.id) return
@@ -265,11 +242,7 @@ export default function VentasTab({
     handleEditarPublicacion(publicacionObjetivo)
   }, [handleEditarPublicacion, initialOpenEdit, initialProductId, loadingPublicaciones, publicaciones, refreshKey, sellerId])
 
-  function handleCloseModal() {
-    setEditModalVisible(false)
-    setPublicacionEnEdicion(null)
-    setLoadingEditProduct(false)
-  }
+  function handleCloseModal() { setEditModalVisible(false); setPublicacionEnEdicion(null); setLoadingEditProduct(false) }
 
   async function handleSaveChanges(productoActualizado) {
     if (!productoActualizado?.id) { handleCloseModal(); return }
@@ -286,19 +259,17 @@ export default function VentasTab({
       if (!updatedProduct) { handleCloseModal(); return }
       setPublicaciones((prev) =>
         prev.map((p) =>
-          p.id === updatedProduct.id
-            ? {
-                ...p,
-                titulo: updatedProduct.name ?? p.titulo,
-                precio: updatedProduct.price !== undefined ? Number(updatedProduct.price) || 0 : p.precio,
-                stock: updatedProduct.stock !== undefined ? Number(updatedProduct.stock) || 0 : p.stock,
-                imagen: updatedProduct.images?.[0] || p.imagen,
-                images: updatedProduct.images ?? p.images,
-                categoria: updatedProduct.categorySlug ?? updatedProduct.category ?? p.categoria,
-                descripcion: updatedProduct.description ?? p.descripcion,
-                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
-              }
-            : p
+          p.id === updatedProduct.id ? {
+            ...p,
+            titulo: updatedProduct.name ?? p.titulo,
+            precio: updatedProduct.price !== undefined ? Number(updatedProduct.price) || 0 : p.precio,
+            stock: updatedProduct.stock !== undefined ? Number(updatedProduct.stock) || 0 : p.stock,
+            imagen: updatedProduct.images?.[0] || p.imagen,
+            images: updatedProduct.images ?? p.images,
+            categoria: updatedProduct.categorySlug ?? updatedProduct.category ?? p.categoria,
+            descripcion: updatedProduct.description ?? p.descripcion,
+            estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+          } : p
         )
       )
       handleCloseModal()
@@ -315,16 +286,14 @@ export default function VentasTab({
       if (!updatedProduct) return
       setPublicaciones((prev) =>
         prev.map((p) =>
-          p.id === id
-            ? {
-                ...p,
-                stock: Number(updatedProduct.stock) || 0,
-                precio: Number(updatedProduct.price) || 0,
-                titulo: updatedProduct.name,
-                imagen: updatedProduct.images?.[0] || p.imagen,
-                estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
-              }
-            : p
+          p.id === id ? {
+            ...p,
+            stock: Number(updatedProduct.stock) || 0,
+            precio: Number(updatedProduct.price) || 0,
+            titulo: updatedProduct.name,
+            imagen: updatedProduct.images?.[0] || p.imagen,
+            estado: updatedProduct.status === 'disabled' ? 'inactiva' : 'activa',
+          } : p
         )
       )
     } catch (error) {
@@ -340,13 +309,94 @@ export default function VentasTab({
     })
   }, [busqueda, filtrosActivos, publicaciones])
 
+  function renderPublicacionCard(pub) {
+    return (
+      <View key={pub.id} style={styles.pubCard}>
+        <View style={styles.pubCardTop}>
+          <View style={styles.pubCardLeft}>
+            {isRemoteImage(pub.imagen)
+              ? <Image source={{ uri: pub.imagen }} style={styles.pubCardImage} />
+              : <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+            }
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pubCardTitulo} numberOfLines={2}>{pub.titulo}</Text>
+              <Text style={styles.pubCardPrecio}>${pub.precio.toLocaleString('es-AR')}</Text>
+            </View>
+          </View>
+          <View style={[styles.estadoBadge, pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva]}>
+            <Text style={[styles.estadoText, pub.estado === 'activa' ? styles.estadoTextActiva : styles.estadoTextInactiva]}>
+              {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.pubCardStats}>
+          <View style={styles.pubCardStat}>
+            <Text style={styles.pubCardStatLabel}>Stock</Text>
+            <EditableStockStepper value={pub.stock} onChange={(n) => handleUpdateStock(pub.id, n)} />
+          </View>
+          <View style={styles.pubCardStat}>
+            <Text style={styles.pubCardStatLabel}>Vendidos</Text>
+            <Text style={styles.pubCardStatValue}>{pub.vendidos}</Text>
+          </View>
+          <View style={styles.pubCardStat}>
+            <Text style={styles.pubCardStatLabel}>Visible</Text>
+            <StateSwitch value={pub.estado === 'activa'} onToggle={() => handleTogglePublicacion(pub.id)} />
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.pubCardBtnEditar} onPress={() => handleEditarPublicacion(pub)}>
+          <Text style={styles.pubCardBtnEditarText}>Editar publicación</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  function renderPublicacionRow(pub, idx) {
+    return (
+      <View key={pub.id} style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}>
+        <View style={[styles.colTitulo, styles.colPublicacion]}>
+          {isRemoteImage(pub.imagen)
+            ? <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
+            : <Text style={styles.pubEmoji}>{pub.imagen}</Text>
+          }
+          <Text style={styles.pubTitulo} numberOfLines={2}>{pub.titulo}</Text>
+        </View>
+        <Text style={[styles.colText, styles.precioText, styles.alignRight, styles.colPrecio]}>
+          ${pub.precio.toLocaleString('es-AR')}
+        </Text>
+        <View style={[styles.stockCell, styles.colStock]}>
+          <EditableStockStepper value={pub.stock} onChange={(n) => handleUpdateStock(pub.id, n)} />
+        </View>
+        <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>{pub.vendidos}</Text>
+        <View style={[styles.estadoCell, styles.colEstado]}>
+          <View style={[styles.estadoBadge, pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva]}>
+            <Text style={[styles.estadoText, pub.estado === 'activa' ? styles.estadoTextActiva : styles.estadoTextInactiva]}>
+              {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.switchCell, styles.colVisible]}>
+          <StateSwitch value={pub.estado === 'activa'} onToggle={() => handleTogglePublicacion(pub.id)} />
+        </View>
+        <View style={[styles.actionsCell, styles.colAcciones]}>
+          <TouchableOpacity style={styles.btnEditar} onPress={() => handleEditarPublicacion(pub)}>
+            <Text style={styles.btnEditarText}>Editar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.titulo}>Gestión de publicaciones</Text>
+        <Text style={[styles.titulo, isMobile && styles.tituloMobile]}>
+          {isMobile ? 'Mis publicaciones' : 'Gestión de publicaciones'}
+        </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.btnPedidos} onPress={handleOpenPedidos}>
-            <Text style={styles.btnPedidosText}>📦 Pedidos</Text>
+            <Text style={styles.btnPedidosText}>{isMobile ? '📦' : '📦 Pedidos'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnPublicar} onPress={handleCrearPublicacion}>
             <Text style={styles.btnPublicarText}>+ Publicar</Text>
@@ -359,7 +409,7 @@ export default function VentasTab({
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar por título de publicación..."
+            placeholder="Buscar por título..."
             value={busqueda}
             onChangeText={setBusqueda}
             placeholderTextColor={COLORS.textMuted}
@@ -370,7 +420,6 @@ export default function VentasTab({
             </TouchableOpacity>
           )}
         </View>
-
         <View style={styles.filtrosRow}>
           {FILTROS.map((filtro) => {
             const activo = filtrosActivos.includes(filtro)
@@ -381,8 +430,7 @@ export default function VentasTab({
                 onPress={() => toggleFiltro(filtro)}
               >
                 <Text style={[styles.chipText, activo && styles.chipTextoActivo]}>
-                  {filtro.charAt(0).toUpperCase() + filtro.slice(1)}
-                  {activo ? '  ✕' : ''}
+                  {filtro.charAt(0).toUpperCase() + filtro.slice(1)}{activo ? '  ✕' : ''}
                 </Text>
               </TouchableOpacity>
             )
@@ -406,7 +454,6 @@ export default function VentasTab({
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={COLORS.primaryLight} />
           <Text style={styles.emptyTitulo}>Cargando tus publicaciones...</Text>
-          <Text style={styles.emptySubtitulo}>Estamos trayendo la información del catálogo real.</Text>
         </View>
       ) : publicacionesFiltradas.length === 0 ? (
         <View style={styles.emptyState}>
@@ -423,7 +470,13 @@ export default function VentasTab({
             </TouchableOpacity>
           )}
         </View>
+      ) : isMobile ? (
+        // Vista mobile: cards apiladas
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pubCardsList}>
+          {publicacionesFiltradas.map(renderPublicacionCard)}
+        </ScrollView>
       ) : (
+        // Vista desktop: tabla con scroll horizontal
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.lista}>
             <View style={styles.filaHeader}>
@@ -435,43 +488,7 @@ export default function VentasTab({
               <Text style={[styles.colHeader, styles.alignCenter, styles.colVisible]}>Visible</Text>
               <Text style={[styles.colHeader, styles.alignCenter, styles.colAcciones]}>Acciones</Text>
             </View>
-
-            {publicacionesFiltradas.map((pub, idx) => (
-              <View key={pub.id} style={[styles.fila, idx % 2 === 0 && styles.filaAlterna]}>
-                <View style={[styles.colTitulo, styles.colPublicacion]}>
-                  {isRemoteImage(pub.imagen)
-                    ? <Image source={{ uri: pub.imagen }} style={styles.pubImage} />
-                    : <Text style={styles.pubEmoji}>{pub.imagen}</Text>
-                  }
-                  <Text style={styles.pubTitulo} numberOfLines={2}>{pub.titulo}</Text>
-                </View>
-                <Text style={[styles.colText, styles.precioText, styles.alignRight, styles.colPrecio]}>
-                  ${pub.precio.toLocaleString('es-AR')}
-                </Text>
-                <View style={[styles.stockCell, styles.colStock]}>
-                  <EditableStockStepper
-                    value={pub.stock}
-                    onChange={(nuevoStock) => handleUpdateStock(pub.id, nuevoStock)}
-                  />
-                </View>
-                <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>{pub.vendidos}</Text>
-                <View style={[styles.estadoCell, styles.colEstado]}>
-                  <View style={[styles.estadoBadge, pub.estado === 'activa' ? styles.estadoActiva : styles.estadoInactiva]}>
-                    <Text style={[styles.estadoText, pub.estado === 'activa' ? styles.estadoTextActiva : styles.estadoTextInactiva]}>
-                      {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={[styles.switchCell, styles.colVisible]}>
-                  <StateSwitch value={pub.estado === 'activa'} onToggle={() => handleTogglePublicacion(pub.id)} />
-                </View>
-                <View style={[styles.actionsCell, styles.colAcciones]}>
-                  <TouchableOpacity style={styles.btnEditar} onPress={() => handleEditarPublicacion(pub)}>
-                    <Text style={styles.btnEditarText}>Editar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+            {publicacionesFiltradas.map((pub, idx) => renderPublicacionRow(pub, idx))}
           </View>
         </ScrollView>
       )}
@@ -484,7 +501,7 @@ export default function VentasTab({
         onSave={handleSaveChanges}
       />
 
-      {/* ── Modal de pedidos recibidos (pantalla completa) ─────────────── */}
+      {/* Modal de pedidos recibidos */}
       <Modal
         visible={pedidosModalVisible}
         animationType="slide"
@@ -492,7 +509,6 @@ export default function VentasTab({
         onRequestClose={handleClosePedidos}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-          {/* Header */}
           <View style={styles.pedidosModalHeader}>
             <Text style={styles.pedidosModalTitulo}>Pedidos recibidos</Text>
             <TouchableOpacity onPress={handleClosePedidos} style={styles.pedidosCloseBtn}>
@@ -516,16 +532,10 @@ export default function VentasTab({
             <View style={styles.pedidosCentered}>
               <Text style={styles.pedidosEmptyIcon}>🛒</Text>
               <Text style={styles.pedidosTituloVacio}>Sin pedidos todavía</Text>
-              <Text style={styles.pedidosSubtitulo}>
-                Aquí verás los pedidos confirmados de tus compradores.
-              </Text>
+              <Text style={styles.pedidosSubtitulo}>Aquí verás los pedidos confirmados de tus compradores.</Text>
             </View>
           ) : (
-            <ScrollView
-              style={styles.pedidosList}
-              contentContainerStyle={styles.pedidosListContent}
-              showsVerticalScrollIndicator={false}
-            >
+            <ScrollView style={styles.pedidosList} contentContainerStyle={styles.pedidosListContent} showsVerticalScrollIndicator={false}>
               <Text style={styles.pedidosConteo}>
                 {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''} activo{pedidos.length !== 1 ? 's' : ''}
               </Text>
@@ -577,9 +587,18 @@ export default function VentasTab({
                       ))}
                     </View>
 
-                    {/* ── Estado + botón de avance ──────────────────────── */}
+                    {/* Código de seguimiento — visible si existe */}
+                    {(pedido.tracking_code || pedido.trackingCode) ? (
+                      <View style={styles.pedidoRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.pedidoLabel}>Código de seguimiento</Text>
+                          <Text style={styles.pedidoValue}>{pedido.tracking_code || pedido.trackingCode}</Text>
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {/* Estado + botón de avance */}
                     <View style={styles.pedidoStatusSection}>
-                      {/* Badge de estado actual */}
                       <View style={styles.pedidoStatusRow}>
                         <View style={[
                           styles.pedidoStatusBadge,
@@ -593,7 +612,6 @@ export default function VentasTab({
                           </Text>
                         </View>
 
-                        {/* Botón de avance (solo si hay próximo estado) */}
                         {nextStatus && !isAwaitingTracking && (
                           <TouchableOpacity
                             style={[styles.btnAvanzarEstado, isUpdating && styles.btnAvanzarEstadoDisabled]}
@@ -610,7 +628,7 @@ export default function VentasTab({
                         )}
                       </View>
 
-                      {/* Input de tracking code (aparece solo al marcar como enviada) */}
+                      {/* Input de tracking code al marcar como enviada */}
                       {isAwaitingTracking && (
                         <View style={styles.trackingContainer}>
                           <Text style={styles.trackingLabel}>
@@ -647,12 +665,9 @@ export default function VentasTab({
                         </View>
                       )}
 
-                      {/* Error de actualización */}
-                      {updateError && isUpdating === false && updatingOrderId === null && trackingOrderId === null ? null
-                        : updateError && pedido.order_id === trackingOrderId ? (
-                          <Text style={styles.updateErrorText}>{updateError}</Text>
-                        ) : null
-                      }
+                      {(updateError && isAwaitingTracking) ? (
+                        <Text style={styles.updateErrorText}>{updateError}</Text>
+                      ) : null}
                     </View>
                   </View>
                 )
@@ -664,366 +679,3 @@ export default function VentasTab({
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    gap: SPACING.md,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  titulo: {
-    fontSize: FONT.large,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  btnPublicar: {
-    backgroundColor: COLORS.secondary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: 10,
-  },
-  btnPublicarText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontSize: FONT.medium,
-  },
-  btnPedidos: {
-    borderWidth: 1.5,
-    borderColor: COLORS.primaryLight,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: 10,
-    backgroundColor: COLORS.white,
-  },
-  btnPedidosText: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-    fontSize: FONT.medium,
-  },
-
-  toolbar: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    gap: SPACING.sm,
-  },
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    gap: SPACING.sm,
-    backgroundColor: COLORS.white,
-  },
-  searchIcon: { fontSize: FONT.small, color: COLORS.textMuted },
-  searchInput: { flex: 1, fontSize: FONT.small, color: COLORS.textPrimary, outlineStyle: 'none' },
-  clearSearch: { fontSize: FONT.small, color: COLORS.textMuted, paddingHorizontal: 4 },
-  filtrosRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    flexWrap: 'wrap',
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
-  },
-  chipActivo: { borderColor: COLORS.primaryLight, backgroundColor: COLORS.promoLight },
-  chipText: { fontSize: FONT.small, color: COLORS.textSecondary },
-  chipTextoActivo: { color: COLORS.primary, fontWeight: '600' },
-  conteo: { marginLeft: 'auto', fontSize: FONT.small, color: COLORS.textSecondary },
-
-  errorBanner: {
-    backgroundColor: '#FFF7ED',
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.secondary,
-    borderRadius: 10,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  errorBannerText: { flex: 1, fontSize: FONT.small, color: COLORS.dark },
-  errorBannerAction: { color: COLORS.secondary, fontWeight: '700' },
-
-  lista: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    marginBottom: SPACING.md,
-  },
-  filaHeader: {
-    flexDirection: 'row',
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-    backgroundColor: COLORS.background,
-  },
-  colHeader: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  filaAlterna: { backgroundColor: '#FAFCFC' },
-  colTitulo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  pubEmoji: { fontSize: 24 },
-  pubImage: { width: 44, height: 44, borderRadius: 10, backgroundColor: COLORS.imagePlaceholder },
-  pubTitulo: { fontSize: FONT.small, color: COLORS.textPrimary, flex: 1, flexShrink: 1 },
-  colText: { fontSize: FONT.small, color: COLORS.textSecondary },
-  precioText: { fontWeight: '700', color: COLORS.textPrimary },
-  estadoCell: { alignItems: 'center' },
-  estadoBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
-  estadoActiva: { backgroundColor: COLORS.promoLight },
-  estadoInactiva: { backgroundColor: COLORS.background },
-  estadoText: { fontSize: 12, fontWeight: '600' },
-  estadoTextActiva: { color: COLORS.success },
-  estadoTextInactiva: { color: COLORS.textSecondary },
-  switchCell: { alignItems: 'center', justifyContent: 'center' },
-  actionsCell: { alignItems: 'center', justifyContent: 'center' },
-  btnEditar: {
-    borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  btnEditarText: { color: COLORS.primaryLight, fontSize: 12, fontWeight: '600' },
-  switchTrack: { width: 46, height: 24, borderRadius: 999, justifyContent: 'center', paddingHorizontal: 2 },
-  switchTrackOn: { backgroundColor: COLORS.secondary },
-  switchTrackOff: { backgroundColor: '#D9D9D9' },
-  switchThumb: {
-    width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.white,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15, shadowRadius: 2, elevation: 2,
-  },
-  switchThumbOn: { alignSelf: 'flex-end' },
-  switchThumbOff: { alignSelf: 'flex-start' },
-
-  emptyState: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    paddingVertical: 60,
-    paddingHorizontal: SPACING.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    marginBottom: SPACING.md,
-  },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
-  emptyTitulo: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: SPACING.xs, textAlign: 'center' },
-  emptySubtitulo: { fontSize: FONT.small, color: COLORS.textSecondary, textAlign: 'center', marginBottom: SPACING.lg },
-  btnCrearEmpty: {
-    borderWidth: 1, borderColor: COLORS.primaryLight, borderRadius: 10,
-    paddingVertical: SPACING.sm, paddingHorizontal: 28, backgroundColor: COLORS.white,
-  },
-  btnCrearEmptyText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: FONT.small },
-
-  alignRight: { textAlign: 'right' },
-  alignCenter: { textAlign: 'center' },
-  stockCell: { alignItems: 'center', justifyContent: 'center', minWidth: 54 },
-
-  // ── Column widths ──────────────────────────────────────────────────────────
-  colPublicacion: { width: 180 },
-  colPrecio:      { width: 100 },
-  colStock:       { width: 90 },
-  colVendidos:    { width: 80 },
-  colEstado:      { width: 90 },
-  colVisible:     { width: 80 },
-  colAcciones:    { width: 90 },
-
-  // ── Modal de pedidos ───────────────────────────────────────────────────────
-  pedidosModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-  },
-  pedidosModalTitulo: { fontSize: FONT.large, fontWeight: '700', color: COLORS.textPrimary },
-  pedidosCloseBtn: { padding: SPACING.sm },
-  pedidosCloseBtnText: { fontSize: FONT.medium, color: COLORS.textMuted },
-  pedidosCentered: { padding: 40, alignItems: 'center', gap: SPACING.md },
-  pedidosEmptyIcon: { fontSize: 48, marginBottom: SPACING.sm },
-  pedidosTituloVacio: { fontSize: FONT.medium, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
-  pedidosSubtitulo: { fontSize: FONT.small, color: COLORS.textSecondary, textAlign: 'center' },
-  pedidosError: { fontSize: FONT.small, color: '#C0392B', textAlign: 'center' },
-  btnReintentar: {
-    borderWidth: 1, borderColor: COLORS.primaryLight, borderRadius: 8,
-    paddingVertical: SPACING.sm, paddingHorizontal: SPACING.lg,
-  },
-  btnReintentarText: { color: COLORS.primaryLight, fontWeight: '600', fontSize: FONT.small },
-  pedidosList: { flex: 1 },
-  pedidosListContent: { padding: SPACING.lg, gap: SPACING.md },
-  pedidosConteo: { fontSize: FONT.small, color: COLORS.textMuted, marginBottom: SPACING.sm },
-
-  pedidoCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-    gap: SPACING.sm,
-  },
-  pedidoCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  pedidoFecha: { fontSize: FONT.small, color: COLORS.textMuted, fontWeight: '500' },
-  pedidoSubtotal: { fontSize: FONT.medium, fontWeight: '700', color: COLORS.primary },
-  pedidoRow: { flexDirection: 'row', gap: SPACING.sm, flexWrap: 'wrap' },
-  pedidoLabel: { fontSize: FONT.small, fontWeight: '700', color: COLORS.textSecondary, minWidth: 80 },
-  pedidoValue: { fontSize: FONT.small, color: COLORS.textPrimary, flex: 1, flexShrink: 1 },
-  pedidoProductosContainer: { gap: 4 },
-  pedidoProductoRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingLeft: 80 },
-  pedidoProductoName: { flex: 1, fontSize: FONT.small, color: COLORS.textPrimary },
-  pedidoProductoQty: { fontSize: FONT.small, color: COLORS.textMuted, minWidth: 28, textAlign: 'right' },
-  pedidoProductoSubtotal: { fontSize: FONT.small, fontWeight: '600', color: COLORS.textPrimary, minWidth: 70, textAlign: 'right' },
-
-  // ── Estado del pedido ──────────────────────────────────────────────────────
-  pedidoStatusSection: {
-    marginTop: SPACING.xs,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
-    gap: SPACING.sm,
-  },
-  pedidoStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    flexWrap: 'wrap',
-  },
-  pedidoStatusBadge: {
-    backgroundColor: COLORS.white,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1.5,
-    borderColor: COLORS.divider,
-  },
-  pedidoStatusBadgeDelivered: {
-    borderColor: COLORS.success,
-    backgroundColor: '#f0fdf4',
-  },
-  pedidoStatusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  pedidoStatusTextDelivered: {
-    color: COLORS.success,
-  },
-  btnAvanzarEstado: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: SPACING.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 34,
-  },
-  btnAvanzarEstadoDisabled: {
-    opacity: 0.6,
-  },
-  btnAvanzarEstadoText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  // Tracking code
-  trackingContainer: {
-    gap: SPACING.xs,
-  },
-  trackingLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  trackingInput: {
-    borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    borderRadius: 8,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 8,
-    fontSize: FONT.small,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.white,
-  },
-  trackingActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  btnConfirmarEnvio: {
-    flex: 1,
-    backgroundColor: COLORS.success,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-  },
-  btnConfirmarEnvioText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  btnCancelarTracking: {
-    borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: SPACING.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnCancelarTrackingText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  updateErrorText: {
-    fontSize: 12,
-    color: COLORS.error,
-    fontWeight: '600',
-  },
-})

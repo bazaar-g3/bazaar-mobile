@@ -18,7 +18,6 @@ import Logo from "../components/Logo";
 import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 import { COLORS } from "../constants/colors";
-import { SPACING, FONT } from "../constants/theme";
 import {
   getCatalogErrorMessage,
   listRecentProducts,
