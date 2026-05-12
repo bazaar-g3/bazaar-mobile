@@ -23,6 +23,7 @@ import {
   listRecentProducts,
   listProductCategories,
   listCatalogProducts,
+  listPopularProducts,
   mapCatalogProductToCard,
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
@@ -45,6 +46,10 @@ export default function HomeScreen() {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [loadingRecommendedProducts, setLoadingRecommendedProducts] = useState(true);
   const [recommendedProductsError, setRecommendedProductsError] = useState("");
+
+  const [popularProducts, setPopularProducts] = useState([]);
+  const [loadingPopularProducts, setLoadingPopularProducts] = useState(true);
+  const [popularProductsError, setPopularProductsError] = useState("");
 
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
@@ -183,6 +188,31 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const loadPopularProducts = useCallback(async () => {
+    setLoadingPopularProducts(true);
+    setPopularProductsError("");
+
+    try {
+      const products = await listPopularProducts({ limit: 5 });
+
+      setPopularProducts(
+        products.map((product) =>
+          mapCatalogProductToCard(product, { tag: "POPULAR" })
+        )
+      );
+    } catch (error) {
+      setPopularProductsError(
+        getCatalogErrorMessage(
+          error,
+          "No pudimos cargar los productos populares por el momento."
+        )
+      );
+      setPopularProducts([]);
+    } finally {
+      setLoadingPopularProducts(false);
+    }
+  }, []);
+
   const loadRecentCatalogProducts = useCallback(async () => {
     setLoadingRecentProducts(true);
     setRecentProductsError("");
@@ -212,6 +242,7 @@ export default function HomeScreen() {
       await Promise.all([
         loadSessionData(),
         loadCategories(),
+        loadPopularProducts(),
         loadRecommendedCatalogProducts(),
         loadRecentCatalogProducts(),
       ]);
@@ -221,6 +252,7 @@ export default function HomeScreen() {
   }, [
     loadSessionData,
     loadCategories,
+    loadPopularProducts,
     loadRecommendedCatalogProducts,
     loadRecentCatalogProducts,
     refreshCatalogKey,
@@ -427,6 +459,52 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.content}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              POPULARES <Text style={styles.sectionAccent}>EN BAZAAR</Text>
+            </Text>
+
+            {loadingPopularProducts ? (
+              <View style={styles.sectionStatusCard}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.sectionStatusText}>
+                  Cargando productos populares...
+                </Text>
+              </View>
+            ) : popularProductsError ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionErrorText}>
+                  {popularProductsError}
+                </Text>
+                <TouchableOpacity onPress={loadPopularProducts}>
+                  <Text style={styles.sectionRetryText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : popularProducts.length === 0 ? (
+              <View style={styles.sectionStatusCard}>
+                <Text style={styles.sectionStatusText}>
+                  Todavía no hay productos populares disponibles.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recommendedList}
+              >
+                {popularProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="horizontal"
+                    isWishlisted={wishlistIds.has(String(product.id))}
+                    onPress={() => router.push(`/product/${product.id}`)}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               PRODUCTOS <Text style={styles.sectionAccent}>RECOMENDADOS</Text>
