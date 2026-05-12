@@ -86,8 +86,8 @@ export const styles = StyleSheet.create({
 
   // ── Tabla desktop ──────────────────────────────────────────────────────────
   lista: {
-    width: '100%',
-    minWidth: '100%',
+    flex: 1,
+    minWidth: 820,
     backgroundColor: COLORS.white,
     borderRadius: 14,
     overflow: 'hidden',
@@ -158,9 +158,10 @@ export const styles = StyleSheet.create({
   colVendidos: { flex: 1, minWidth: 90 },
   colEstado: { flex: 1, minWidth: 100 },
   colVisible: { flex: 1, minWidth: 90 },
-  colAcciones: { flex: 1, minWidth: 100 },
+  colAcciones: { flex: 1, minWidth: 120 },
 
   tableScrollContent: {
     flexGrow: 1,
+    minWidth: '100%',
   },
 })

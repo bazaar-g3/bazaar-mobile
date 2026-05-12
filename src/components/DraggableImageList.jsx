@@ -127,17 +127,15 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
       {/* touch-target + panResponder container */}
       <View
         style={{ height: ITEM_H, position: 'relative' }}
-        onTouchStart={(evt) => {
-          touchedIdxRef.current = Math.min(
-            Math.max(0, Math.floor(evt.nativeEvent.locationX / slot)),
-            images.length - 1
-          )
-        }}
         {...panResponder.panHandlers}
       >
         {images.map((image, idx) => (
           <View
             key={`img-${idx}-${image.uri}`}
+            onStartShouldSetResponder={() => {
+              touchedIdxRef.current = idx
+              return false
+            }}
             style={[
               styles.card,
               { left: getDisplayLeft(idx), width: itemW, height: ITEM_H },
