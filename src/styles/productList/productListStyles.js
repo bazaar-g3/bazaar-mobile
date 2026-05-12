@@ -84,6 +84,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: 12,
   },
 
   card: {
@@ -105,6 +106,7 @@ export const styles = StyleSheet.create({
     width: "100%",
     height: 160,
     backgroundColor: COLORS.imagePlaceholder,
+    resizeMode: "cover",
   },
 
   cardContent: {

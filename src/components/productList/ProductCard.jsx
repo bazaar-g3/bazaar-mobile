@@ -7,14 +7,16 @@ export default function ProductCard({
   item,
   onOpenProduct,
   onAddToCart,
+  cardStyle,
+  imageStyle,
 }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, cardStyle]}>
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => onOpenProduct(item.id)}
       >
-        <Image source={{ uri: item.image }} style={styles.productImage} />
+        <Image source={{ uri: item.image }} style={[styles.productImage, imageStyle]} />
       </TouchableOpacity>
 
       <View style={styles.cardContent}>
