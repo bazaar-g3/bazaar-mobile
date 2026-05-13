@@ -4,6 +4,21 @@ import catalogApi, { getCatalogApiBaseUrl } from '../api/catalogApi'
 export const PRODUCT_IMAGE_PLACEHOLDER = 'https://via.placeholder.com/500x350.png?text=Producto'
 
 /**
+ * Reemplaza localhost en URLs de imágenes (MinIO) con la IP real del servidor.
+ * Necesario cuando la app corre en un dispositivo físico.
+ */
+function fixImageUrl(url) {
+  if (!url || typeof url !== 'string') return url
+  const base = process.env.EXPO_PUBLIC_CATALOG_API_URL ?? ''
+  const match = base.match(/https?:\/\/([^:/]+)/)
+  const serverHost = match?.[1]
+  if (serverHost && serverHost !== 'localhost') {
+    return url.replace(/localhost/g, serverHost)
+  }
+  return url
+}
+
+/**
  * Normaliza el nombre de un campo de issue.
  * @param field - El nombre del campo.
  * @returns El nombre del campo normalizado.
@@ -136,7 +151,7 @@ export function mapCatalogProductToCard(product, overrides = {}) {
     id: String(product.id),
     name: product.name,
     price: Number(product.price) || 0,
-    image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
+    image: fixImageUrl(product.images?.[0]) || PRODUCT_IMAGE_PLACEHOLDER,
     tag: overrides.tag || product.tag,
     categoryId: product.category?.id ? String(product.category.id) : undefined,
     categoryName: product.category?.label || '',

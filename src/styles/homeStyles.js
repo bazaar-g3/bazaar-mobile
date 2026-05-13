@@ -164,13 +164,15 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: COLORS.primaryLight,
     backgroundColor: "rgba(255,255,255,0.12)",
     height: 46,
+    flexShrink: 0,
+    minWidth: 80,
   },
 
   filterButtonActive: {

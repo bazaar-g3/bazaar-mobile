@@ -1,5 +1,8 @@
 import React from "react";
-import { TouchableOpacity, View, Text, Image, StyleSheet } from "react-native";
+import { TouchableOpacity, View, Text, Image, StyleSheet, Dimensions } from "react-native";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const CARD_WIDTH = Math.min(150, SCREEN_WIDTH * 0.4);
 
 const COLORS = {
   white: "#FFFFFF",
@@ -66,11 +69,11 @@ export default function ProductCard({ product, onPress, variant = "horizontal", 
 
 const styles = StyleSheet.create({
   recommendedCard: {
-    width: 190,
+    width: CARD_WIDTH,
     backgroundColor: COLORS.white,
-    borderRadius: 22,
-    padding: 10,
-    marginRight: 14,
+    borderRadius: 16,
+    padding: 8,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
   },
@@ -79,10 +82,10 @@ const styles = StyleSheet.create({
   },
   recommendedImage: {
     width: "100%",
-    height: 130,
-    borderRadius: 16,
+    height: CARD_WIDTH * 0.7,
+    borderRadius: 12,
     backgroundColor: "#ECECEC",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   badge: {
     alignSelf: "flex-start",
@@ -99,14 +102,14 @@ const styles = StyleSheet.create({
   },
   productName: {
     color: COLORS.text,
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "700",
-    lineHeight: 20,
-    marginBottom: 6,
+    lineHeight: 17,
+    marginBottom: 4,
   },
   productPrice: {
     color: COLORS.coral,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "800",
   },
   gridCard: {

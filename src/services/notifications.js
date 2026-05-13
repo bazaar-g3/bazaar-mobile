@@ -3,13 +3,17 @@ import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 
 // Configurar comportamiento de notificaciones cuando la app está abierta
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-})
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  })
+} catch {
+  // Ignorar si no está disponible (ej. simulador o error de inicialización)
+}
 
 /*
  Registra el dispositivo para recibir notificaciones push.
@@ -17,29 +21,29 @@ Notifications.setNotificationHandler({
  Debe llamarse al iniciar sesión.
 */
 export async function registerForPushNotifications() {
-  if (Platform.OS === 'web') {
-    return null
-  }
-
-  if (!Device.isDevice) {
-    console.log('Las push notifications solo funcionan en dispositivo físico')
-    return null
-  }
-
-  const { status: existingStatus } = await Notifications.getPermissionsAsync()
-  let finalStatus = existingStatus
-
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync()
-    finalStatus = status
-  }
-
-  if (finalStatus !== 'granted') {
-    console.log('Permiso de notificaciones denegado')
-    return null
-  }
-
   try {
+    if (Platform.OS === 'web') {
+      return null
+    }
+
+    if (!Device.isDevice) {
+      console.log('Las push notifications solo funcionan en dispositivo físico')
+      return null
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync()
+    let finalStatus = existingStatus
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync()
+      finalStatus = status
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Permiso de notificaciones denegado')
+      return null
+    }
+
     // Obtener el token FCM del dispositivo
     const { data: fcmToken } = await Notifications.getExpoPushTokenAsync()
 
