@@ -476,6 +476,9 @@ export default function HomeScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.recommendedList}
+                scrollEnabled={true}
+                alwaysBounceHorizontal={true}
+                directionalLockEnabled={true}
               >
                 {popularProducts.map((product) => (
                   <ProductCard

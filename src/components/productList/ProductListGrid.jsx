@@ -1,9 +1,24 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, useWindowDimensions } from "react-native";
 import { COLORS } from "../../constants/colors";
 import { styles } from "../../styles/productList/productListStyles";
 import ProductCard from "./ProductCard";
 import ProductListEmptyState from "./ProductListEmptyState";
+
+const GRID_H_PADDING = 32;
+
+/*devuelve una cantidad de columnas segun el ancho de la pantalla para ajustar el tamaño de las imagenes de ls productos */
+function useGridLayout() {
+  const { width } = useWindowDimensions();
+
+  const numCols = width >= 1024 ? 4 : width >= 640 ? 3 : 2;
+
+  const cardWidth = Math.floor((width - GRID_H_PADDING) / numCols - 4);
+
+  const imageHeight = Math.round(cardWidth * (numCols <= 2 ? 0.9 : 0.85));
+
+  return { cardWidth, imageHeight };
+}
 
 export default function ProductListGrid({
   screenTitle,
@@ -18,6 +33,8 @@ export default function ProductListGrid({
   onOpenProduct,
   onAddToCart,
 }) {
+  const { cardWidth, imageHeight } = useGridLayout();
+
   return (
     <ScrollView contentContainerStyle={styles.gridContainer}>
       <Text style={styles.sectionHeading}>{screenTitle}</Text>
@@ -47,6 +64,8 @@ export default function ProductListGrid({
               item={item}
               onOpenProduct={onOpenProduct}
               onAddToCart={onAddToCart}
+              cardStyle={{ width: cardWidth }}
+              imageStyle={{ height: imageHeight }}
             />
           ))}
         </View>

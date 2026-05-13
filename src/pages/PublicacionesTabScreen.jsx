@@ -576,53 +576,51 @@ export default function VentasTab({
           {publicacionesFiltradas.map(renderPublicacionCard)}
         </ScrollView>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}contentContainerStyle={styles.tableScrollContent}>
-          <View style={styles.lista}>
-            <View style={styles.filaHeader}>
-              <Text style={[styles.colHeader, styles.colPublicacion]}>
-                Publicación
-              </Text>
-              <Text
-                style={[styles.colHeader, styles.alignRight, styles.colPrecio]}
-              >
-                Precio
-              </Text>
-              <Text
-                style={[styles.colHeader, styles.alignCenter, styles.colStock]}
-              >
-                Stock
-              </Text>
-              <Text
-                style={[
-                  styles.colHeader,
-                  styles.alignCenter,
-                  styles.colVendidos,
-                ]}
-              >
-                Vendidos
-              </Text>
-              <Text
-                style={[styles.colHeader, styles.alignCenter, styles.colEstado]}
-              >
-                Estado
-              </Text>
-              <Text
-                style={[styles.colHeader, styles.alignCenter, styles.colVisible]}
-              >
-                Visible
-              </Text>
-              <Text
-                style={[styles.colHeader, styles.alignCenter, styles.colAcciones]}
-              >
-                Acciones
-              </Text>
-            </View>
-
-            {publicacionesFiltradas.map((pub, idx) =>
-              renderPublicacionRow(pub, idx)
-            )}
+        <View style={styles.lista}>
+          <View style={styles.filaHeader}>
+            <Text style={[styles.colHeader, styles.colPublicacion]}>
+              Publicación
+            </Text>
+            <Text
+              style={[styles.colHeader, styles.alignRight, styles.colPrecio]}
+            >
+              Precio
+            </Text>
+            <Text
+              style={[styles.colHeader, styles.alignCenter, styles.colStock]}
+            >
+              Stock
+            </Text>
+            <Text
+              style={[
+                styles.colHeader,
+                styles.alignCenter,
+                styles.colVendidos,
+              ]}
+            >
+              Vendidos
+            </Text>
+            <Text
+              style={[styles.colHeader, styles.alignCenter, styles.colEstado]}
+            >
+              Estado
+            </Text>
+            <Text
+              style={[styles.colHeader, styles.alignCenter, styles.colVisible]}
+            >
+              Visible
+            </Text>
+            <Text
+              style={[styles.colHeader, styles.alignCenter, styles.colAcciones]}
+            >
+              Acciones
+            </Text>
           </View>
-        </ScrollView>
+
+          {publicacionesFiltradas.map((pub, idx) =>
+            renderPublicacionRow(pub, idx)
+          )}
+        </View>
       )}
 
       <EditProductModal

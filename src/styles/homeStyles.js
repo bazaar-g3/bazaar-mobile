@@ -264,6 +264,7 @@ export const styles = StyleSheet.create({
 
   section: {
     marginBottom: 10,
+    width: "100%",
   },
 
   sectionTitle: {
@@ -280,10 +281,12 @@ export const styles = StyleSheet.create({
 
   recommendedList: {
     paddingBottom: 10,
+    flexDirection: "row",
   },
 
   recentList: {
     paddingBottom: 10,
+    flexDirection: "row",
   },
 
   sectionStatusCard: {

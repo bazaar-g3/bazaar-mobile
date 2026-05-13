@@ -87,7 +87,6 @@ export const styles = StyleSheet.create({
   // ── Tabla desktop ──────────────────────────────────────────────────────────
   lista: {
     width: '100%',
-    minWidth: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 14,
     overflow: 'hidden',
@@ -152,15 +151,14 @@ export const styles = StyleSheet.create({
   alignRight: { textAlign: 'right' },
   alignCenter: { textAlign: 'center' },
   stockCell: { alignItems: 'center', justifyContent: 'center', minWidth: 54 },
-  colPublicacion: { flex: 2.2, minWidth: 180 },
-  colPrecio: { flex: 1, minWidth: 90 },
+  colPublicacion: { flex: 2.5, minWidth: 140 },
+  colPrecio: { flex: 1, minWidth: 70 },
   colStock: { flex: 1, minWidth: 90 },
-  colVendidos: { flex: 1, minWidth: 90 },
-  colEstado: { flex: 1, minWidth: 100 },
-  colVisible: { flex: 1, minWidth: 90 },
-  colAcciones: { flex: 1, minWidth: 100 },
+  colVendidos: { flex: 0.8, minWidth: 60 },
+  colEstado: { flex: 1, minWidth: 70 },
+  colVisible: { flex: 0.8, minWidth: 60 },
+  colAcciones: { flex: 1, minWidth: 80 },
 
-  tableScrollContent: {
-    flexGrow: 1,
-  },
+  // (kept for compatibility, no longer needed for horizontal scroll)
+  tableScrollContent: { flexGrow: 1 },
 })

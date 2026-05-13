@@ -14,7 +14,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { COLORS } from '../constants/colors'
 import { SPACING, FONT } from '../constants/theme'
-import removeIcon from '../../assets/removeImg.png'
+import DraggableImageList from './DraggableImageList'
 
 const PRODUCT_IMAGE_PLACEHOLDER =
   'https://via.placeholder.com/500x350.png?text=Producto'
@@ -126,6 +126,11 @@ export default function EditProductModal({
     setImagenes((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
 
+  function handleReorderImages(reorderedItems) {
+    // DraggableImageList devuelve [{ uri }]; extraemos de vuelta a strings
+    setImagenes(reorderedItems.map((item) => item.uri))
+  }
+
   function handleSave() {
     onSave?.({
       ...product,
@@ -171,32 +176,21 @@ export default function EditProductModal({
                 <View style={styles.fieldGroup}>
                   <Text style={styles.label}>Imágenes</Text>
 
-                  <View style={styles.imagesGrid}>
-                    {imagenes.map((imagen, index) => (
-                      <View key={`${imagen}-${index}`} style={styles.imageCard}>
-                        <TouchableOpacity
-                          style={styles.deleteImageButton}
-                          onPress={() => handleRemoveImage(index)}
-                          activeOpacity={0.7}
-                        >
-                          <Image source={removeIcon} style={styles.deleteIcon} />
-                        </TouchableOpacity>
+                  {imagenes.length > 0 && (
+                    <DraggableImageList
+                      images={imagenes.map((uri) => ({ uri: uri || PRODUCT_IMAGE_PLACEHOLDER }))}
+                      onReorder={handleReorderImages}
+                      onRemove={handleRemoveImage}
+                    />
+                  )}
 
-                        <Image
-                          source={{ uri: imagen || PRODUCT_IMAGE_PLACEHOLDER }}
-                          style={styles.productImage}
-                        />
-                      </View>
-                    ))}
-
-                    <TouchableOpacity
-                      style={styles.addImageCard}
-                      onPress={handlePickImages}
-                    >
-                      <Text style={styles.addImagePlus}>+</Text>
-                      <Text style={styles.addImageText}>Agregar foto</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.addImageCard}
+                    onPress={handlePickImages}
+                  >
+                    <Text style={styles.addImagePlus}>+</Text>
+                    <Text style={styles.addImageText}>Agregar foto</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.fieldGroup}>
@@ -362,46 +356,6 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
 
-  imagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-
-  imageCard: {
-    width: 130,
-    height: 130,
-    borderRadius: 14,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: COLORS.imagePlaceholder,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
-  },
-
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  deleteImageButton: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    zIndex: 2,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  deleteIcon: {
-    width: 16,
-    height: 16,
-  },
-
   addImageCard: {
     width: 130,
     height: 130,
@@ -413,6 +367,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.white,
     padding: SPACING.sm,
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
   },
 
   addImagePlus: {
