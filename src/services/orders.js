@@ -83,9 +83,11 @@ export function getCheckoutErrorMessage(error) {
  * Confirma la recepción del pedido (comprador).
  * La orden pasa de 'shipped' a 'delivered'.
  * @param {string} orderId - UUID de la orden.
+ * @param {string} sellerId - ID del vendedor.
  */
-export async function confirmDelivery(orderId) {
-  const { data } = await ordersApi.post(`/orders/${orderId}/confirm-delivery`)
+export async function confirmDelivery(orderId, sellerId) {
+  // Pasamos el sellerId como query parameter
+  const { data } = await ordersApi.post(`/orders/${orderId}/confirm-delivery?seller_id=${sellerId}`)
   return data
 }
 
