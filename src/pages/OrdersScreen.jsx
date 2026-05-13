@@ -3,21 +3,24 @@ import {
   View,
   Text,
   TouchableOpacity,
+  StyleSheet,
   FlatList,
   ActivityIndicator,
   SafeAreaView,
   ScrollView,
   Modal,
+  Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { styles } from "../styles/OrdersScreenStyles";
+import {styles} from '../styles/OrdersScreenStyles'
 import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { COLORS } from '../constants/colors'
 import { FONT, SPACING } from '../constants/theme'
+import { getPublicProfile } from '../services/user'
 
 const STATUS_CONFIG = {
   pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary,    icon: 'time-outline' },
@@ -81,7 +84,7 @@ function StatusBadge({ status, small = false }) {
 export default function OrdersScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
-
+  const [sellerNames, setSellerNames] = useState({})
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
@@ -134,9 +137,26 @@ export default function OrdersScreen() {
     setSelectedOrder(order)
     setDetailLoading(true)
     setDetailError(null)
+    setSellerNames({})
+
     try {
       const detail = await getOrderById(order.id)
       setSelectedOrder(detail)
+
+      if (Array.isArray(detail.fulfillments) && detail.fulfillments.length > 0) {
+        const uniqueSellerIds = [...new Set(detail.fulfillments.map(f => f.seller_id))]
+        const namesDict = {}
+
+        await Promise.all(
+          uniqueSellerIds.map(async (id) => {
+            const profile = await getPublicProfile(id)
+            namesDict[id] = profile?.name || profile?.fullName || profile?.username || `Vendedor ${String(id).slice(0, 4)}`
+          })
+        )
+        
+        setSellerNames(namesDict)
+      }
+
     } catch (e) {
       setDetailError(e)
     } finally {
@@ -149,15 +169,20 @@ export default function OrdersScreen() {
     setDetailError(null)
   }
 
+  // Ahora recibe el sellerId del paquete específico que se está confirmando
   async function handleConfirmDelivery(sellerId) {
     if (!selectedOrder || !sellerId) return
     setConfirmingDelivery(true)
     setConfirmDeliveryError(null)
     try {
+      // Ajustá tu servicio frontend para enviar el seller_id como query param
       const updated = await confirmDelivery(selectedOrder.id, sellerId)
+      
+      // Actualizar el detalle de la orden recargándolo
       const freshDetail = await getOrderById(selectedOrder.id)
       setSelectedOrder(freshDetail)
       
+      // Actualizar la lista general si el estado global cambió
       setOrders((prev) =>
         prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: freshDetail.status } : o))
       )
@@ -376,7 +401,7 @@ export default function OrdersScreen() {
                 </View>
               ) : null}
 
-              {/* PRODUCTOS COMPRADOS */}
+              {/* PRODUCTOS COMPRADOS (Restaurado para que se vea siempre) */}
               {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Productos comprados</Text>
@@ -411,7 +436,7 @@ export default function OrdersScreen() {
                 </View>
               )}
 
-              {/* TRACKING POR PAQUETES */}
+              {/* TRACKING POR PAQUETES (Solo se va a ver cuando actualices el back) */}
               {Array.isArray(selectedOrder.fulfillments) && selectedOrder.fulfillments.length > 0 && (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Seguimiento por paquetes</Text>
@@ -419,7 +444,7 @@ export default function OrdersScreen() {
                   {selectedOrder.fulfillments.map((fulfillment, fIndex) => (
                     <View key={`f-${fulfillment.seller_id}`} style={styles.packageCard}>
                       <View style={styles.packageHeader}>
-                        <Text style={styles.packageTitle}>Paquete {fIndex + 1}</Text>
+                        <Text style={styles.packageTitle}>Paquete de {sellerNames[fulfillment.seller_id] || `Vendedor`}</Text>
                         <StatusBadge status={fulfillment.status} small />
                       </View>
 
@@ -487,35 +512,42 @@ export default function OrdersScreen() {
                   {/* Historial por Vendedor (Agrupado) */}
                   {Object.entries(
                     selectedOrder.status_history
-                      .filter(h => h.seller_id) // Filtra solo los que SI tienen seller_id
+                      .filter(h => h.seller_id) 
                       .reduce((acc, h) => {
                         if (!acc[h.seller_id]) acc[h.seller_id] = [];
                         acc[h.seller_id].push(h);
                         return acc;
                       }, {})
-                  ).map(([sellerId, history]) => (
-                    <View key={`seller-history-${sellerId}`} style={{ marginTop: 15 }}>
-                      <Text style={[styles.sectionLabel, { color: COLORS.primary }]}>
-                        Historial del Vendedor
-                      </Text>
-                      {[...history].reverse().map((h, i) => (
-                        <View key={`sh-${i}`} style={styles.historyRow}>
-                          <View style={[
-                            styles.historyDot,
-                            { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
-                          ]} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.historyStatus}>
-                              {STATUS_CONFIG[h.status]?.label ?? h.status}
-                            </Text>
-                            <Text style={styles.historyDate}>
-                              {formatDateTime(h.changed_at)}
-                            </Text>
+                  ).map(([sellerId, history]) => {
+                    
+                    const sellerName = sellerNames[sellerId] || `Cargando...`;
+
+                    return (
+                      <View key={`seller-history-${sellerId}`} style={{ marginTop: 15 }}>
+                        
+                        <Text style={[styles.sectionLabel, { color: COLORS.primary }]}>
+                          Historial de Vendedor {sellerName}
+                        </Text>
+                        
+                        {[...history].reverse().map((h, i) => (
+                          <View key={`sh-${i}`} style={styles.historyRow}>
+                            <View style={[
+                              styles.historyDot,
+                              { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                            ]} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.historyStatus}>
+                                {STATUS_CONFIG[h.status]?.label ?? h.status}
+                              </Text>
+                              <Text style={styles.historyDate}>
+                                {formatDateTime(h.changed_at)}
+                              </Text>
+                            </View>
                           </View>
-                        </View>
-                      ))}
-                    </View>
-                  ))}
+                        ))}
+                      </View>
+                    )
+                  })}
 
                 </View>
               )}
