@@ -329,6 +329,22 @@ export async function listPopularProducts({ limit = 10 } = {}) {
 }
 
 /**
+ * Lista productos recomendados según la categoría preferida del usuario.
+ *
+ * Requiere autenticación; catalogApi inyecta el JWT automáticamente.
+ * Si el usuario no tiene historial de compras o no está autenticado,
+ * el endpoint retorna lista vacía y la sección no se muestra.
+ *
+ * @param {object} params - Parámetros opcionales.
+ * @param {number} params.limit - Cantidad máxima de productos (1-50).
+ * @returns {Promise<Array>} Una lista de productos de la categoría preferida, o vacía.
+ */
+export async function listForYouProducts({ limit = 10 } = {}) {
+  const response = await catalogApi.get('/products/recommended', { params: { limit } })
+  return response.data?.products ?? []
+}
+
+/**
  * Actualiza el estado de un producto del vendedor.
  * @param productId - ID del producto.
  * @param enabled - Si el producto debe estar habilitado o no.
