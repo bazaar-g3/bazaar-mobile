@@ -45,8 +45,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "88c89600-1f5e-4dde-b560-e3f24fc54a4e"
+        "projectId": "c733bfbd-4101-41bf-bc4c-76b00f79ca31"
       }
-    }
+    },
+    "owner": "mslepowron"
   }
 }
