@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import { Platform } from 'react-native'
+import Constants from 'expo-constants'
 
 // Configurar comportamiento de notificaciones cuando la app está abierta
 try {
@@ -45,7 +46,10 @@ export async function registerForPushNotifications() {
     }
 
     // Obtener el token FCM del dispositivo
-    const { data: fcmToken } = await Notifications.getExpoPushTokenAsync()
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId
+    const { data: fcmToken } = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    )
 
     // TODO: enviar el token al notifications-api para guardarlo en Supabase
     return fcmToken

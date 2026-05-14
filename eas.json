@@ -18,7 +18,9 @@
       "env": {
         "EXPO_PUBLIC_API_GATEWAY_URL": "https://zvh5k42p9f.execute-api.us-east-2.amazonaws.com/prod",
         "EXPO_PUBLIC_CATALOG_API_URL": "https://zvh5k42p9f.execute-api.us-east-2.amazonaws.com/prod",
-        "EXPO_PUBLIC_ORDERS_API_URL": "https://zvh5k42p9f.execute-api.us-east-2.amazonaws.com/prod"
+        "EXPO_PUBLIC_ORDERS_API_URL": "https://zvh5k42p9f.execute-api.us-east-2.amazonaws.com/prod",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "33951208692-680qrko6ruqupv2pt7g4uhtlu2dub0om.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "33951208692-07riu1mtecjkf7atqp0v917u9hrirhfa.apps.googleusercontent.com"
       }
     },
     "production": {
