@@ -2,6 +2,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { COLORS } from '../constants/colors'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useCartContext } from '../context/CartContext'
@@ -17,6 +18,7 @@ export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
   const { count } = useCartContext()
+  const insets = useSafeAreaInsets()
 
   const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password', '/checkout']
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null
@@ -33,7 +35,7 @@ export default function BottomNavBar() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {TABS.map((tab) => {
         const isActive = pathname === tab.path || pathname.startsWith(tab.path + '/')
         const iconName = isActive ? tab.activeIcon : tab.icon
@@ -76,7 +78,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.divider,
-    paddingBottom: 20,
     paddingTop: 10,
     paddingHorizontal: 16,
   },

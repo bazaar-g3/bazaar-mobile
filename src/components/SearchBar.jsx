@@ -1,5 +1,6 @@
 import React from "react";
-import { View, TextInput, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -17,9 +18,10 @@ export default function SearchBar({ value, onChangeText, onSearch, style }) {
         placeholderTextColor="#8E8E93"
         style={styles.searchInput}
         onSubmitEditing={onSearch}
+        returnKeyType="search"
       />
       <TouchableOpacity style={styles.searchButton} onPress={onSearch}>
-        <Text style={styles.searchButtonText}>Buscar</Text>
+        <Ionicons name="search" size={22} color={COLORS.white} />
       </TouchableOpacity>
     </View>
   );
@@ -35,22 +37,17 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 48,
+    height: 44,
     paddingHorizontal: 14,
     color: COLORS.text,
     fontSize: 15,
   },
   searchButton: {
     backgroundColor: COLORS.coral,
-    paddingHorizontal: 18,
-    height: 48,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-  },
-  searchButtonText: {
-    color: COLORS.white,
-    fontWeight: "700",
-    fontSize: 14,
   },
 });

@@ -63,6 +63,7 @@ export const styles = StyleSheet.create({
   gridContainer: {
     padding: 16,
     paddingBottom: 30,
+    alignItems: "center",
   },
 
   sectionHeading: {
@@ -80,10 +81,16 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  gridWrapper: {
+    maxWidth: 1200,
+    alignSelf: "center",
+    width: "100%",
+  },
+
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     gap: 12,
   },
 

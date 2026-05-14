@@ -3,6 +3,7 @@ import { View } from 'react-native'
 import { useFonts } from 'expo-font'
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { CartProvider } from '../src/context/CartContext'
 import BottomNavBar from '../src/components/BottomNavBar'
 
@@ -18,11 +19,13 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null
 
   return (
-    <CartProvider>
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false }} />
-        <BottomNavBar />
-      </View>
-    </CartProvider>
+    <SafeAreaProvider>
+      <CartProvider>
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }} />
+          <BottomNavBar />
+        </View>
+      </CartProvider>
+    </SafeAreaProvider>
   )
 }

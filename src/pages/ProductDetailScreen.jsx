@@ -3,14 +3,14 @@ import {
   ActivityIndicator,
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   Alert,
   Share,
   TouchableOpacity,
   Platform,
   StyleSheet,
-} from "react-native";
+} from "react-native"
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";

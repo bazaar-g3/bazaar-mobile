@@ -7,11 +7,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/ProductCard";
 import Logo from "../components/Logo";
@@ -346,7 +347,7 @@ export default function HomeScreen() {
                   style={styles.loginButton}
                   onPress={() => router.push('/login')}
                 >
-                  <Text style={styles.loginButtonText}>Iniciar sesión</Text>
+                  <Ionicons name="person-outline" size={20} color="#2E9E95" />
                 </TouchableOpacity>
               )}
 

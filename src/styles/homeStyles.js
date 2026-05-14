@@ -93,14 +93,16 @@ export const styles = StyleSheet.create({
   },
 
   loginButton: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#B9D8D4",
     backgroundColor: "#F2FBFA",
     borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    width: 38,
+    height: 38,
     marginLeft: 8,
     marginRight: 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   loginButtonText: {
