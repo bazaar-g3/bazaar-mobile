@@ -35,3 +35,15 @@ jobs:
 
       - name: Get APK URL
         run: eas build:list --platform android --limit 1 --json | jq '.[0].artifacts.buildUrl'
+            
+      - name: Download and upload APK as artifact
+        run: |
+          APK_URL=$(eas build:list --platform android --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
+          curl -L "$APK_URL" -o bazaar.apk
+        
+      - name: Upload APK to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: bazaar-apk
+          path: bazaar.apk
+          retention-days: 30
