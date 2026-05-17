@@ -13,19 +13,19 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import Logo from '../components/Logo'
-import DraggableImageList from '../components/DraggableImageList'
-import { COLORS } from '../constants/colors'
-import { SPACING, FONT } from '../constants/theme'
+import Logo from '../Logo'
+import DraggableImageList from '../DraggableImageList'
+import { COLORS } from '../../constants/colors'
+import { SPACING, FONT } from '../../constants/theme'
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
   createProduct,
   getCatalogErrorMessage,
   getCatalogValidationErrors,
   listProductCategories,
-} from '../services/catalog'
-import { getSessionStatus } from '../services/session'
-import { buildLoginRedirect } from '../utils/authRedirect'
+} from '../../services/catalog'
+import { getSessionStatus } from '../../services/session'
+import { buildLoginRedirect } from '../../utils/authRedirect'
 
 const MAX_IMAGES = 5
 

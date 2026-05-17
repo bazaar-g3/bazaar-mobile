@@ -19,11 +19,11 @@ import {
   updateSellerProductStatus,
   updateSellerProductStock,
   updateSellerProduct,
-} from '../services/catalog'
-import { COLORS } from '../constants/colors'
-import { styles } from '../styles/PublicacionesTabStyles'
-import EditProductModal from '../components/EditProductModal'
-import EditableStockStepper from '../components/EditableStockStepper'
+} from '../../services/catalog'
+import { COLORS } from '../../constants/colors'
+import { styles } from '../../styles/PublicacionesTabStyles'
+import EditProductModal from '../EditProductModal'
+import EditableStockStepper from '../EditableStockStepper'
 
 const FILTROS = ['activa', 'inactiva']
 const MOBILE_BREAKPOINT = 768

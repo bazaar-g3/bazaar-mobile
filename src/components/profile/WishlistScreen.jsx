@@ -1,23 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Image,
-  Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { getSessionStatus } from '../services/session'
-import { buildLoginRedirect } from '../utils/authRedirect'
-import { getWishlist, removeFromWishlist } from '../services/wishlist'
-import { getCatalogProduct, PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
-import { COLORS } from '../constants/colors'
-import { FONT, SPACING } from '../constants/theme'
-import Logo from '../components/Logo'
+
+import ProfileHeader from './ProfileHeader'
+import ProfileSidebar from './ProfileSidebar'
+import { COLORS } from '../../constants/colors'
+import { FONT, SPACING } from '../../constants/theme'
+import { getCatalogProduct, PRODUCT_IMAGE_PLACEHOLDER } from '../../services/catalog'
+import { getSessionStatus } from '../../services/session'
+import { getWishlist, removeFromWishlist } from '../../services/wishlist'
+import { buildLoginRedirect } from '../../utils/authRedirect'
 
 export default function WishlistScreen() {
   const router = useRouter()
@@ -26,35 +28,42 @@ export default function WishlistScreen() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
     async function ensureAuth() {
       const session = await getSessionStatus()
+
       if (!session.isAuthenticated) {
         router.replace(buildLoginRedirect({ redirectPath: '/wishlist' }))
         return
       }
+
       if (!cancelled) setCheckingSession(false)
     }
 
     ensureAuth()
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
   const loadWishlist = useCallback(async () => {
-    let cancelled = false
     setLoading(true)
     setError(null)
 
     try {
       const wishlistItems = await getWishlist()
+
       const productResults = await Promise.all(
         wishlistItems.map(async ({ productId, addedAt }) => {
           try {
             const product = await getCatalogProduct(String(productId))
             if (!product) return null
+
             return {
               productId: String(productId),
               addedAt,
@@ -70,46 +79,45 @@ export default function WishlistScreen() {
         })
       )
 
-      if (!cancelled) {
-        setItems(productResults.filter(Boolean))
-      }
+      setItems(productResults.filter(Boolean))
     } catch (err) {
-      // Si el servidor devuelve 4xx/5xx o hay error de red, mostramos wishlist vacía
-      // en lugar de un mensaje de error que confunde al usuario.
       const status = err?.response?.status
-      if (!cancelled) {
-        if (status >= 400) {
-          setItems([])
-        } else {
-          setError('No pudimos cargar tu wishlist. Verificá tu conexión y volvé a intentarlo.')
-        }
+
+      if (status >= 400) {
+        setItems([])
+      } else {
+        setError('No pudimos cargar tu wishlist. Verificá tu conexión y volvé a intentarlo.')
       }
     } finally {
-      if (!cancelled) setLoading(false)
+      setLoading(false)
     }
-
-    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     if (!checkingSession) loadWishlist()
   }, [checkingSession, loadWishlist])
 
+  const handleSelectTab = useCallback(
+    (key) => {
+      setIsMenuOpen(false)
+
+      if (key === 'Wishlist') return
+
+      router.push({
+        pathname: '/profile',
+        params: { activeTab: key },
+      })
+    },
+    [router]
+  )
+
   const handleRemove = async (productId) => {
     try {
       await removeFromWishlist(productId)
-      setItems(prev => prev.filter(item => item.productId !== productId))
+      setItems((prev) => prev.filter((item) => item.productId !== productId))
     } catch {
       Alert.alert('Error', 'No se pudo quitar el producto de tu wishlist.')
     }
-  }
-
-  if (checkingSession) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ActivityIndicator size="large" color={COLORS.primaryLight} style={{ flex: 1 }} />
-      </SafeAreaView>
-    )
   }
 
   const renderItem = ({ item }) => {
@@ -126,26 +134,34 @@ export default function WishlistScreen() {
         >
           <View style={styles.imageContainer}>
             <Image source={{ uri: item.image }} style={styles.productImage} />
+
             {disabled && (
               <View style={styles.overlayBadge}>
                 <Text style={styles.overlayBadgeText}>No disponible</Text>
               </View>
             )}
+
             {!disabled && outOfStock && (
               <View style={[styles.overlayBadge, styles.outOfStockBadge]}>
                 <Text style={styles.overlayBadgeText}>Sin stock</Text>
               </View>
             )}
           </View>
+
           <View style={styles.productInfo}>
-            <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+            <Text style={styles.productName} numberOfLines={2}>
+              {item.name}
+            </Text>
+
             <Text style={[styles.productPrice, unavailable && styles.priceUnavailable]}>
               ${item.price.toFixed(2)}
             </Text>
+
             {disabled && <Text style={styles.statusLabel}>No disponible</Text>}
             {!disabled && outOfStock && <Text style={styles.statusLabel}>Sin stock</Text>}
           </View>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.removeButton}
           onPress={() => handleRemove(item.productId)}
@@ -157,64 +173,89 @@ export default function WishlistScreen() {
     )
   }
 
+  if (checkingSession) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" color={COLORS.primaryLight} style={styles.fullLoader} />
+      </SafeAreaView>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>← Volver</Text>
-        </TouchableOpacity>
-        <Logo />
-      </View>
+      <ProfileHeader
+        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+        onGoHome={() => router.replace('/')}
+      />
 
-      <View style={styles.titleRow}>
-        <Text style={styles.screenTitle}>Mi Wishlist</Text>
-        {items.length > 0 && (
-          <Text style={styles.itemCount}>{items.length} {items.length === 1 ? 'producto' : 'productos'}</Text>
+      <View style={styles.mainWrapper}>
+        {isMenuOpen && (
+          <TouchableOpacity
+            style={styles.drawerBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsMenuOpen(false)}
+          />
+        )}
+
+        {isMenuOpen && (
+          <ProfileSidebar activeTab="Wishlist" onSelectTab={handleSelectTab} />
+        )}
+
+        <View style={styles.titleRow}>
+          <Text style={styles.screenTitle}>Mi Wishlist</Text>
+
+          {items.length > 0 && (
+            <Text style={styles.itemCount}>
+              {items.length} {items.length === 1 ? 'producto' : 'productos'}
+            </Text>
+          )}
+        </View>
+
+        {loading && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={COLORS.primaryLight} />
+            <Text style={styles.loadingText}>Cargando tu wishlist...</Text>
+          </View>
+        )}
+
+        {!loading && error && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Text style={styles.errorText}>{error}</Text>
+
+            <TouchableOpacity style={styles.retryButton} onPress={loadWishlist}>
+              <Text style={styles.retryButtonText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && items.length === 0 && (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyEmoji}>🤍</Text>
+            <Text style={styles.emptyTitle}>Tu wishlist está vacía</Text>
+            <Text style={styles.emptySubtitle}>
+              Tocá el ♡ en cualquier publicación para guardar productos y encontrarlos acá fácilmente.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.exploreCatalogButton}
+              onPress={() => router.push('/home')}
+            >
+              <Text style={styles.exploreCatalogButtonText}>Explorar catálogo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && items.length > 0 && (
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.productId}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
         )}
       </View>
-
-      {loading && (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.primaryLight} />
-          <Text style={styles.loadingText}>Cargando tu wishlist...</Text>
-        </View>
-      )}
-
-      {!loading && error && (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorEmoji}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadWishlist}>
-            <Text style={styles.retryButtonText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {!loading && !error && items.length === 0 && (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyEmoji}>🤍</Text>
-          <Text style={styles.emptyTitle}>Tu wishlist está vacía</Text>
-          <Text style={styles.emptySubtitle}>
-            Tocá el ♡ en cualquier publicación para guardar productos y encontrarlos acá fácilmente.
-          </Text>
-          <TouchableOpacity
-            style={styles.exploreCatalogButton}
-            onPress={() => router.push('/home')}
-          >
-            <Text style={styles.exploreCatalogButtonText}>Explorar catálogo</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {!loading && !error && items.length > 0 && (
-        <FlatList
-          data={items}
-          keyExtractor={item => item.productId}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
     </SafeAreaView>
   )
 }
@@ -224,21 +265,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+  mainWrapper: {
+    flex: 1,
   },
-  backButton: {
-    fontSize: FONT.regular,
-    color: COLORS.primary,
-    fontWeight: '600',
+  drawerBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    zIndex: 5,
+  },
+  fullLoader: {
+    flex: 1,
   },
   titleRow: {
     flexDirection: 'row',

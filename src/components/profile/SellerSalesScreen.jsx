@@ -8,10 +8,10 @@ import {
   View,
 } from 'react-native'
 
-import { COLORS } from '../constants/colors'
-import { getSellerSales, updateOrderStatus } from '../services/orders'
-import { getPublicProfile } from '../services/user'
-import { styles } from '../styles/sellerSales/sellerSalesStyles'
+import { COLORS } from '../../constants/colors'
+import { getSellerSales, updateOrderStatus } from '../../services/orders'
+import { getPublicProfile } from '../../services/user'
+import { styles } from '../../styles/sellerSales/sellerSalesStyles'
 
 const STATUS_FILTERS = [
   { label: 'Todas', value: 'all' },
