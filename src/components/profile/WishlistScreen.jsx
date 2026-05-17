@@ -202,8 +202,6 @@ export default function WishlistScreen() {
         )}
 
         <View style={styles.titleRow}>
-          <Text style={styles.screenTitle}>Mi Wishlist</Text>
-
           {items.length > 0 && (
             <Text style={styles.itemCount}>
               {items.length} {items.length === 1 ? 'producto' : 'productos'}

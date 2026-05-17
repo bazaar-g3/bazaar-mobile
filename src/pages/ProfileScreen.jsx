@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
 import ProfileHeader from '../components/profile/ProfileHeader'
 import ProfileInfoTab from '../components/profile/ProfileInfoTab'
+import CouponsTab from '../components/profile/ProfileCouponsTab'
 import ProfileSidebar, {
   PROFILE_MENU_ITEMS,
 } from '../components/profile/ProfileSidebar'
@@ -431,11 +432,7 @@ export default function ProfileScreen() {
     }
 
     if (activeTab === 'Cupones') {
-      return (
-        <Text style={styles.emptyText}>
-          Próximamente: gestión de cupones.
-        </Text>
-      )
+      return <CouponsTab />
     }
 
     return (
