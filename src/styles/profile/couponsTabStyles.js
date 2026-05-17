@@ -143,45 +143,32 @@ export const styles = StyleSheet.create({
     couponActions: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: SPACING.sm,
+        gap: 10,
         marginTop: SPACING.sm,
     },
 
     couponToggleButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
+        paddingVertical: 9,
+        paddingHorizontal: 14,
+        borderRadius: 999,
         alignSelf: 'flex-start',
+        borderWidth: 1,
     },
 
     couponDisableButton: {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: '#FFF1F2',
+        borderColor: '#FDA4AF',
     },
 
     couponEnableButton: {
-        backgroundColor: '#DCFCE7',
+        backgroundColor: '#ECFDF5',
+        borderColor: '#86EFAC',
     },
 
     couponActionText: {
         fontWeight: '800',
         color: COLORS.textPrimary,
-        fontSize: FONT.small,
-    },
-
-    couponEditButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 18,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.primaryLight,
-        backgroundColor: COLORS.white,
-        alignSelf: 'flex-start',
-    },
-
-    couponEditText: {
-        fontWeight: '800',
-        color: COLORS.textPrimary,
-        fontSize: FONT.small,
+        fontSize: 13,
     },
 
     couponModalBackdrop: {
@@ -340,4 +327,9 @@ export const styles = StyleSheet.create({
         minWidth: 0,
     },
 
+    couponMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
 })

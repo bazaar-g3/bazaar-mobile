@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 
 import { COLORS } from '../../constants/colors'
+import { Feather } from '@expo/vector-icons'
 import {
   createCoupon,
   getCouponErrorMessage,
@@ -209,7 +210,21 @@ function CouponCard({ coupon, compact, onToggleStatus, onEditExpiration }) {
         </View>
       </View>
 
-      <Text style={styles.couponMeta}>Vence el {formatDate(coupon.expiresAt)}</Text>
+      <View style={styles.couponMetaRow}>
+        <Text style={styles.couponMeta}>
+          Vence el {formatDate(coupon.expiresAt)}
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => onEditExpiration(coupon)}
+        >
+          <Feather
+            name="edit-2"
+            size={15}
+            color={COLORS.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.couponActions}>
         <TouchableOpacity
@@ -224,13 +239,6 @@ function CouponCard({ coupon, compact, onToggleStatus, onEditExpiration }) {
           <Text style={styles.couponActionText}>
             {isActive ? 'Desactivar' : 'Activar'}
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.couponEditButton}
-          onPress={() => onEditExpiration(coupon)}
-        >
-          <Text style={styles.couponEditText}>Editar vencimiento</Text>
         </TouchableOpacity>
       </View>
     </View>
