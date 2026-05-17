@@ -1,42 +1,33 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
   ActivityIndicator,
-  ScrollView,
-  StyleSheet,
   Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+
 import api from '../api/api'
-import PublicacionesTab from './PublicacionesTabScreen'
-import Logo from '../components/Logo'
+import ProfileHeader from '../components/profile/ProfileHeader'
+import ProfileInfoTab from '../components/profile/ProfileInfoTab'
+import CouponsTab from '../components/profile/ProfileCouponsTab'
+import ProfileSidebar, {
+  PROFILE_MENU_ITEMS,
+} from '../components/profile/ProfileSidebar'
 import { COLORS } from '../constants/colors'
-import { SPACING, FONT } from '../constants/theme'
+import PublicacionesTab from '../components/profile/PublicacionesTabScreen'
+import SellerSalesScreen from '../components/profile/SellerSalesScreen'
+import { styles } from '../styles/profile/profileStyles'
 import {
-  PRODUCT_IMAGE_PLACEHOLDER,
   getCatalogErrorMessage,
   listSellerProducts,
 } from '../services/catalog'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
-import SellerSalesScreen from './SellerSalesScreen'
-
-const PLACEHOLDER_AVATAR =
-  'https://ui-avatars.com/api/?background=69BDB6&color=fff&size=128&name='
-
-const MENU_ITEMS = [
-  { key: 'Perfil', emoji: '👤' },
-  { key: 'Compras', emoji: '🛍️' },
-  { key: 'Publicaciones', emoji: '📌' },
-  { key: 'Ventas', emoji: '🏷️' },
-  { key: 'Wishlist', emoji: '❤️' },
-]
 
 export default function ProfileScreen() {
   const router = useRouter()
@@ -61,8 +52,10 @@ export default function ProfileScreen() {
   const [saveSuccess, setSaveSuccess] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [activeProductsSummary, setActiveProductsSummary] = useState([])
-  const [loadingActiveProductsSummary, setLoadingActiveProductsSummary] = useState(true)
-  const [activeProductsSummaryError, setActiveProductsSummaryError] = useState('')
+  const [loadingActiveProductsSummary, setLoadingActiveProductsSummary] =
+    useState(true)
+  const [activeProductsSummaryError, setActiveProductsSummaryError] =
+    useState('')
   const [checkingSession, setCheckingSession] = useState(true)
 
   const refreshCatalogKey = Array.isArray(refreshCatalog)
@@ -93,6 +86,7 @@ export default function ProfileScreen() {
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true)
+
     try {
       const res = await api.get('/users/me')
       applyProfileData(res.data)
@@ -158,12 +152,11 @@ export default function ProfileScreen() {
   ])
 
   useEffect(() => {
-    if (checkingSession || !refreshCatalogKey) {
-      return
-    }
+    if (checkingSession || !refreshCatalogKey) return
 
     async function refreshProfileIfNeeded() {
       const result = await loadProfile()
+
       if (result?.authInvalid) {
         router.replace(
           buildLoginRedirect({
@@ -188,7 +181,11 @@ export default function ProfileScreen() {
   ])
 
   useEffect(() => {
-    if (normalizedRequestedTab && MENU_ITEMS.some(({ key }) => key === normalizedRequestedTab)) {
+    const existsRequestedTab = PROFILE_MENU_ITEMS.some(
+      ({ key }) => key === normalizedRequestedTab
+    )
+
+    if (normalizedRequestedTab && existsRequestedTab) {
       setActiveTab(normalizedRequestedTab)
       return
     }
@@ -215,6 +212,7 @@ export default function ProfileScreen() {
         onlyAvailable: false,
         limit: 3,
       })
+
       setActiveProductsSummary(products)
     } catch (error) {
       setActiveProductsSummaryError(
@@ -298,12 +296,17 @@ export default function ProfileScreen() {
       const blob = await blobRes.blob()
       const mimeType = blob.type || 'image/jpeg'
       const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg'
+
       formData.append('avatar', blob, `avatar.${ext}`)
     } else {
       const uriParts = localUri.split('.')
       const ext = uriParts[uriParts.length - 1]?.toLowerCase() ?? 'jpg'
       const mimeType =
-        ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+        ext === 'png'
+          ? 'image/png'
+          : ext === 'webp'
+            ? 'image/webp'
+            : 'image/jpeg'
 
       formData.append('avatar', {
         uri: localUri,
@@ -313,7 +316,11 @@ export default function ProfileScreen() {
     }
 
     const token = await AsyncStorage.getItem('token')
-    const baseUrl = (api.defaults.baseURL ?? 'http://localhost:8001').replace(/\/$/, '')
+    const baseUrl = (api.defaults.baseURL ?? 'http://localhost:8001').replace(
+      /\/$/,
+      ''
+    )
+
     const res = await fetch(`${baseUrl}/users/me/avatar`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -321,7 +328,9 @@ export default function ProfileScreen() {
     })
 
     const data = await res.json()
+
     if (!res.ok) throw new Error(data.detail ?? 'Error al subir la imagen')
+
     return data.avatarUrl
   }
 
@@ -330,6 +339,7 @@ export default function ProfileScreen() {
     setSaveSuccess('')
 
     const errors = validate()
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       return
@@ -349,10 +359,13 @@ export default function ProfileScreen() {
       const payload = {
         fullName: fullName.trim(),
         description: description.trim(),
-        ...(finalAvatarUrl !== profile?.avatarUrl && { avatarUrl: finalAvatarUrl }),
+        ...(finalAvatarUrl !== profile?.avatarUrl && {
+          avatarUrl: finalAvatarUrl,
+        }),
       }
 
       const res = await api.patch('/users/me', payload)
+
       setProfile(res.data)
       setAvatarUri(res.data.avatarUrl)
       setSaveSuccess('¡Perfil actualizado con éxito!')
@@ -385,77 +398,16 @@ export default function ProfileScreen() {
     setActiveTab('Publicaciones')
   }, [])
 
-  const handleTabSelect = useCallback((key) => {
-    if (key === 'Wishlist') {
-      router.push('/wishlist')
-      return
-    }
-    setActiveTab(key)
-  }, [router])
+  const handleTabSelect = useCallback(
+    (key) => {
+      if (key === 'Wishlist') {
+        router.push('/wishlist')
+        return
+      }
 
-  const renderActiveProductsSummary = () => (
-    <View style={styles.summarySection}>
-      <View style={styles.summaryHeader}>
-        <Text style={styles.sectionTitle}>Publicaciones activas</Text>
-        <TouchableOpacity onPress={handleGoToSalesTab}>
-          <Text style={styles.summaryAction}>Ver publicaciones</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loadingActiveProductsSummary ? (
-        <View style={styles.summaryStatus}>
-          <ActivityIndicator size="small" color={COLORS.primaryLight} />
-          <Text style={styles.summaryStatusText}>Cargando resumen...</Text>
-        </View>
-      ) : activeProductsSummaryError ? (
-        <View style={styles.summaryMessageCard}>
-          <Text style={styles.summaryErrorText}>{activeProductsSummaryError}</Text>
-          <TouchableOpacity onPress={loadActiveProductsSummary}>
-            <Text style={styles.summaryRetryText}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
-      ) : activeProductsSummary.length === 0 ? (
-        <View style={styles.summaryMessageCard}>
-          <Text style={styles.summaryEmptyTitle}>
-            Todavía no tenés publicaciones activas.
-          </Text>
-          <Text style={styles.summaryEmptyText}>
-            Publicá tu primer producto para que empiece a aparecer en tu perfil y en
-            Home.
-          </Text>
-          <TouchableOpacity
-            style={styles.summaryPublishButton}
-            onPress={handleOpenPublish}
-          >
-            <Text style={styles.summaryPublishButtonText}>Publicar ahora</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.summaryList}>
-          {activeProductsSummary.map((product) => (
-            <TouchableOpacity
-              key={product.id}
-              style={styles.summaryRow}
-              activeOpacity={0.9}
-              onPress={handleGoToSalesTab}
-            >
-              <Image
-                source={{ uri: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER }}
-                style={styles.summaryImage}
-              />
-              <View style={styles.summaryContent}>
-                <Text style={styles.summaryProductName} numberOfLines={1}>
-                  {product.name}
-                </Text>
-                <Text style={styles.summaryMeta}>
-                  ${Number(product.price).toLocaleString('es-AR')} · Stock {product.stock}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
+      setActiveTab(key)
+    },
+    [router]
   )
 
   const renderMainContent = () => {
@@ -479,140 +431,35 @@ export default function ProfileScreen() {
       return <SellerSalesScreen sellerId={profile?.id} />
     }
 
+    if (activeTab === 'Cupones') {
+      return <CouponsTab />
+    }
+
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Información del perfil</Text>
-          {!editing ? (
-            <TouchableOpacity
-              onPress={() => {
-                setSaveSuccess('')
-                setEditing(true)
-              }}
-            >
-              <Text style={styles.editText}>Editar</Text>
-            </TouchableOpacity>
-          ) : (
-            <View />
-          )}
-        </View>
-
-        {saveSuccess ? <Text style={styles.successText}>{saveSuccess}</Text> : null}
-        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
-
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Image
-              source={{
-                uri:
-                  avatarUri ||
-                  `${PLACEHOLDER_AVATAR}${encodeURIComponent(fullName || 'U')}`,
-              }}
-              style={styles.avatarLarge}
-            />
-            {editing && (
-              <TouchableOpacity
-                style={styles.changePhotoOverlay}
-                onPress={handlePickImage}
-              >
-                <Text style={styles.changePhotoText}>Cambiar foto</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.profileInfoText}>
-            <Text style={styles.userName}>{profile?.fullName || 'Usuario'}</Text>
-            <Text style={styles.userEmail}>{profile?.email}</Text>
-          </View>
-        </View>
-
-        <View style={styles.separator} />
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Nombre y Apellido</Text>
-          {editing ? (
-            <>
-              <TextInput
-                style={[styles.input, fieldErrors.fullName && styles.inputError]}
-                value={fullName}
-                onChangeText={(v) => {
-                  setFullName(v)
-                  setFieldErrors((e) => ({ ...e, fullName: undefined }))
-                }}
-                maxLength={50}
-                placeholder="Ingresá tu nombre"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              {fieldErrors.fullName ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text>
-              ) : null}
-            </>
-          ) : (
-            <View style={styles.readonlyField}>
-              <Text style={styles.valueText}>{fullName || 'No definido'}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Descripción</Text>
-          {editing ? (
-            <>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  fieldErrors.description && styles.inputError,
-                ]}
-                value={description}
-                onChangeText={(v) => {
-                  setDescription(v)
-                  setFieldErrors((e) => ({ ...e, description: undefined }))
-                }}
-                multiline
-                maxLength={500}
-                placeholder="Contanos algo sobre vos"
-                placeholderTextColor={COLORS.textMuted}
-              />
-              <Text style={styles.charCount}>{description.length}/500</Text>
-              {fieldErrors.description ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.description}</Text>
-              ) : null}
-            </>
-          ) : (
-            <View style={styles.readonlyField}>
-              <Text style={styles.valueText}>{description || 'Sin descripción'}</Text>
-            </View>
-          )}
-        </View>
-
-        {editing && (
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.btnSave, saving && styles.btnDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
-              ) : (
-                <Text style={styles.btnTextWhite}>Guardar cambios</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.btnCancel}
-              onPress={handleCancel}
-              disabled={saving}
-            >
-              <Text style={styles.btnTextCancel}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.summarySeparator} />
-        {renderActiveProductsSummary()}
-      </View>
+      <ProfileInfoTab
+        profile={profile}
+        editing={editing}
+        setEditing={setEditing}
+        fullName={fullName}
+        setFullName={setFullName}
+        description={description}
+        setDescription={setDescription}
+        avatarUri={avatarUri}
+        saveSuccess={saveSuccess}
+        saveError={saveError}
+        fieldErrors={fieldErrors}
+        setFieldErrors={setFieldErrors}
+        saving={saving}
+        onPickImage={handlePickImage}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        activeProductsSummary={activeProductsSummary}
+        loadingActiveProductsSummary={loadingActiveProductsSummary}
+        activeProductsSummaryError={activeProductsSummaryError}
+        onReloadActiveProductsSummary={loadActiveProductsSummary}
+        onOpenPublish={handleOpenPublish}
+        onGoToSalesTab={handleGoToSalesTab}
+      />
     )
   }
 
@@ -626,32 +473,12 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.topHeader}>
-        <View style={styles.topHeaderContent}>
-          <TouchableOpacity
-            style={styles.hamburgerButton}
-            onPress={() => setIsMenuOpen((prev) => !prev)}
-          >
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
-            <View style={styles.hamburgerLine} />
-          </TouchableOpacity>
-
-          <View style={styles.logoCenter}>
-            <Logo size={30} textSize={28} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.homeButton}
-            onPress={() => router.replace('/')}
-          >
-            <Text style={styles.homeButtonText}>Inicio</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ProfileHeader
+        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+        onGoHome={() => router.replace('/')}
+      />
 
       <View style={styles.mainWrapper}>
-        {/* Backdrop que cierra el drawer al tocar fuera */}
         {isMenuOpen && (
           <TouchableOpacity
             style={styles.drawerBackdrop}
@@ -660,34 +487,14 @@ export default function ProfileScreen() {
           />
         )}
 
-        {/* Drawer lateral — overlay absoluto, no empuja el contenido */}
         {isMenuOpen && (
-          <View style={styles.sidebar}>
-            <Text style={styles.sidebarTitle}>Mi cuenta</Text>
-            {MENU_ITEMS.map(({ key, emoji }) => (
-              <TouchableOpacity
-                key={key}
-                style={[
-                  styles.sidebarItem,
-                  activeTab === key && styles.sidebarItemActive,
-                ]}
-                onPress={() => {
-                  handleTabSelect(key)
-                  setIsMenuOpen(false)
-                }}
-              >
-                <Text style={styles.sidebarEmoji}>{emoji}</Text>
-                <Text
-                  style={[
-                    styles.sidebarText,
-                    activeTab === key && styles.sidebarTextActive,
-                  ]}
-                >
-                  {key}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <ProfileSidebar
+            activeTab={activeTab}
+            onSelectTab={(key) => {
+              handleTabSelect(key)
+              setIsMenuOpen(false)
+            }}
+          />
         )}
 
         <ScrollView
@@ -701,487 +508,3 @@ export default function ProfileScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#DDEAEA',
-  },
-
-  loaderContainer: {
-    flex: 1,
-    backgroundColor: '#DDEAEA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  topHeader: {
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
-  },
-
-  topHeaderContent: {
-    width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    position: 'relative',
-    minHeight: 44,
-  },
-
-  hamburgerButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: -8,
-    zIndex: 2,
-  },
-
-  hamburgerLine: {
-    width: 20,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: COLORS.primary,
-    marginVertical: 3,
-  },
-
-  logoCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'none',
-  },
-
-  homeButton: {
-    backgroundColor: '#F4F7F8',
-    borderWidth: 1,
-    borderColor: '#E4EBEE',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    zIndex: 2,
-  },
-
-  homeButtonText: {
-    color: COLORS.primary,
-    fontSize: FONT.small,
-    fontWeight: '700',
-  },
-
-  mainWrapper: {
-    flex: 1,
-  },
-
-  drawerBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    zIndex: 10,
-  },
-
-  sidebar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: 200,
-    backgroundColor: COLORS.white,
-    paddingTop: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-    borderRightWidth: 1,
-    borderRightColor: '#E6ECEC',
-    zIndex: 11,
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  sidebarTitle: {
-    fontSize: FONT.medium,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.md,
-  },
-
-  sidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-
-  sidebarItemActive: {
-    backgroundColor: '#E7F6F4',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primaryLight,
-  },
-
-  sidebarEmoji: {
-    fontSize: 18,
-  },
-
-  sidebarText: {
-    fontSize: FONT.regular,
-    color: COLORS.text,
-  },
-
-  sidebarTextActive: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-  },
-
-  contentArea: {
-    flex: 1,
-  },
-
-  contentContainer: {
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-  },
-
-  containerCenter: {
-    width: '100%',
-    maxWidth: 900,
-    alignSelf: 'center',
-  },
-
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 22,
-    padding: 22,
-    width: '100%',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.lg,
-  },
-
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-
-  editText: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-    fontSize: FONT.regular,
-    textAlign: 'right',
-  },
-
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    flexWrap: 'wrap', // Permite que si no hay espacio, baje a la siguiente fila
-    gap: SPACING.md,   // Espaciado consistente
-  },
-
-  avatarContainer: {
-    position: 'relative',
-    marginRight: SPACING.md,
-  },
-
-  avatarLarge: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    backgroundColor: '#D9F4F0',
-    borderWidth: 2,
-    borderColor: '#BDEAE4',
-  },
-
-  changePhotoOverlay: {
-    position: 'absolute',
-    bottom: -6,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.primary,
-    paddingVertical: 5,
-    borderRadius: 999,
-    alignItems: 'center',
-  },
-
-  changePhotoText: {
-    color: COLORS.white,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-
-  profileInfoText: {
-    flex: 1,
-    minWidth: 200, 
-  },
-
-  userName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-
-  userEmail: {
-    fontSize: FONT.regular,
-    color: COLORS.textSecondary,
-  },
-
-  separator: {
-    height: 1,
-    backgroundColor: COLORS.divider,
-    marginVertical: SPACING.md,
-  },
-
-  inputGroup: {
-    marginBottom: SPACING.md,
-    width: '100%',
-  },
-
-  label: {
-    fontSize: FONT.small,
-    color: COLORS.text,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-
-  readonlyField: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F8FCFC',
-  },
-
-  valueText: {
-    fontSize: FONT.regular,
-    color: COLORS.text,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#F8FCFC',
-    fontSize: FONT.regular,
-    color: COLORS.text,
-    width: '100%',
-  },
-
-  inputError: {
-    borderColor: COLORS.error,
-  },
-
-  textArea: {
-    minHeight: 86,
-    textAlignVertical: 'top',
-  },
-
-  charCount: {
-    textAlign: 'right',
-    marginTop: 4,
-    color: COLORS.textMuted,
-    fontSize: 12,
-  },
-
-  fieldErrorText: {
-    color: COLORS.error,
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  successText: {
-    color: COLORS.success,
-    marginBottom: SPACING.sm,
-    fontWeight: '600',
-  },
-
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.sm,
-    fontWeight: '600',
-  },
-
-  buttonRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
-  },
-
-  btnSave: {
-    backgroundColor: COLORS.primaryLight,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-  },
-
-  btnDisabled: {
-    opacity: 0.65,
-  },
-
-  btnCancel: {
-    backgroundColor: '#EDF5F4',
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-  },
-
-  btnTextWhite: {
-    color: COLORS.white,
-    fontWeight: '700',
-  },
-
-  btnTextCancel: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-
-  summarySeparator: {
-    height: 1,
-    backgroundColor: COLORS.divider,
-    marginVertical: SPACING.lg,
-  },
-
-  summarySection: {
-    gap: SPACING.sm,
-  },
-
-  summaryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-
-  summaryAction: {
-    color: '#C9941A',
-    fontWeight: '700',
-  },
-
-  summaryStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-
-  summaryStatusText: {
-    color: COLORS.textSecondary,
-  },
-
-  summaryMessageCard: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: 12,
-    padding: 16,
-  },
-
-  summaryEmptyTitle: {
-    fontSize: FONT.medium,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-
-  summaryEmptyText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT.regular,
-    marginBottom: 12,
-  },
-
-  summaryPublishButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.secondary,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-  },
-
-  summaryPublishButtonText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    fontSize: 13,
-  },
-
-  summaryErrorText: {
-    color: COLORS.error,
-    marginBottom: 8,
-  },
-
-  summaryRetryText: {
-    color: COLORS.primaryLight,
-    fontWeight: '700',
-  },
-
-  summaryList: {
-    gap: 10,
-  },
-
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#F7FAFA',
-  },
-
-  summaryImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.imagePlaceholder,
-  },
-
-  summaryContent: {
-    flex: 1,
-  },
-
-  summaryProductName: {
-    fontSize: FONT.regular,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-
-  summaryMeta: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
-  },
-
-  emptyText: {
-    textAlign: 'center',
-    color: COLORS.textSecondary,
-    fontSize: FONT.medium,
-    marginTop: 60,
-  },
-})
