@@ -119,8 +119,9 @@ export default function ProductDetailScreen() {
             status: product.status || "active",
           });
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
+          if (error?.reason === 'seller_blocked') setSellerUnavailable(true);
           setCatalogProduct(null);
         }
       } finally {

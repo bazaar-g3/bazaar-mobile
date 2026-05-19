@@ -83,7 +83,7 @@ export const styles = StyleSheet.create({
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",  // evita que el último renglón incompleto se extienda hasta los bordes
     gap: 12,
   },
 
