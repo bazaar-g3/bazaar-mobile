@@ -174,10 +174,21 @@ export async function listCatalogProducts(params = {}) {
  * Obtiene el detalle de un producto del catálogo.
  * @param productId - ID del producto.
  * @returns El detalle del producto.
+ * @throws {Error} Con `reason = 'seller_blocked'` si el vendedor está bloqueado.
  */
 export async function getCatalogProduct(productId) {
-  const response = await catalogApi.get(`/products/${productId}`)
-  return response.data?.product ?? null
+  try {
+    const response = await catalogApi.get(`/products/${productId}`)
+    return response.data?.product ?? null
+  } catch (error) {
+    const detail = error?.response?.data?.detail
+    if (detail === 'seller_blocked') {
+      const err = new Error('seller_blocked')
+      err.reason = 'seller_blocked'
+      throw err
+    }
+    return null
+  }
 }
 
 /**
