@@ -18,6 +18,7 @@ import Logo from '../components/Logo'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 import OAuthButtons from '../components/OAuthButtons'
 import { useCartContext } from '../context/CartContext'
+import AccountBlockedModal from '../components/AccountBlockedModal'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -29,6 +30,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [blockedModalVisible, setBlockedModalVisible] = useState(false)
 
   const successMessage = params.passwordReset === 'success'
     ? 'Se ha actualizado tu contraseña correctamente. Inicia sesión con la nueva contraseña.'
@@ -73,7 +75,10 @@ export default function LoginScreen() {
 
       router.replace(buildPostAuthDestination(params))
     } catch (err) {
-      if (err.response?.status === 401) {
+      if (err.response?.status === 403) {
+        // CA2: cuenta suspendida — mostramos modal en lugar de texto de error
+        setBlockedModalVisible(true)
+      } else if (err.response?.status === 401) {
         setError('Dirección de correo electrónico o contraseña incorrectas')
       } else if (err.response?.status === 422) {
         setError('Ingrese una dirección de correo electrónico válida')
@@ -86,6 +91,11 @@ export default function LoginScreen() {
   }
 
   return (
+    <>
+      <AccountBlockedModal
+        visible={blockedModalVisible}
+        onClose={() => setBlockedModalVisible(false)}
+      />
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
@@ -178,6 +188,7 @@ export default function LoginScreen() {
         </View>
       </View>
     </ScrollView>
+    </>
   )
 }
 

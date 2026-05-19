@@ -64,6 +64,7 @@ export default function ProductDetailScreen() {
   const [pendingLoginAction, setPendingLoginAction] = useState("add-to-cart");
   const { addItem, items: cartItems } = useCartContext();
   const [addingToCart, setAddingToCart] = useState(false);
+  const [sellerUnavailable, setSellerUnavailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +77,7 @@ export default function ProductDetailScreen() {
       }
 
       setLoadingCatalogProduct(true);
+      setSellerUnavailable(false);
 
       try {
         const product = await getCatalogProduct(String(id));
@@ -88,6 +90,17 @@ export default function ProductDetailScreen() {
         }
 
         const sellerProfile = await getPublicProfile(product.sellerId);
+
+        // Si el perfil del vendedor no está disponible (bloqueado/suspendido),
+        // marcamos el producto como de vendedor no disponible para mostrar
+        // un mensaje claro en lugar de "Producto no encontrado".
+        if (!sellerProfile) {
+          if (!cancelled) {
+            setSellerUnavailable(true);
+            setCatalogProduct(null);
+          }
+          return;
+        }
 
         if (!cancelled) {
           setCatalogProduct({
@@ -102,7 +115,7 @@ export default function ProductDetailScreen() {
             categoryName: product.category?.label || "Catalogo",
             description: product.description || "Sin descripcion disponible.",
             stock: Number(product.stock) || 0,
-            seller: sellerProfile?.fullName ?? `Vendedor #${product.sellerId}`,
+            seller: sellerProfile.fullName,
             status: product.status || "active",
           });
         }
@@ -491,11 +504,23 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={sharedStyles.safeArea}>
         <View style={sharedStyles.notFoundContainer}>
-          <Text style={sharedStyles.notFoundEmoji}>📦</Text>
-          <Text style={sharedStyles.notFoundTitle}>Producto no encontrado</Text>
-          <Text style={sharedStyles.notFoundText}>
-            No pudimos encontrar el producto que estás buscando.
-          </Text>
+          {sellerUnavailable ? (
+            <>
+              <Text style={sharedStyles.notFoundEmoji}>🚫</Text>
+              <Text style={sharedStyles.notFoundTitle}>Publicación no disponible</Text>
+              <Text style={sharedStyles.notFoundText}>
+                Este producto no está disponible porque la cuenta del vendedor fue suspendida.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={sharedStyles.notFoundEmoji}>📦</Text>
+              <Text style={sharedStyles.notFoundTitle}>Producto no encontrado</Text>
+              <Text style={sharedStyles.notFoundText}>
+                No pudimos encontrar el producto que estás buscando.
+              </Text>
+            </>
+          )}
           <TouchableOpacity
             style={sharedStyles.backHomeButton}
             onPress={() => router.replace("/home")}
