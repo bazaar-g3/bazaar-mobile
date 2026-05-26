@@ -153,7 +153,9 @@ export function mapCatalogProductToVentasItem(product) {
     id: String(product.id),
     titulo: product.name,
     precio: Number(product.price) || 0,
-    estado: product.status === 'disabled' ? 'inactiva' : 'activa',
+    estado: product.adminDisabled
+      ? 'bloqueado_admin'
+      : product.status === 'disabled' ? 'inactiva' : 'activa',
     stock: Number(product.stock) || 0,
     vendidos: product.sold_count ?? 0,
     imagen: product.images?.[0] || '📦',
