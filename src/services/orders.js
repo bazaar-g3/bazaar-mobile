@@ -22,15 +22,30 @@ export async function getOrderById(orderId) {
 }
 
 /**
+ * Previsualiza el desglose de precios del carrito con cupón opcional.
+ * No consume el cupón ni reserva stock — solo calcula el descuento.
+ * @param {string|null} couponCode - Código del cupón a evaluar, o null para sin descuento.
+ * @returns {{ subtotal, discount_amount, total, coupon_code, coupon_valid, coupon_error }}
+ */
+export async function previewCart(couponCode = null) {
+  const { data } = await ordersApi.post('/orders/cart/preview', {
+    coupon_code: couponCode,
+  })
+  return data
+}
+
+/**
  * Inicia el proceso de checkout.
  * @param {{ calle: string, altura: string, codigo_postal: string, zona?: string, departamento?: string }} deliveryAddress
  * @param {string} idempotencyKey - UUID único por intento de pago.
- * @returns {{ order_id, status, total, delivery_address, items, init_point }}
+ * @param {string|null} couponCode - Código de cupón a aplicar, o null.
+ * @returns {{ order_id, status, subtotal, discount_amount, total, coupon_code, delivery_address, items, init_point }}
  */
-export async function checkout(deliveryAddress, idempotencyKey) {
+export async function checkout(deliveryAddress, idempotencyKey, couponCode = null) {
   const { data } = await ordersApi.post('/orders/checkout', {
     delivery_address: deliveryAddress,
     idempotency_key: idempotencyKey,
+    coupon_code: couponCode,
   })
   return data
 }
