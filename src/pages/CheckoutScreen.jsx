@@ -26,7 +26,7 @@ import { useRouter } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 
 import { useCartContext } from '../context/CartContext'
-import { checkout, getOrderById, getCheckoutErrorMessage } from '../services/orders'
+import { checkout, getOrderById, getCheckoutErrorMessage, previewCart } from '../services/orders'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
@@ -68,6 +68,12 @@ export default function CheckoutScreen() {
   const [screen, setScreen] = useState('form') // 'form' | 'processing' | 'success' | 'failed' | 'pending'
   const [orderResult, setOrderResult] = useState(null)
   const pollTimerRef = useRef(null)
+
+  // Estado del cupón
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discount_amount, total }
+  const [couponError, setCouponError] = useState(null)
+  const [loadingCoupon, setLoadingCoupon] = useState(false)
 
   // Auth gate
   useEffect(() => {
@@ -167,7 +173,8 @@ export default function CheckoutScreen() {
     }
 
     try {
-      const result = await checkout(deliveryAddress, idempotencyKey)
+      const couponCode = appliedCoupon?.code ?? null
+      const result = await checkout(deliveryAddress, idempotencyKey, couponCode)
       setOrderResult(result)
 
       // Abrir MercadoPago Checkout Pro en el browser nativo / pestaña web
@@ -186,8 +193,49 @@ export default function CheckoutScreen() {
       )
     } catch (e) {
       setSubmitting(false)
-      setApiError(getCheckoutErrorMessage(e))
+      // Si el cupón fue invalidado entre el preview y el checkout (carrera de usos)
+      if (e?.response?.status === 422 && appliedCoupon) {
+        const detail = e?.response?.data?.detail
+        const msg = typeof detail === 'object' ? detail.message : (detail || 'El cupón ya no está disponible.')
+        setAppliedCoupon(null)
+        setCouponError(msg)
+      } else {
+        setApiError(getCheckoutErrorMessage(e))
+      }
     }
+  }
+
+  async function handleApplyCoupon() {
+    const code = couponInput.trim().toUpperCase()
+    if (!code) return
+
+    setLoadingCoupon(true)
+    setCouponError(null)
+    try {
+      const result = await previewCart(code)
+      if (result.coupon_valid === true) {
+        setAppliedCoupon({
+          code,
+          discount_amount: result.discount_amount,
+          total: result.total,
+        })
+        setCouponError(null)
+      } else {
+        setAppliedCoupon(null)
+        setCouponError(result.coupon_error || 'Cupón inválido.')
+      }
+    } catch {
+      setAppliedCoupon(null)
+      setCouponError('No se pudo verificar el cupón. Intentá nuevamente.')
+    } finally {
+      setLoadingCoupon(false)
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponError(null)
   }
 
   function handleRetry() {
@@ -350,12 +398,69 @@ export default function CheckoutScreen() {
               </View>
             ))}
 
+            {appliedCoupon && (
+              <View style={styles.summaryRow}>
+                <Text style={[styles.summaryItemName, styles.discountLabel]}>
+                  Descuento ({appliedCoupon.code})
+                </Text>
+                <Text style={[styles.summarySubtotal, styles.discountAmount]}>
+                  -${Number(appliedCoupon.discount_amount).toFixed(2)}
+                </Text>
+              </View>
+            )}
+
             <View style={styles.totalDivider} />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalAmount}>${Number(total).toFixed(2)}</Text>
+              <Text style={styles.totalAmount}>
+                ${Number(appliedCoupon ? appliedCoupon.total : total).toFixed(2)}
+              </Text>
             </View>
           </View>
+
+          {/* Cupón de descuento */}
+          <Text style={styles.sectionLabel}>Cupón de descuento</Text>
+          {appliedCoupon ? (
+            <View style={styles.couponAppliedRow}>
+              <View style={styles.couponAppliedBadge}>
+                <Ionicons name="pricetag" size={14} color={COLORS.success ?? '#22c55e'} />
+                <Text style={styles.couponAppliedText}>{appliedCoupon.code} aplicado</Text>
+              </View>
+              <TouchableOpacity onPress={handleRemoveCoupon} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.couponRow}>
+              <TextInput
+                style={[styles.input, styles.couponInput, { fontSize: isSmall ? FONT.small : FONT.regular }]}
+                placeholder="Código de cupón"
+                placeholderTextColor={COLORS.textMuted}
+                value={couponInput}
+                onChangeText={(v) => {
+                  setCouponInput(v.toUpperCase())
+                  if (couponError) setCouponError(null)
+                }}
+                autoCapitalize="characters"
+                returnKeyType="done"
+                maxLength={50}
+                editable={!loadingCoupon}
+              />
+              <TouchableOpacity
+                style={[styles.couponApplyButton, (!couponInput.trim() || loadingCoupon) && styles.payButtonDisabled]}
+                onPress={handleApplyCoupon}
+                disabled={!couponInput.trim() || loadingCoupon}
+              >
+                {loadingCoupon
+                  ? <ActivityIndicator size="small" color={COLORS.white} />
+                  : <Text style={styles.couponApplyText}>Aplicar</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
+          {couponError ? (
+            <Text style={styles.couponErrorText}>{couponError}</Text>
+          ) : null}
 
           {/* Dirección de entrega */}
           <Text style={styles.sectionLabel}>Dirección de entrega</Text>
@@ -660,6 +765,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     marginTop: SPACING.xs,
+  },
+
+  // Cupón
+  couponRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'center',
+  },
+  couponInput: {
+    flex: 1,
+  },
+  couponApplyButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+    minHeight: 48,
+  },
+  couponApplyText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: FONT.small,
+  },
+  couponAppliedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 12,
+  },
+  couponAppliedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  couponAppliedText: {
+    fontSize: FONT.small,
+    fontWeight: '700',
+    color: COLORS.success ?? '#22c55e',
+  },
+  couponErrorText: {
+    fontSize: FONT.small,
+    color: COLORS.error,
+    fontWeight: '600',
+    marginTop: -SPACING.xs,
+  },
+  discountLabel: {
+    color: COLORS.success ?? '#22c55e',
+  },
+  discountAmount: {
+    color: COLORS.success ?? '#22c55e',
   },
 
   // Pantallas de resultado
