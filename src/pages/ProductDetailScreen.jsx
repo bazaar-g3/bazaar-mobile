@@ -29,6 +29,7 @@ import {
   normalizeRouteParam,
 } from "../utils/authRedirect";
 import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
+import { getProductReputation, formatAverageScore } from "../services/reviews";
 
 import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
 
@@ -65,6 +66,8 @@ export default function ProductDetailScreen() {
   const { addItem, items: cartItems } = useCartContext();
   const [addingToCart, setAddingToCart] = useState(false);
   const [sellerUnavailable, setSellerUnavailable] = useState(false);
+  const [reputation, setReputation] = useState(null);
+  const [loadingReputation, setLoadingReputation] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +171,26 @@ export default function ProductDetailScreen() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!catalogProduct?.id) return;
+    let cancelled = false;
+
+    async function loadReputation() {
+      setLoadingReputation(true);
+      try {
+        const data = await getProductReputation(catalogProduct.id);
+        if (!cancelled) setReputation(data);
+      } catch {
+        if (!cancelled) setReputation({ product_id: catalogProduct.id, average_score: null, review_count: 0, reviews: [] });
+      } finally {
+        if (!cancelled) setLoadingReputation(false);
+      }
+    }
+
+    loadReputation();
+    return () => { cancelled = true; };
+  }, [catalogProduct?.id]);
 
   useEffect(() => {
     if (!id) return;
@@ -621,8 +644,8 @@ export default function ProductDetailScreen() {
               quantity={quantity}
               isOwnProduct={isOwnProduct}
               isAvailable={isAvailable}
-              maxAddable={maxAddable}                    
-              cartLimitReached={cartLimitReached}        
+              maxAddable={maxAddable}
+              cartLimitReached={cartLimitReached}
               onSellerPress={() => router.push(`/user/${product.sellerId}`)}
               onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
               onIncreaseQuantity={() => {
@@ -635,6 +658,62 @@ export default function ProductDetailScreen() {
               onShareProduct={handleOpenShareModal}
             />
           </View>
+
+          {/* ── Reputación del producto ── */}
+          <Text style={reviewStyles.sectionTitle}>Calificaciones del producto</Text>
+
+          {loadingReputation ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 8 }} />
+          ) : reputation && reputation.review_count > 0 ? (
+            <View style={reviewStyles.reputationCard}>
+              <View style={reviewStyles.reputationSummary}>
+                <View style={reviewStyles.reputationScore}>
+                  <Text style={reviewStyles.reputationScoreValue}>
+                    {formatAverageScore(reputation.average_score)}
+                  </Text>
+                  <Text style={reviewStyles.reputationStarIcon}>★</Text>
+                </View>
+                <Text style={reviewStyles.reputationCount}>
+                  {reputation.review_count}{' '}
+                  {reputation.review_count === 1 ? 'calificación' : 'calificaciones'}
+                </Text>
+              </View>
+
+              <View style={reviewStyles.divider} />
+
+              {reputation.reviews.map((review) => (
+                <View key={String(review.id)} style={reviewStyles.reviewItem}>
+                  <View style={reviewStyles.reviewHeader}>
+                    <View style={reviewStyles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Text
+                          key={star}
+                          style={[
+                            reviewStyles.reviewStar,
+                            { color: star <= review.score ? '#f59e0b' : COLORS.divider },
+                          ]}
+                        >
+                          ★
+                        </Text>
+                      ))}
+                    </View>
+                    <Text style={reviewStyles.reviewDate}>
+                      {new Date(review.created_at).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                  {review.comment ? (
+                    <Text style={reviewStyles.reviewComment}>{review.comment}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={reviewStyles.emptyText}>Este producto aún no tiene calificaciones</Text>
+          )}
         </ScrollView>
 
         <LoginPromptModal
@@ -653,6 +732,94 @@ export default function ProductDetailScreen() {
     </SafeAreaView>
   );
 }
+
+const reviewStyles = StyleSheet.create({
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  reputationCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 20,
+  },
+  reputationSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 10,
+  },
+  reputationScore: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  reputationScoreValue: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    lineHeight: 34,
+  },
+  reputationStarIcon: {
+    fontSize: 20,
+    color: '#f59e0b',
+  },
+  reputationCount: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.divider,
+    marginBottom: 10,
+  },
+  reviewItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewStar: {
+    fontSize: 15,
+  },
+  reviewDate: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  reviewComment: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 20,
+  },
+});
 
 const headerStyles = StyleSheet.create({
   topHeader: {
