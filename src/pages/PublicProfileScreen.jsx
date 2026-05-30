@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
 import { COLORS } from '../constants/colors'
 import { listSellerProducts, PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
+import { getSellerReputation, formatAverageScore } from '../services/reviews'
 
 export default function PublicProfileScreen() {
   const { userId } = useLocalSearchParams()
@@ -23,6 +24,8 @@ export default function PublicProfileScreen() {
   const [errorType, setErrorType] = useState(null) // null | '404' | 'generic'
   const [products, setProducts] = useState([])
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [reputation, setReputation] = useState(null)
+  const [loadingReputation, setLoadingReputation] = useState(false)
 
   const fetchProfile = async () => {
     setLoading(true)
@@ -54,10 +57,25 @@ export default function PublicProfileScreen() {
     }
   }
 
+  const fetchReputation = async () => {
+    setLoadingReputation(true)
+    try {
+      const data = await getSellerReputation(userId)
+      setReputation(data)
+    } catch {
+      setReputation({ seller_id: String(userId), average_score: null, review_count: 0, reviews: [] })
+    } finally {
+      setLoadingReputation(false)
+    }
+  }
+
   useEffect(() => {
     async function load() {
       const ok = await fetchProfile()
-      if (ok) fetchProducts()
+      if (ok) {
+        fetchProducts()
+        fetchReputation()
+      }
     }
     load()
   }, [userId])
@@ -120,6 +138,62 @@ export default function PublicProfileScreen() {
           <Text style={styles.description}>{description}</Text>
         </View>
 
+        {/* ── Sección de Reputación ─────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>Reputación del vendedor</Text>
+
+        {loadingReputation ? (
+          <ActivityIndicator size="small" color={COLORS.primaryLight} style={styles.reputationLoader} />
+        ) : reputation && reputation.review_count > 0 ? (
+          <View style={styles.reputationCard}>
+            <View style={styles.reputationSummary}>
+              <View style={styles.reputationScore}>
+                <Text style={styles.reputationScoreValue}>
+                  {formatAverageScore(reputation.average_score)}
+                </Text>
+                <Text style={styles.reputationStarIcon}>★</Text>
+              </View>
+              <Text style={styles.reputationCount}>
+                {reputation.review_count} {reputation.review_count === 1 ? 'calificación' : 'calificaciones'}
+              </Text>
+            </View>
+
+            <View style={styles.reviewsDivider} />
+
+            {reputation.reviews.map((review) => (
+              <View key={String(review.id)} style={styles.reviewItem}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewStars}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Text
+                        key={star}
+                        style={[
+                          styles.reviewStar,
+                          { color: star <= review.score ? COLORS.secondary : COLORS.textMuted },
+                        ]}
+                      >
+                        ★
+                      </Text>
+                    ))}
+                  </View>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.created_at).toLocaleDateString('es-AR', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                {review.comment ? (
+                  <Text style={styles.reviewComment}>{review.comment}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.emptyText}>Este vendedor aún no tiene calificaciones</Text>
+        )}
+
+        {/* ── Publicaciones activas ─────────────────────────────────────── */}
         <Text style={styles.sectionTitle}>Publicaciones activas</Text>
 
         {loadingProducts ? (
@@ -259,6 +333,80 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+  // ── Reputación ──────────────────────────────────────────────────────────
+  reputationLoader: {
+    marginTop: 8,
+  },
+  reputationCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  reputationSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  reputationScore: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  reputationScoreValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    lineHeight: 36,
+  },
+  reputationStarIcon: {
+    fontSize: 22,
+    color: COLORS.secondary,
+  },
+  reputationCount: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  reviewsDivider: {
+    height: 1,
+    backgroundColor: COLORS.divider,
+    marginBottom: 12,
+  },
+  reviewItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewStar: {
+    fontSize: 16,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  // ── Productos ───────────────────────────────────────────────────────────
   productCard: {
     flexDirection: 'row',
     backgroundColor: COLORS.white,

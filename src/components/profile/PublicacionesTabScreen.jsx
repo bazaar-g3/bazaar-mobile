@@ -113,7 +113,7 @@ export default function VentasTab({
   async function handleTogglePublicacion(id) {
     const pub = publicaciones.find((p) => p.id === id)
 
-    if (!pub) return
+    if (!pub || pub.estado === 'bloqueado_admin') return
 
     try {
       const updatedProduct = await updateSellerProductStatus({
@@ -267,7 +267,7 @@ export default function VentasTab({
   async function handleUpdateStock(id, nuevoStock) {
     const pub = publicaciones.find((p) => p.id === id)
 
-    if (!pub) return
+    if (!pub || pub.estado === 'bloqueado_admin') return
 
     try {
       const updatedProduct = await updateSellerProductStock({
@@ -303,7 +303,7 @@ export default function VentasTab({
         .toLowerCase()
         .includes(busqueda.toLowerCase())
 
-      const coincideFiltro = filtrosActivos.includes(p.estado)
+      const coincideFiltro = p.estado === 'bloqueado_admin' || filtrosActivos.includes(p.estado)
 
       return coincideBusqueda && coincideFiltro
     })
@@ -333,31 +333,45 @@ export default function VentasTab({
           <View
             style={[
               styles.estadoBadge,
-              pub.estado === 'activa'
-                ? styles.estadoActiva
-                : styles.estadoInactiva,
+              pub.estado === 'bloqueado_admin'
+                ? styles.estadoBloqueado
+                : pub.estado === 'activa'
+                  ? styles.estadoActiva
+                  : styles.estadoInactiva,
             ]}
           >
             <Text
               style={[
                 styles.estadoText,
-                pub.estado === 'activa'
-                  ? styles.estadoTextActiva
-                  : styles.estadoTextInactiva,
+                pub.estado === 'bloqueado_admin'
+                  ? styles.estadoTextBloqueado
+                  : pub.estado === 'activa'
+                    ? styles.estadoTextActiva
+                    : styles.estadoTextInactiva,
               ]}
             >
-              {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+              {pub.estado === 'bloqueado_admin' ? 'Bloqueado' : pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
             </Text>
           </View>
         </View>
 
+        {pub.estado === 'bloqueado_admin' && (
+          <Text style={styles.bloqueadoAviso}>
+            ⚠️ El administrador deshabilitó esta publicación. No podés modificarla hasta que sea rehabilitada.
+          </Text>
+        )}
+
         <View style={styles.pubCardStats}>
           <View style={styles.pubCardStat}>
             <Text style={styles.pubCardStatLabel}>Stock</Text>
-            <EditableStockStepper
-              value={pub.stock}
-              onChange={(n) => handleUpdateStock(pub.id, n)}
-            />
+            {pub.estado === 'bloqueado_admin' ? (
+              <Text style={styles.pubCardStatValue}>{pub.stock}</Text>
+            ) : (
+              <EditableStockStepper
+                value={pub.stock}
+                onChange={(n) => handleUpdateStock(pub.id, n)}
+              />
+            )}
           </View>
 
           <View style={styles.pubCardStat}>
@@ -369,17 +383,19 @@ export default function VentasTab({
             <Text style={styles.pubCardStatLabel}>Visible</Text>
             <StateSwitch
               value={pub.estado === 'activa'}
-              onToggle={() => handleTogglePublicacion(pub.id)}
+              onToggle={pub.estado === 'bloqueado_admin' ? undefined : () => handleTogglePublicacion(pub.id)}
             />
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.pubCardBtnEditar}
-          onPress={() => handleEditarPublicacion(pub)}
-        >
-          <Text style={styles.pubCardBtnEditarText}>Editar publicación</Text>
-        </TouchableOpacity>
+        {pub.estado !== 'bloqueado_admin' && (
+          <TouchableOpacity
+            style={styles.pubCardBtnEditar}
+            onPress={() => handleEditarPublicacion(pub)}
+          >
+            <Text style={styles.pubCardBtnEditarText}>Editar publicación</Text>
+          </TouchableOpacity>
+        )}
       </View>
     )
   }
@@ -414,10 +430,14 @@ export default function VentasTab({
         </Text>
 
         <View style={[styles.stockCell, styles.colStock]}>
-          <EditableStockStepper
-            value={pub.stock}
-            onChange={(n) => handleUpdateStock(pub.id, n)}
-          />
+          {pub.estado === 'bloqueado_admin' ? (
+            <Text style={[styles.colText, styles.alignCenter]}>{pub.stock}</Text>
+          ) : (
+            <EditableStockStepper
+              value={pub.stock}
+              onChange={(n) => handleUpdateStock(pub.id, n)}
+            />
+          )}
         </View>
 
         <Text style={[styles.colText, styles.alignCenter, styles.colVendidos]}>
@@ -428,20 +448,24 @@ export default function VentasTab({
           <View
             style={[
               styles.estadoBadge,
-              pub.estado === 'activa'
-                ? styles.estadoActiva
-                : styles.estadoInactiva,
+              pub.estado === 'bloqueado_admin'
+                ? styles.estadoBloqueado
+                : pub.estado === 'activa'
+                  ? styles.estadoActiva
+                  : styles.estadoInactiva,
             ]}
           >
             <Text
               style={[
                 styles.estadoText,
-                pub.estado === 'activa'
-                  ? styles.estadoTextActiva
-                  : styles.estadoTextInactiva,
+                pub.estado === 'bloqueado_admin'
+                  ? styles.estadoTextBloqueado
+                  : pub.estado === 'activa'
+                    ? styles.estadoTextActiva
+                    : styles.estadoTextInactiva,
               ]}
             >
-              {pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
+              {pub.estado === 'bloqueado_admin' ? 'Bloqueado' : pub.estado.charAt(0).toUpperCase() + pub.estado.slice(1)}
             </Text>
           </View>
         </View>
@@ -449,17 +473,19 @@ export default function VentasTab({
         <View style={[styles.switchCell, styles.colVisible]}>
           <StateSwitch
             value={pub.estado === 'activa'}
-            onToggle={() => handleTogglePublicacion(pub.id)}
+            onToggle={pub.estado === 'bloqueado_admin' ? undefined : () => handleTogglePublicacion(pub.id)}
           />
         </View>
 
         <View style={[styles.actionsCell, styles.colAcciones]}>
-          <TouchableOpacity
-            style={styles.btnEditar}
-            onPress={() => handleEditarPublicacion(pub)}
-          >
-            <Text style={styles.btnEditarText}>Editar</Text>
-          </TouchableOpacity>
+          {pub.estado !== 'bloqueado_admin' && (
+            <TouchableOpacity
+              style={styles.btnEditar}
+              onPress={() => handleEditarPublicacion(pub)}
+            >
+              <Text style={styles.btnEditarText}>Editar</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     )
