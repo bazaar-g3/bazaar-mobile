@@ -17,6 +17,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 
 import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
 import { createSellerReview, createProductReview } from '../services/reviews'
+import { getPublicProfile } from '../services/user'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
@@ -123,6 +124,7 @@ export default function OrdersScreen() {
   const [confirmDeliveryError, setConfirmDeliveryError] = useState(null)
   const [sellerReviews, setSellerReviews] = useState({})
   const [productReviews, setProductReviews] = useState({})
+  const [sellerNames, setSellerNames] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -172,11 +174,7 @@ export default function OrdersScreen() {
       setSelectedOrder(detail)
       if (detail.status === 'delivered') {
         const uniqueSellerIds = [
-          ...new Set(
-            (detail.fulfillments?.map((f) => f.seller_id) ?? []).concat(
-              detail.items?.map((i) => i.seller_id) ?? []
-            )
-          ),
+          ...new Set((detail.fulfillments?.map((f) => f.seller_id) ?? []).filter(Boolean)),
         ]
         const initSellers = {}
         uniqueSellerIds.forEach((sid) => { initSellers[sid] = _initReviewEntry() })
@@ -187,6 +185,13 @@ export default function OrdersScreen() {
           initProducts[String(item.product_id)] = _initReviewEntry()
         })
         setProductReviews(initProducts)
+
+        const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+        const names = {}
+        uniqueSellerIds.forEach((sid, i) => {
+          names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+        })
+        setSellerNames(names)
       }
     } catch (e) {
       setDetailError(e)
@@ -205,12 +210,31 @@ export default function OrdersScreen() {
     setConfirmingDelivery(true)
     setConfirmDeliveryError(null)
     try {
-      const updated = await confirmDelivery(selectedOrder.id)
-      // Actualizar la orden en el modal y en la lista sin re-fetchar todo
+      const sellerId = selectedOrder.fulfillments?.[0]?.seller_id ?? selectedOrder.items?.[0]?.seller_id
+      const updated = await confirmDelivery(selectedOrder.id, sellerId)
       setSelectedOrder((prev) => ({ ...prev, status: updated.status }))
       setOrders((prev) =>
         prev.map((o) => (o.id === updated.order_id ? { ...o, status: updated.status } : o))
       )
+      // Inicializar estados de review ahora que la orden está entregada
+      const currentOrder = selectedOrder
+      const uniqueSellerIds = [
+        ...new Set((currentOrder.fulfillments?.map((f) => f.seller_id) ?? []).filter(Boolean)),
+      ]
+      const initSellers = {}
+      uniqueSellerIds.forEach((sid) => { initSellers[sid] = _initReviewEntry() })
+      setSellerReviews(initSellers)
+      const initProducts = {}
+      ;(currentOrder.items ?? []).forEach((item) => {
+        initProducts[String(item.product_id)] = _initReviewEntry()
+      })
+      setProductReviews(initProducts)
+      const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+      const names = {}
+      uniqueSellerIds.forEach((sid, i) => {
+        names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+      })
+      setSellerNames(names)
     } catch (e) {
       const detail = e?.response?.data?.detail
       setConfirmDeliveryError(
@@ -584,7 +608,7 @@ export default function OrdersScreen() {
                     return (
                       <View key={sellerId} style={styles.reviewCard}>
                         <Text style={styles.reviewEntityName} numberOfLines={1}>
-                          Vendedor #{String(sellerId).slice(0, 8)}
+                          {sellerNames[sellerId] ?? `${sellerId}`}
                         </Text>
                         {entry.done ? (
                           <View style={styles.reviewDoneRow}>
