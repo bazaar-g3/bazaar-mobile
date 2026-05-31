@@ -20,6 +20,13 @@ import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 
 const LIMIT = 20;
 
+const SORT_TITLE = {
+  newest:     "PRODUCTOS RECIENTES",
+  price_asc:  "MENOR PRECIO PRIMERO",
+  price_desc: "MAYOR PRECIO PRIMERO",
+  relevance:  "POR RELEVANCIA",
+};
+
 export default function ProductListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -30,7 +37,6 @@ export default function ProductListScreen() {
   const categoryName = normalizeRouteParam(params.categoryName);
   const categorySlug = normalizeRouteParam(params.categorySlug);
   const sortBy = normalizeRouteParam(params.sortBy);
-  const section = normalizeRouteParam(params.section);
   const initialMinPrice = params.minPrice ? Number(params.minPrice) : PRICE_MIN_LIMIT;
   const initialMaxPrice = params.maxPrice ? Number(params.maxPrice) : PRICE_MAX_LIMIT;
 
@@ -58,7 +64,6 @@ export default function ProductListScreen() {
       : null
   );
   const [activeSortBy, setActiveSortBy] = useState(sortBy || null);
-  const [activeSection, setActiveSection] = useState(section || null);
   const [minPrice, setMinPrice] = useState(initialMinPrice);
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
 
@@ -66,10 +71,10 @@ export default function ProductListScreen() {
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (activeCategory) count++;
-    if (activeSortBy || activeSection) count++;
+    if (activeSortBy) count++;
     if (minPrice > PRICE_MIN_LIMIT || maxPrice < PRICE_MAX_LIMIT) count++;
     return count;
-  }, [activeCategory, activeSortBy, activeSection, minPrice, maxPrice]);
+  }, [activeCategory, activeSortBy, minPrice, maxPrice]);
 
   // ── Carga de categorías ──
   const loadCategories = useCallback(async () => {
@@ -116,19 +121,13 @@ export default function ProductListScreen() {
 
         if (search) requestParams.search = search;
         if (activeCategory?.slug) requestParams.category = activeCategory.slug;
-        if (activeSortBy === "recent" || activeSection === "recommended") {
-          requestParams.sort = "recent";
-        }
+        if (activeSortBy) requestParams.sort = activeSortBy;
         // CA2: Filtros de precio (solo si difieren de los límites por defecto)
         if (minPrice > PRICE_MIN_LIMIT) requestParams.minPrice = minPrice;
         if (maxPrice < PRICE_MAX_LIMIT) requestParams.maxPrice = maxPrice;
 
         const response = await listCatalogProducts(requestParams);
-        const mappedProducts = response.map((product) =>
-          mapProductToListItem(product, {
-            recommended: activeSection === "recommended",
-          })
-        );
+        const mappedProducts = response.map((product) => mapProductToListItem(product));
 
         setProducts((prev) => (replace ? mappedProducts : [...prev, ...mappedProducts]));
         setHasMore(response.length === LIMIT);
@@ -143,7 +142,7 @@ export default function ProductListScreen() {
         setLoadingMore(false);
       }
     },
-    [search, activeCategory, activeSortBy, activeSection, minPrice, maxPrice]
+    [search, activeCategory, activeSortBy, minPrice, maxPrice]
   );
 
   const loadMore = () => {
@@ -168,10 +167,9 @@ export default function ProductListScreen() {
   const screenTitle = useMemo(() => {
     if (search) return `RESULTADOS PARA "${String(search).toUpperCase()}"`;
     if (activeCategory?.label) return `CATEGORÍA: ${String(activeCategory.label).toUpperCase()}`;
-    if (activeSortBy === "recent") return "PRODUCTOS RECIENTES";
-    if (activeSection === "recommended") return "PRODUCTOS RECOMENDADOS";
+    if (activeSortBy && SORT_TITLE[activeSortBy]) return SORT_TITLE[activeSortBy];
     return "TODOS LOS PRODUCTOS";
-  }, [search, activeCategory, activeSortBy, activeSection]);
+  }, [search, activeCategory, activeSortBy]);
 
   const screenSubtitle = useMemo(() => {
     if (loadingProducts) return "Cargando productos...";
@@ -229,7 +227,6 @@ export default function ProductListScreen() {
   const clearFilters = () => {
     setActiveCategory(null);
     setActiveSortBy(null);
-    setActiveSection(null);
     setMinPrice(PRICE_MIN_LIMIT);
     setMaxPrice(PRICE_MAX_LIMIT);
   };
@@ -242,6 +239,8 @@ export default function ProductListScreen() {
         onSearch={handleSearch}
         onOpenFilters={() => setFiltersVisible(true)}
         activeFiltersCount={activeFiltersCount}
+        activeSortBy={activeSortBy}
+        onSortChange={(value) => setActiveSortBy(value)}
       />
 
       <View style={styles.mainContainer}>
@@ -272,16 +271,6 @@ export default function ProductListScreen() {
         minPrice={minPrice}
         maxPrice={maxPrice}
         onPriceChange={handlePriceChange}
-        activeSortBy={activeSortBy}
-        activeSection={activeSection}
-        onSortRecent={() => {
-          setActiveSortBy("recent");
-          setActiveSection(null);
-        }}
-        onSortRecommended={() => {
-          setActiveSection("recommended");
-          setActiveSortBy(null);
-        }}
         onClearFilters={clearFilters}
       />
     </SafeAreaView>
