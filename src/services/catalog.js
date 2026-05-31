@@ -201,7 +201,7 @@ export async function listRecentProducts() {
   return listCatalogProducts({
     status: 'active',
     onlyAvailable: false,
-    sort: 'recent',
+    sort: 'newest',
     limit: 20,
     offset: 0,
   })
@@ -225,7 +225,7 @@ export async function listSellerProducts({
   const params = {
     sellerId,
     onlyAvailable,
-    sort: 'recent',
+    sort: 'newest',
     limit,
     offset,
   }
@@ -319,7 +319,7 @@ export async function listRecommendedProducts() {
   return listCatalogProducts({
     status: 'active',
     onlyAvailable: false,
-    sort: 'recent',
+    sort: 'newest',
     limit: 10,
     offset: 0,
   })
