@@ -108,7 +108,6 @@ function _initReviewEntry() {
 export default function OrdersScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
-  const [sellerNames, setSellerNames] = useState({})
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
