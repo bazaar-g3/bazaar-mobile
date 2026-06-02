@@ -4,6 +4,21 @@ import catalogApi, { getCatalogApiBaseUrl } from '../api/catalogApi'
 export const PRODUCT_IMAGE_PLACEHOLDER = 'https://via.placeholder.com/500x350.png?text=Producto'
 
 /**
+ * Reemplaza localhost en URLs de imágenes (MinIO) con la IP real del servidor.
+ * Necesario cuando la app corre en un dispositivo físico.
+ */
+function fixImageUrl(url) {
+  if (!url || typeof url !== 'string') return url
+  const base = process.env.EXPO_PUBLIC_CATALOG_API_URL ?? ''
+  const match = base.match(/https?:\/\/([^:/]+)/)
+  const serverHost = match?.[1]
+  if (serverHost && serverHost !== 'localhost') {
+    return url.replace(/localhost/g, serverHost)
+  }
+  return url
+}
+
+/**
  * Normaliza el nombre de un campo de issue.
  * @param field - El nombre del campo.
  * @returns El nombre del campo normalizado.
@@ -136,7 +151,7 @@ export function mapCatalogProductToCard(product, overrides = {}) {
     id: String(product.id),
     name: product.name,
     price: Number(product.price) || 0,
-    image: product.images?.[0] || PRODUCT_IMAGE_PLACEHOLDER,
+    image: fixImageUrl(product.images?.[0]) || PRODUCT_IMAGE_PLACEHOLDER,
     tag: overrides.tag || product.tag,
     categoryId: product.category?.id ? String(product.category.id) : undefined,
     categoryName: product.category?.label || '',
@@ -338,6 +353,22 @@ export async function listRecommendedProducts() {
  */
 export async function listPopularProducts({ limit = 10 } = {}) {
   const response = await catalogApi.get('/products/popular', { params: { limit } })
+  return response.data?.products ?? []
+}
+
+/**
+ * Lista productos recomendados según la categoría preferida del usuario.
+ *
+ * Requiere autenticación; catalogApi inyecta el JWT automáticamente.
+ * Si el usuario no tiene historial de compras o no está autenticado,
+ * el endpoint retorna lista vacía y la sección no se muestra.
+ *
+ * @param {object} params - Parámetros opcionales.
+ * @param {number} params.limit - Cantidad máxima de productos (1-50).
+ * @returns {Promise<Array>} Una lista de productos de la categoría preferida, o vacía.
+ */
+export async function listForYouProducts({ limit = 10 } = {}) {
+  const response = await catalogApi.get('/products/recommended', { params: { limit } })
   return response.data?.products ?? []
 }
 

@@ -18,6 +18,7 @@ export default function SearchBar({ value, onChangeText, onSearch, style }) {
         placeholderTextColor="#8E8E93"
         style={styles.searchInput}
         onSubmitEditing={onSearch}
+        returnKeyType="search"
       />
       <TouchableOpacity style={styles.searchButton} onPress={onSearch} accessibilityLabel="Buscar">
         <Ionicons name="search" size={20} color={COLORS.white} />

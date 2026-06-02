@@ -6,15 +6,14 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Modal,
   Platform,
   TextInput,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
-
 import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
 import { createSellerReview, createProductReview } from '../services/reviews'
 import { getPublicProfile } from '../services/user'
@@ -36,7 +35,6 @@ const STATUS_CONFIG = {
   refund_processed:   { label: 'Reembolso procesado',  color: COLORS.success,      icon: 'wallet-outline' },
 }
 
-// Filtros reducidos para mobile — los más relevantes primero
 const FILTERS = [
   { key: null,               label: 'Todas' },
   { key: 'pending_payment',  label: 'Pendiente' },
@@ -65,7 +63,6 @@ function formatDateTime(iso) {
 
 function formatDeliveryAddress(addr) {
   if (!addr) return ''
-  // Retrocompatibilidad: si por alguna razón llega como string, lo devuelve directo
   if (typeof addr === 'string') return addr
   const { calle, altura, departamento, zona, codigo_postal } = addr
   let line = `${calle ?? ''} ${altura ?? ''}`.trim()
@@ -111,7 +108,7 @@ function _initReviewEntry() {
 export default function OrdersScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
-
+  const [sellerNames, setSellerNames] = useState({})
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
@@ -192,6 +189,14 @@ export default function OrdersScreen() {
           names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
         })
         setSellerNames(names)
+      } else if (Array.isArray(detail.fulfillments) && detail.fulfillments.length > 0) {
+        const uniqueSellerIds = [...new Set(detail.fulfillments.map(f => f.seller_id).filter(Boolean))]
+        const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+        const names = {}
+        uniqueSellerIds.forEach((sid, i) => {
+          names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+        })
+        setSellerNames(names)
       }
     } catch (e) {
       setDetailError(e)
@@ -205,16 +210,17 @@ export default function OrdersScreen() {
     setDetailError(null)
   }
 
-  async function handleConfirmDelivery() {
-    if (!selectedOrder) return
+  // Ahora recibe el sellerId del paquete específico que se está confirmando
+  async function handleConfirmDelivery(sellerId) {
+    if (!selectedOrder || !sellerId) return
     setConfirmingDelivery(true)
     setConfirmDeliveryError(null)
     try {
-      const sellerId = selectedOrder.fulfillments?.[0]?.seller_id ?? selectedOrder.items?.[0]?.seller_id
-      const updated = await confirmDelivery(selectedOrder.id, sellerId)
-      setSelectedOrder((prev) => ({ ...prev, status: updated.status }))
+      await confirmDelivery(selectedOrder.id, sellerId)
+      const freshDetail = await getOrderById(selectedOrder.id)
+      setSelectedOrder(freshDetail)
       setOrders((prev) =>
-        prev.map((o) => (o.id === updated.order_id ? { ...o, status: updated.status } : o))
+        prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: freshDetail.status } : o))
       )
       // Inicializar estados de review ahora que la orden está entregada
       const currentOrder = selectedOrder
@@ -325,7 +331,6 @@ export default function OrdersScreen() {
           <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
         </View>
 
-        {/* Aviso inline para pago rechazado */}
         {isRejected && (
           <View style={styles.orderCardRejectedHint}>
             <Ionicons name="alert-circle-outline" size={13} color={COLORS.error} />
@@ -340,7 +345,6 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      {/* ── Header fijo ─────────────────────────────────────────── */}
       <View style={[styles.header, { paddingHorizontal: hPad }]}>
         <Text style={[styles.title, { fontSize: isSmall ? FONT.large : 26 }]}>
           Mis órdenes
@@ -350,7 +354,6 @@ export default function OrdersScreen() {
         )}
       </View>
 
-      {/* ── Filtros full-width (scroll horizontal sin padding lateral) ─ */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -379,7 +382,6 @@ export default function OrdersScreen() {
         })}
       </ScrollView>
 
-      {/* ── Lista ────────────────────────────────────────────────── */}
       <View style={[styles.listContainer, isTablet && styles.listContainerTablet]}>
         {loading && orders.length === 0 ? (
           <View style={styles.fullCenter}>
@@ -424,7 +426,6 @@ export default function OrdersScreen() {
         )}
       </View>
 
-      {/* ── Modal de detalle ─────────────────────────────────────── */}
       <Modal
         visible={selectedOrder !== null}
         animationType="slide"
@@ -464,16 +465,15 @@ export default function OrdersScreen() {
               contentContainerStyle={styles.modalBody}
               showsVerticalScrollIndicator={false}
             >
-              {/* Orden ID + badge */}
               <View style={styles.detailHero}>
                 <Text style={styles.detailOrderId}>
                   Orden #{String(selectedOrder.id).slice(0, 8).toUpperCase()}
                 </Text>
+                {/* ESTADO GLOBAL */}
                 <StatusBadge status={selectedOrder.status} />
                 <Text style={styles.detailMeta}>{formatDate(selectedOrder.created_at)}</Text>
               </View>
 
-              {/* Banner de pago rechazado */}
               {selectedOrder.status === 'payment_rejected' && (
                 <View style={styles.rejectedBanner}>
                   <View style={styles.rejectedBannerTop}>
@@ -494,7 +494,6 @@ export default function OrdersScreen() {
                 </View>
               )}
 
-              {/* Dirección */}
               {selectedOrder.delivery_address ? (
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Dirección de entrega</Text>
@@ -507,26 +506,12 @@ export default function OrdersScreen() {
                 </View>
               ) : null}
 
-              {/* Código de seguimiento */}
-              {selectedOrder.tracking_code && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.sectionLabel}>Código de seguimiento</Text>
-                  <View style={styles.detailSectionCard}>
-                    <Ionicons name="barcode-outline" size={16} color={COLORS.textSecondary} />
-                    <Text style={[styles.detailText, styles.trackingCode]}>
-                      {selectedOrder.tracking_code}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Productos */}
+              {/* PRODUCTOS COMPRADOS (Restaurado para que se vea siempre) */}
               {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 && (
                 <View style={styles.detailSection}>
-                  <Text style={styles.sectionLabel}>Productos</Text>
+                  <Text style={styles.sectionLabel}>Productos comprados</Text>
                   {selectedOrder.items.map((item, i) => {
-                    const displayName = item.product_name ?? item.name ?? null
-                    const shortId = String(item.product_id ?? '').slice(0, 8)
+                    const displayName = item.product_name ?? item.name ?? `Producto ${String(item.product_id).slice(0, 8)}`
                     return (
                       <View key={i} style={styles.detailItem}>
                         <TouchableOpacity
@@ -538,7 +523,7 @@ export default function OrdersScreen() {
                           style={styles.detailItemNameRow}
                         >
                           <Text style={styles.detailItemName} numberOfLines={2}>
-                            {displayName ?? `Producto ${shortId}`}
+                            {displayName}
                           </Text>
                           <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
                         </TouchableOpacity>
@@ -556,7 +541,46 @@ export default function OrdersScreen() {
                 </View>
               )}
 
-              {/* Total */}
+              {/* TRACKING POR PAQUETES (Solo se va a ver cuando actualices el back) */}
+              {Array.isArray(selectedOrder.fulfillments) && selectedOrder.fulfillments.length > 0 && (
+                <View style={styles.detailSection}>
+                  <Text style={styles.sectionLabel}>Seguimiento por paquetes</Text>
+                  
+                  {selectedOrder.fulfillments.map((fulfillment, fIndex) => (
+                    <View key={`f-${fulfillment.seller_id}`} style={styles.packageCard}>
+                      <View style={styles.packageHeader}>
+                        <Text style={styles.packageTitle}>Paquete de {sellerNames[fulfillment.seller_id] || `Vendedor`}</Text>
+                        <StatusBadge status={fulfillment.status} small />
+                      </View>
+
+                      {fulfillment.tracking_code && (
+                        <View style={[styles.detailSectionCard, { marginTop: 0, marginBottom: 10 }]}>
+                          <Ionicons name="barcode-outline" size={16} color={COLORS.textSecondary} />
+                          <Text style={[styles.detailText, styles.trackingCode]}>
+                            {fulfillment.tracking_code}
+                          </Text>
+                        </View>
+                      )}
+
+                      {fulfillment.status === 'shipped' && (
+                        <TouchableOpacity
+                          style={[styles.confirmDeliveryBtn, confirmingDelivery && styles.confirmDeliveryBtnDisabled, { marginTop: 10 }]}
+                          onPress={() => handleConfirmDelivery(fulfillment.seller_id)}
+                          disabled={confirmingDelivery}
+                          activeOpacity={0.85}
+                        >
+                          {confirmingDelivery ? (
+                            <ActivityIndicator color={COLORS.white} size="small" />
+                          ) : (
+                            <Text style={styles.confirmDeliveryBtnText}>Confirmar que recibí este paquete</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )}
+
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total</Text>
                 <Text style={styles.totalAmount}>
@@ -564,32 +588,72 @@ export default function OrdersScreen() {
                 </Text>
               </View>
 
-              {/* Confirmar entrega (CA7) */}
-              {selectedOrder.status === 'shipped' && (
-                <View style={styles.confirmDeliveryBox}>
-                  <Ionicons name="home-outline" size={22} color={COLORS.success} />
-                  <Text style={styles.confirmDeliveryTitle}>¿Ya recibiste tu pedido?</Text>
-                  <Text style={styles.confirmDeliveryText}>
-                    Confirmá la recepción para dar por finalizada la compra.
-                  </Text>
-                  {confirmDeliveryError ? (
-                    <Text style={styles.confirmDeliveryError}>{confirmDeliveryError}</Text>
-                  ) : null}
-                  <TouchableOpacity
-                    style={[
-                      styles.confirmDeliveryBtn,
-                      confirmingDelivery && styles.confirmDeliveryBtnDisabled,
-                    ]}
-                    onPress={handleConfirmDelivery}
-                    disabled={confirmingDelivery}
-                    activeOpacity={0.85}
-                  >
-                    {confirmingDelivery ? (
-                      <ActivityIndicator color={COLORS.white} size="small" />
-                    ) : (
-                      <Text style={styles.confirmDeliveryBtnText}>Confirmar que lo recibí</Text>
-                    )}
-                  </TouchableOpacity>
+              {/* HISTORIAL DIVIDIDO */}
+              {Array.isArray(selectedOrder.status_history) && selectedOrder.status_history.length > 0 && (
+                <View style={styles.detailSection}>
+                  
+                  {/* Historial Global */}
+                  <Text style={styles.sectionLabel}>Historial de la Orden</Text>
+                  {[...selectedOrder.status_history]
+                    .filter(h => !h.seller_id) // Filtra los que NO tienen seller_id
+                    .reverse()
+                    .map((h, i) => (
+                    <View key={`global-${i}`} style={styles.historyRow}>
+                      <View style={[
+                        styles.historyDot,
+                        { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                      ]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.historyStatus}>
+                          {STATUS_CONFIG[h.status]?.label ?? h.status}
+                        </Text>
+                        <Text style={styles.historyDate}>
+                          {formatDateTime(h.changed_at)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+
+                  {/* Historial por Vendedor (Agrupado) */}
+                  {Object.entries(
+                    selectedOrder.status_history
+                      .filter(h => h.seller_id) 
+                      .reduce((acc, h) => {
+                        if (!acc[h.seller_id]) acc[h.seller_id] = [];
+                        acc[h.seller_id].push(h);
+                        return acc;
+                      }, {})
+                  ).map(([sellerId, history]) => {
+                    
+                    const sellerName = sellerNames[sellerId] || `Cargando...`;
+
+                    return (
+                      <View key={`seller-history-${sellerId}`} style={{ marginTop: 15 }}>
+                        
+                        <Text style={[styles.sectionLabel, { color: COLORS.primary }]}>
+                          Historial de Vendedor {sellerName}
+                        </Text>
+                        
+                        {[...history].reverse().map((h, i) => (
+                          <View key={`sh-${i}`} style={styles.historyRow}>
+                            <View style={[
+                              styles.historyDot,
+                              { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                            ]} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.historyStatus}>
+                                {STATUS_CONFIG[h.status]?.label ?? h.status}
+                              </Text>
+                              <Text style={styles.historyDate}>
+                                {formatDateTime(h.changed_at)}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )
+                  })}
+
                 </View>
               )}
 
@@ -730,29 +794,6 @@ export default function OrdersScreen() {
                 </View>
               )}
 
-              {/* Historial */}
-              {Array.isArray(selectedOrder.status_history) &&
-                selectedOrder.status_history.length > 0 && (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.sectionLabel}>Historial</Text>
-                    {[...selectedOrder.status_history].reverse().map((h, i) => (
-                      <View key={i} style={styles.historyRow}>
-                        <View style={[
-                          styles.historyDot,
-                          { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
-                        ]} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.historyStatus}>
-                            {STATUS_CONFIG[h.status]?.label ?? h.status}
-                          </Text>
-                          <Text style={styles.historyDate}>
-                            {formatDateTime(h.changed_at)}
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
             </ScrollView>
           ) : null}
         </SafeAreaView>
@@ -1274,6 +1315,27 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
     color: COLORS.error,
     fontWeight: '600',
+  },
+
+  // Estilos de los paquetes
+  packageCard: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  packageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  packageTitle: {
+    fontWeight: 'bold',
+    fontSize: FONT.medium,
+    color: COLORS.textPrimary,
   },
 
 })

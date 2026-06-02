@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, SafeAreaView, View } from "react-native";
+import { Alert, View } from "react-native"
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getSessionStatus } from "../services/session";

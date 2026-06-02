@@ -10,9 +10,9 @@
       "android",
       "web"
     ],
-    "newArchEnabled": false,
     "android": {
-      "package": "com.bazaar.app"
+      "package": "com.bazaar.app",
+      "usesCleartextTraffic": true
     },
     "ios": {
       "bundleIdentifier": "com.bazaar.app",
@@ -29,8 +29,17 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "networkSecurityConfig": "./network-security-config.xml"
+          }
+        }
+      ]
     ],
+    "newArchEnabled": false,
     "extra": {
       "router": {
         "origin": false
@@ -38,6 +47,7 @@
       "eas": {
         "projectId": "c733bfbd-4101-41bf-bc4c-76b00f79ca31"
       }
-    }
+    },
+    "owner": "mslepowron"
   }
 }

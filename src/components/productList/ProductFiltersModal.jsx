@@ -7,8 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
-} from "react-native";
+} from "react-native"
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from "../../constants/colors";
 import PriceRangeSlider from "./PriceRangeSlider";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../../constants/filters";

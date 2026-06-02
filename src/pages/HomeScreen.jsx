@@ -7,10 +7,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
@@ -23,8 +23,8 @@ import {
   getCatalogErrorMessage,
   listRecentProducts,
   listProductCategories,
-  listCatalogProducts,
   listPopularProducts,
+  listForYouProducts,
   mapCatalogProductToCard,
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
@@ -44,9 +44,8 @@ export default function HomeScreen() {
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoriesError, setCategoriesError] = useState("");
 
-  const [recommendedProducts, setRecommendedProducts] = useState([]);
-  const [loadingRecommendedProducts, setLoadingRecommendedProducts] = useState(true);
-  const [recommendedProductsError, setRecommendedProductsError] = useState("");
+  const [forYouProducts, setForYouProducts] = useState([]);
+  const [loadingForYou, setLoadingForYou] = useState(true);
 
   const [popularProducts, setPopularProducts] = useState([]);
   const [loadingPopularProducts, setLoadingPopularProducts] = useState(true);
@@ -155,34 +154,20 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const loadRecommendedCatalogProducts = useCallback(async () => {
-    setLoadingRecommendedProducts(true);
-    setRecommendedProductsError("");
+  const loadForYouProducts = useCallback(async () => {
+    setLoadingForYou(true);
 
     try {
-      const products = await listCatalogProducts({
-        status: "active",
-        onlyAvailable: true,
-        sort: "newest",
-        limit: 10,
-        offset: 0,
-      });
-
-      setRecommendedProducts(
+      const products = await listForYouProducts({ limit: 10 });
+      setForYouProducts(
         products.map((product) =>
-          mapCatalogProductToCard(product, { tag: "RECOMENDADO" })
+          mapCatalogProductToCard(product, { tag: "PARA VOS" })
         )
       );
-    } catch (error) {
-      setRecommendedProductsError(
-        getCatalogErrorMessage(
-          error,
-          "No pudimos cargar los productos recomendados por el momento."
-        )
-      );
-      setRecommendedProducts([]);
+    } catch {
+      setForYouProducts([]);
     } finally {
-      setLoadingRecommendedProducts(false);
+      setLoadingForYou(false);
     }
   }, []);
 
@@ -191,7 +176,7 @@ export default function HomeScreen() {
     setPopularProductsError("");
 
     try {
-      const products = await listPopularProducts({ limit: 5 });
+      const products = await listPopularProducts({ limit: 20, offset: 0 });
 
       setPopularProducts(
         products.map((product) =>
@@ -241,7 +226,7 @@ export default function HomeScreen() {
         loadSessionData(),
         loadCategories(),
         loadPopularProducts(),
-        loadRecommendedCatalogProducts(),
+        loadForYouProducts(),
         loadRecentCatalogProducts(),
       ]);
     }
@@ -251,7 +236,7 @@ export default function HomeScreen() {
     loadSessionData,
     loadCategories,
     loadPopularProducts,
-    loadRecommendedCatalogProducts,
+    loadForYouProducts,
     loadRecentCatalogProducts,
     refreshCatalogKey,
   ]);
@@ -359,7 +344,7 @@ export default function HomeScreen() {
                   style={styles.loginButton}
                   onPress={() => router.push('/login')}
                 >
-                  <Text style={styles.loginButtonText}>Iniciar sesión</Text>
+                  <Ionicons name="person-outline" size={20} color="#2E9E95" />
                 </TouchableOpacity>
               )}
 
@@ -506,40 +491,18 @@ export default function HomeScreen() {
             )}
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              PRODUCTOS <Text style={styles.sectionAccent}>RECOMENDADOS</Text>
-            </Text>
+          {!loadingForYou && forYouProducts.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                PARA <Text style={styles.sectionAccent}>VOS</Text>
+              </Text>
 
-            {loadingRecommendedProducts ? (
-              <View style={styles.sectionStatusCard}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.sectionStatusText}>
-                  Cargando productos recomendados...
-                </Text>
-              </View>
-            ) : recommendedProductsError ? (
-              <View style={styles.sectionStatusCard}>
-                <Text style={styles.sectionErrorText}>
-                  {recommendedProductsError}
-                </Text>
-                <TouchableOpacity onPress={loadRecommendedCatalogProducts}>
-                  <Text style={styles.sectionRetryText}>Reintentar</Text>
-                </TouchableOpacity>
-              </View>
-            ) : recommendedProducts.length === 0 ? (
-              <View style={styles.sectionStatusCard}>
-                <Text style={styles.sectionStatusText}>
-                  Todavía no hay productos recomendados disponibles.
-                </Text>
-              </View>
-            ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.recommendedList}
               >
-                {recommendedProducts.map((product) => (
+                {forYouProducts.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -549,8 +512,8 @@ export default function HomeScreen() {
                   />
                 ))}
               </ScrollView>
-            )}
-          </View>
+            </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>

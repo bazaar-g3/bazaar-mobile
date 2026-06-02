@@ -1,6 +1,7 @@
-import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native'
+import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
 import * as Google from 'expo-auth-session/providers/google'
+import * as AuthSession from 'expo-auth-session'
 import { useState } from 'react'
 import { loginWithOAuth } from '../services/auth'
 import { COLORS } from '../constants/colors'
@@ -8,17 +9,33 @@ import { COLORS } from '../constants/colors'
 export default function OAuthButtons({ onSuccess, onError }) {
     const [loadingProvider, setLoadingProvider] = useState(null)
 
-    // iosClientId es obligatorio en iOS. Si no hay un client ID nativo de iOS
-    // configurado, usamos el webClientId como fallback — esto funciona en Expo Go
-    // porque el flujo pasa por el proxy de Expo. En producción con bare workflow
-    // conviene crear un OAuth client de tipo "iOS" en Google Cloud Console.
-    const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-        webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    // Si no hay Google client ID configurado (ej: build de preview sin variables de entorno),
+    // pasamos null para deshabilitar el request y evitar un crash nativo en Android.
+    const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || null
+
+    // En APK nativa hay que usar el Expo Auth Proxy para bypasear la restriccion de Google que no permite custom URI schemes (bazaar://) en clientes Web.
+    // El proxy (auth.expo.io) recibe el redirect de Google y lo reenvía a la app.
+    const redirectUri = Platform.select({
+        native: AuthSession.makeRedirectUri({ useProxy: true }),
+        default: AuthSession.makeRedirectUri(),
     })
 
+    const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest(
+        googleClientId
+            ? {
+                webClientId: googleClientId,
+                androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? googleClientId,
+                iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? googleClientId,
+                redirectUri,
+            }
+            : null
+    )
+
     async function handleGoogle() {
+        if (!googleClientId || !promptGoogleAsync) {
+            onError('Google Sign-In no está disponible en este entorno.')
+            return
+        }
         setLoadingProvider('GOOGLE')
         try {
             const result = await promptGoogleAsync()

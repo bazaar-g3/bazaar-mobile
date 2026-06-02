@@ -7,6 +7,8 @@ import ProductListEmptyState from "./ProductListEmptyState";
 
 const GRID_H_PADDING = 32; // 16px de padding a cada lado del gridContainer
 const GRID_GAP = 12;       // gap entre columnas (debe coincidir con styles.grid.gap)
+const MAX_GRID_WIDTH = 1200;
+const MAX_CARD_WIDTH = 300;
 
 /* Calcula el ancho exacto de cada card para que N columnas + N-1 gaps
    quepan exactamente en el contenedor, sin overflow ni espacios extraños. */
@@ -15,12 +17,15 @@ function useGridLayout() {
 
   const numCols = width >= 1024 ? 4 : width >= 640 ? 3 : 2;
 
-  const containerWidth = width - GRID_H_PADDING;
-  const cardWidth = Math.floor((containerWidth - (numCols - 1) * GRID_GAP) / numCols);
+  const containerWidth = Math.min(width, MAX_GRID_WIDTH) - GRID_H_PADDING;
+  const cardWidth = Math.min(
+    Math.floor((containerWidth - GRID_GAP * (numCols - 1)) / numCols),
+    MAX_CARD_WIDTH
+  );
 
   const imageHeight = Math.round(cardWidth * (numCols <= 2 ? 0.9 : 0.85));
 
-  return { cardWidth, imageHeight };
+  return { cardWidth, imageHeight, numCols };
 }
 
 export default function ProductListGrid({
@@ -60,17 +65,19 @@ export default function ProductListGrid({
           text="Probá con otra búsqueda o explorá otras categorías."
         />
       ) : (
-        <View style={styles.grid}>
-          {products.map((item) => (
-            <ProductCard
-              key={item.id}
-              item={item}
-              onOpenProduct={onOpenProduct}
-              onAddToCart={onAddToCart}
-              cardStyle={{ width: cardWidth }}
-              imageStyle={{ height: imageHeight }}
-            />
-          ))}
+        <View style={styles.gridWrapper}>
+          <View style={styles.grid}>
+            {products.map((item) => (
+              <ProductCard
+                key={item.id}
+                item={item}
+                onOpenProduct={onOpenProduct}
+                onAddToCart={onAddToCart}
+                cardStyle={{ width: cardWidth }}
+                imageStyle={{ height: imageHeight }}
+              />
+            ))}
+          </View>
         </View>
       )}
 
