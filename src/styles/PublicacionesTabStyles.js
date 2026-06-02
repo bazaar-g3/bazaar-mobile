@@ -114,9 +114,17 @@ export const styles = StyleSheet.create({
   estadoBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999 },
   estadoActiva: { backgroundColor: COLORS.promoLight },
   estadoInactiva: { backgroundColor: COLORS.background },
+  estadoBloqueado: { backgroundColor: COLORS.warningLight },
   estadoText: { fontSize: 12, fontWeight: '600' },
   estadoTextActiva: { color: COLORS.success },
   estadoTextInactiva: { color: COLORS.textSecondary },
+  estadoTextBloqueado: { color: COLORS.warning },
+  bloqueadoAviso: {
+    fontSize: 12, color: COLORS.warning,
+    backgroundColor: COLORS.warningLight,
+    borderRadius: 8, padding: SPACING.sm,
+    borderLeftWidth: 3, borderLeftColor: COLORS.warning,
+  },
   switchCell: { alignItems: 'center', justifyContent: 'center' },
   actionsCell: { alignItems: 'center', justifyContent: 'center' },
   btnEditar: {

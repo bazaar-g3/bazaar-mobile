@@ -5,19 +5,18 @@ import { styles } from "../../styles/productList/productListStyles";
 import ProductCard from "./ProductCard";
 import ProductListEmptyState from "./ProductListEmptyState";
 
-const GRID_H_PADDING = 32;
-const GRID_GAP = 12;
-// Ancho máximo del contenedor del grid (evita que en pantallas muy anchas las cards sean enormes)
+const GRID_H_PADDING = 32; // 16px de padding a cada lado del gridContainer
+const GRID_GAP = 12;       // gap entre columnas (debe coincidir con styles.grid.gap)
 const MAX_GRID_WIDTH = 1200;
-// Ancho máximo de una card individual
 const MAX_CARD_WIDTH = 300;
 
+/* Calcula el ancho exacto de cada card para que N columnas + N-1 gaps
+   quepan exactamente en el contenedor, sin overflow ni espacios extraños. */
 function useGridLayout() {
   const { width } = useWindowDimensions();
 
   const numCols = width >= 1024 ? 4 : width >= 640 ? 3 : 2;
 
-  // El contenedor del grid tiene un max-width, así que usamos eso para el cálculo
   const containerWidth = Math.min(width, MAX_GRID_WIDTH) - GRID_H_PADDING;
   const cardWidth = Math.min(
     Math.floor((containerWidth - GRID_GAP * (numCols - 1)) / numCols),

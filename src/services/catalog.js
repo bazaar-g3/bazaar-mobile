@@ -168,7 +168,9 @@ export function mapCatalogProductToVentasItem(product) {
     id: String(product.id),
     titulo: product.name,
     precio: Number(product.price) || 0,
-    estado: product.status === 'disabled' ? 'inactiva' : 'activa',
+    estado: product.adminDisabled
+      ? 'bloqueado_admin'
+      : product.status === 'disabled' ? 'inactiva' : 'activa',
     stock: Number(product.stock) || 0,
     vendidos: product.sold_count ?? 0,
     imagen: product.images?.[0] || '📦',
@@ -189,10 +191,21 @@ export async function listCatalogProducts(params = {}) {
  * Obtiene el detalle de un producto del catálogo.
  * @param productId - ID del producto.
  * @returns El detalle del producto.
+ * @throws {Error} Con `reason = 'seller_blocked'` si el vendedor está bloqueado.
  */
 export async function getCatalogProduct(productId) {
-  const response = await catalogApi.get(`/products/${productId}`)
-  return response.data?.product ?? null
+  try {
+    const response = await catalogApi.get(`/products/${productId}`)
+    return response.data?.product ?? null
+  } catch (error) {
+    const detail = error?.response?.data?.detail
+    if (detail === 'seller_blocked') {
+      const err = new Error('seller_blocked')
+      err.reason = 'seller_blocked'
+      throw err
+    }
+    return null
+  }
 }
 
 /**
@@ -203,7 +216,6 @@ export async function listRecentProducts() {
   return listCatalogProducts({
     status: 'active',
     onlyAvailable: false,
-    sort: 'recent',
     limit: 20,
     offset: 0,
   })
@@ -227,7 +239,6 @@ export async function listSellerProducts({
   const params = {
     sellerId,
     onlyAvailable,
-    sort: 'recent',
     limit,
     offset,
   }
@@ -321,7 +332,7 @@ export async function listRecommendedProducts() {
   return listCatalogProducts({
     status: 'active',
     onlyAvailable: false,
-    sort: 'recent',
+    sort: 'newest',
     limit: 10,
     offset: 0,
   })

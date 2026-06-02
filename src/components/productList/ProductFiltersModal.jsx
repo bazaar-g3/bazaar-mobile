@@ -27,11 +27,6 @@ export default function ProductFiltersModal({
   minPrice,
   maxPrice,
   onPriceChange,
-  // Orden
-  activeSortBy,
-  activeSection,
-  onSortRecent,
-  onSortRecommended,
   // Limpiar
   onClearFilters,
 }) {
@@ -114,45 +109,6 @@ export default function ProductFiltersModal({
             />
           </View>
 
-          {/* ── ORDENAR ── */}
-          <View style={modalStyles.section}>
-            <Text style={modalStyles.sectionTitle}>ORDENAR POR</Text>
-            <View style={modalStyles.sortRow}>
-              <TouchableOpacity
-                style={[
-                  modalStyles.sortChip,
-                  activeSortBy === "recent" && modalStyles.sortChipActive,
-                ]}
-                onPress={onSortRecent}
-              >
-                <Text
-                  style={[
-                    modalStyles.sortChipText,
-                    activeSortBy === "recent" && modalStyles.sortChipTextActive,
-                  ]}
-                >
-                  Más recientes
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  modalStyles.sortChip,
-                  activeSection === "recommended" && modalStyles.sortChipActive,
-                ]}
-                onPress={onSortRecommended}
-              >
-                <Text
-                  style={[
-                    modalStyles.sortChipText,
-                    activeSection === "recommended" && modalStyles.sortChipTextActive,
-                  ]}
-                >
-                  Recomendados
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
 
         {/* Botones de acción en el pie */}
@@ -264,32 +220,6 @@ const modalStyles = StyleSheet.create({
     fontWeight: "600",
   },
   chipTextActive: {
-    color: COLORS.primary,
-    fontWeight: "800",
-  },
-  // Chips de orden
-  sortRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  sortChip: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    alignItems: "center",
-  },
-  sortChipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.promoLight,
-  },
-  sortChipText: {
-    fontSize: 13,
-    color: COLORS.dark,
-    fontWeight: "600",
-  },
-  sortChipTextActive: {
     color: COLORS.primary,
     fontWeight: "800",
   },

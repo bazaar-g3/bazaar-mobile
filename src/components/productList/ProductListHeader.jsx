@@ -1,8 +1,16 @@
 import React from "react";
-import { View, Text, TouchableOpacity, TextInput, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Logo from "../Logo";
 import { COLORS } from "../../constants/colors";
 import { styles } from "../../styles/productList/productListStyles";
+
+const SORT_OPTIONS = [
+  { value: "newest",     label: "Más recientes" },
+  { value: "price_asc",  label: "Menor precio"  },
+  { value: "price_desc", label: "Mayor precio"  },
+  { value: "relevance",  label: "Relevancia"    },
+];
 
 export default function ProductListHeader({
   searchText,
@@ -10,6 +18,8 @@ export default function ProductListHeader({
   onSearch,
   onOpenFilters,
   activeFiltersCount = 0,
+  activeSortBy,
+  onSortChange,
 }) {
   return (
     <View style={styles.header}>
@@ -29,12 +39,12 @@ export default function ProductListHeader({
             onSubmitEditing={onSearch}
             returnKeyType="search"
           />
-          <TouchableOpacity style={headerStyles.searchButton} onPress={onSearch}>
-            <Text style={headerStyles.searchButtonText}>Buscar</Text>
+          <TouchableOpacity style={headerStyles.searchButton} onPress={onSearch} accessibilityLabel="Buscar">
+            <Ionicons name="search" size={20} color={COLORS.white} />
           </TouchableOpacity>
         </View>
 
-        {/* Botón de filtros */}
+        {/* Botón filtros */}
         <TouchableOpacity
           style={[
             headerStyles.filterButton,
@@ -42,15 +52,13 @@ export default function ProductListHeader({
           ]}
           onPress={onOpenFilters}
           activeOpacity={0.8}
+          accessibilityLabel="Filtros"
         >
-          <Text
-            style={[
-              headerStyles.filterButtonText,
-              activeFiltersCount > 0 && headerStyles.filterButtonTextActive,
-            ]}
-          >
-            ⊟ Filtros
-          </Text>
+          <Ionicons
+            name="funnel-outline"
+            size={20}
+            color={activeFiltersCount > 0 ? COLORS.primary : COLORS.dark}
+          />
           {activeFiltersCount > 0 && (
             <View style={headerStyles.badge}>
               <Text style={headerStyles.badgeText}>{activeFiltersCount}</Text>
@@ -58,6 +66,30 @@ export default function ProductListHeader({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Fila de ordenamiento */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={headerStyles.sortRow}
+        style={headerStyles.sortScroll}
+      >
+        {SORT_OPTIONS.map(({ value, label }) => {
+          const active = activeSortBy === value;
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[headerStyles.sortChip, active && headerStyles.sortChipActive]}
+              onPress={() => onSortChange(active ? null : value)}
+              activeOpacity={0.8}
+            >
+              <Text style={[headerStyles.sortChipText, active && headerStyles.sortChipTextActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -77,6 +109,7 @@ const headerStyles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     color: COLORS.textPrimary,
     backgroundColor: COLORS.white,
     borderRadius: 6,
@@ -85,18 +118,16 @@ const headerStyles = StyleSheet.create({
     height: 42,
   },
   searchButton: {
+    flexShrink: 0,
+    width: 42,
+    height: 42,
     backgroundColor: COLORS.secondary,
-    paddingHorizontal: 14,
     borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
   },
-  searchButtonText: {
-    color: COLORS.white,
-    fontWeight: "800",
-    fontSize: 13,
-  },
   filterButton: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -112,14 +143,6 @@ const headerStyles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: COLORS.promoLight,
   },
-  filterButtonText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: COLORS.dark,
-  },
-  filterButtonTextActive: {
-    color: COLORS.primary,
-  },
   badge: {
     backgroundColor: COLORS.primary,
     borderRadius: 10,
@@ -133,5 +156,34 @@ const headerStyles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 10,
     fontWeight: "900",
+  },
+  sortScroll: {
+    marginTop: 10,
+  },
+  sortRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 2,
+  },
+  sortChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.divider,
+    backgroundColor: COLORS.white,
+  },
+  sortChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.promoLight,
+  },
+  sortChipText: {
+    fontSize: 13,
+    color: COLORS.dark,
+    fontWeight: "600",
+  },
+  sortChipTextActive: {
+    color: COLORS.primary,
+    fontWeight: "800",
   },
 });

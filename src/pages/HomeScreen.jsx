@@ -64,13 +64,12 @@ export default function HomeScreen() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [filterCategory, setFilterCategory] = useState(null);
   const [filterSortBy, setFilterSortBy] = useState(null);
-  const [filterSection, setFilterSection] = useState(null);
   const [filterMinPrice, setFilterMinPrice] = useState(PRICE_MIN_LIMIT);
   const [filterMaxPrice, setFilterMaxPrice] = useState(PRICE_MAX_LIMIT);
 
   const activeFiltersCount =
     (filterCategory ? 1 : 0) +
-    (filterSortBy || filterSection ? 1 : 0) +
+    (filterSortBy ? 1 : 0) +
     (filterMinPrice > PRICE_MIN_LIMIT || filterMaxPrice < PRICE_MAX_LIMIT ? 1 : 0);
 
   const handleApplyFilters = () => {
@@ -81,8 +80,7 @@ export default function HomeScreen() {
       params.categoryName = filterCategory.label;
       if (filterCategory.slug) params.categorySlug = filterCategory.slug;
     }
-    if (filterSortBy === "recent") params.sortBy = "recent";
-    if (filterSection === "recommended") params.section = "recommended";
+    if (filterSortBy) params.sortBy = filterSortBy;
     if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
     if (filterMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = filterMaxPrice;
     router.push({ pathname: "/products", params });
@@ -91,7 +89,6 @@ export default function HomeScreen() {
   const handleClearFilters = () => {
     setFilterCategory(null);
     setFilterSortBy(null);
-    setFilterSection(null);
     setFilterMinPrice(PRICE_MIN_LIMIT);
     setFilterMaxPrice(PRICE_MAX_LIMIT);
   };
@@ -390,13 +387,13 @@ export default function HomeScreen() {
               ]}
               onPress={() => setFiltersVisible(true)}
               activeOpacity={0.8}
+              accessibilityLabel="Filtros"
             >
-              <Text style={[
-                styles.filterButtonText,
-                activeFiltersCount > 0 && styles.filterButtonTextActive,
-              ]}>
-                ⊟ Filtros
-              </Text>
+              <Ionicons
+                name="funnel-outline"
+                size={20}
+                color={activeFiltersCount > 0 ? COLORS.secondary : COLORS.white}
+              />
               {activeFiltersCount > 0 && (
                 <View style={styles.filterBadge}>
                   <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
@@ -589,10 +586,6 @@ export default function HomeScreen() {
           setFilterMinPrice(min);
           setFilterMaxPrice(max);
         }}
-        activeSortBy={filterSortBy}
-        activeSection={filterSection}
-        onSortRecent={() => { setFilterSortBy("recent"); setFilterSection(null); }}
-        onSortRecommended={() => { setFilterSection("recommended"); setFilterSortBy(null); }}
         onClearFilters={handleClearFilters}
       />
 

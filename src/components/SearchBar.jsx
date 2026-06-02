@@ -20,8 +20,8 @@ export default function SearchBar({ value, onChangeText, onSearch, style }) {
         onSubmitEditing={onSearch}
         returnKeyType="search"
       />
-      <TouchableOpacity style={styles.searchButton} onPress={onSearch}>
-        <Ionicons name="search" size={22} color={COLORS.white} />
+      <TouchableOpacity style={styles.searchButton} onPress={onSearch} accessibilityLabel="Buscar">
+        <Ionicons name="search" size={20} color={COLORS.white} />
       </TouchableOpacity>
     </View>
   );
@@ -37,16 +37,16 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 44,
+    height: 48,
     paddingHorizontal: 14,
     color: COLORS.text,
     fontSize: 15,
   },
   searchButton: {
     backgroundColor: COLORS.coral,
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },

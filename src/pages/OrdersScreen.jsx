@@ -9,18 +9,19 @@ import {
   ScrollView,
   Modal,
   Platform,
+  TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter } from 'expo-router'
-import {styles} from '../styles/OrdersScreenStyles'
 import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
+import { createSellerReview, createProductReview } from '../services/reviews'
+import { getPublicProfile } from '../services/user'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { COLORS } from '../constants/colors'
 import { FONT, SPACING } from '../constants/theme'
-import { getPublicProfile } from '../services/user'
 
 const STATUS_CONFIG = {
   pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary,    icon: 'time-outline' },
@@ -81,10 +82,32 @@ function StatusBadge({ status, small = false }) {
   )
 }
 
+function StarPicker({ score, onSelect, disabled }) {
+  return (
+    <View style={styles.starRow}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <TouchableOpacity
+          key={star}
+          onPress={() => !disabled && onSelect(star)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+        >
+          <Text style={[styles.starPickerItem, { color: star <= (score ?? 0) ? COLORS.secondary : COLORS.divider }]}>
+            ★
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  )
+}
+
+function _initReviewEntry() {
+  return { score: null, comment: '', submitting: false, done: false, alreadyReviewed: false, error: null }
+}
+
 export default function OrdersScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
-  const [sellerNames, setSellerNames] = useState({})
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
@@ -95,6 +118,9 @@ export default function OrdersScreen() {
   const [detailError, setDetailError] = useState(null)
   const [confirmingDelivery, setConfirmingDelivery] = useState(false)
   const [confirmDeliveryError, setConfirmDeliveryError] = useState(null)
+  const [sellerReviews, setSellerReviews] = useState({})
+  const [productReviews, setProductReviews] = useState({})
+  const [sellerNames, setSellerNames] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -137,26 +163,40 @@ export default function OrdersScreen() {
     setSelectedOrder(order)
     setDetailLoading(true)
     setDetailError(null)
-    setSellerNames({})
-
+    setSellerReviews({})
+    setProductReviews({})
     try {
       const detail = await getOrderById(order.id)
       setSelectedOrder(detail)
+      if (detail.status === 'delivered') {
+        const uniqueSellerIds = [
+          ...new Set((detail.fulfillments?.map((f) => f.seller_id) ?? []).filter(Boolean)),
+        ]
+        const initSellers = {}
+        uniqueSellerIds.forEach((sid) => { initSellers[sid] = _initReviewEntry() })
+        setSellerReviews(initSellers)
 
-      if (Array.isArray(detail.fulfillments) && detail.fulfillments.length > 0) {
-        const uniqueSellerIds = [...new Set(detail.fulfillments.map(f => f.seller_id))]
-        const namesDict = {}
+        const initProducts = {}
+        ;(detail.items ?? []).forEach((item) => {
+          initProducts[String(item.product_id)] = _initReviewEntry()
+        })
+        setProductReviews(initProducts)
 
-        await Promise.all(
-          uniqueSellerIds.map(async (id) => {
-            const profile = await getPublicProfile(id)
-            namesDict[id] = profile?.name || profile?.fullName || profile?.username || `Vendedor ${String(id).slice(0, 4)}`
-          })
-        )
-        
-        setSellerNames(namesDict)
+        const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+        const names = {}
+        uniqueSellerIds.forEach((sid, i) => {
+          names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+        })
+        setSellerNames(names)
+      } else if (Array.isArray(detail.fulfillments) && detail.fulfillments.length > 0) {
+        const uniqueSellerIds = [...new Set(detail.fulfillments.map(f => f.seller_id).filter(Boolean))]
+        const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+        const names = {}
+        uniqueSellerIds.forEach((sid, i) => {
+          names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+        })
+        setSellerNames(names)
       }
-
     } catch (e) {
       setDetailError(e)
     } finally {
@@ -175,17 +215,31 @@ export default function OrdersScreen() {
     setConfirmingDelivery(true)
     setConfirmDeliveryError(null)
     try {
-      // Ajustá tu servicio frontend para enviar el seller_id como query param
-      const updated = await confirmDelivery(selectedOrder.id, sellerId)
-      
-      // Actualizar el detalle de la orden recargándolo
+      await confirmDelivery(selectedOrder.id, sellerId)
       const freshDetail = await getOrderById(selectedOrder.id)
       setSelectedOrder(freshDetail)
-      
-      // Actualizar la lista general si el estado global cambió
       setOrders((prev) =>
         prev.map((o) => (o.id === selectedOrder.id ? { ...o, status: freshDetail.status } : o))
       )
+      // Inicializar estados de review ahora que la orden está entregada
+      const currentOrder = selectedOrder
+      const uniqueSellerIds = [
+        ...new Set((currentOrder.fulfillments?.map((f) => f.seller_id) ?? []).filter(Boolean)),
+      ]
+      const initSellers = {}
+      uniqueSellerIds.forEach((sid) => { initSellers[sid] = _initReviewEntry() })
+      setSellerReviews(initSellers)
+      const initProducts = {}
+      ;(currentOrder.items ?? []).forEach((item) => {
+        initProducts[String(item.product_id)] = _initReviewEntry()
+      })
+      setProductReviews(initProducts)
+      const profiles = await Promise.all(uniqueSellerIds.map((sid) => getPublicProfile(sid)))
+      const names = {}
+      uniqueSellerIds.forEach((sid, i) => {
+        names[sid] = profiles[i]?.fullName ?? `Vendedor #${sid}`
+      })
+      setSellerNames(names)
     } catch (e) {
       const detail = e?.response?.data?.detail
       setConfirmDeliveryError(
@@ -193,6 +247,56 @@ export default function OrdersScreen() {
       )
     } finally {
       setConfirmingDelivery(false)
+    }
+  }
+
+  async function handleSubmitSellerReview(sellerId) {
+    const entry = sellerReviews[sellerId]
+    if (!entry?.score || !selectedOrder) return
+    setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], submitting: true, error: null } }))
+    try {
+      await createSellerReview(selectedOrder.id, { sellerId, score: entry.score, comment: entry.comment || null })
+      setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], submitting: false, done: true } }))
+    } catch (e) {
+      const status = e?.response?.status
+      if (status === 409) {
+        setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], submitting: false, alreadyReviewed: true } }))
+      } else {
+        const detail = e?.response?.data?.detail
+        setSellerReviews((prev) => ({
+          ...prev,
+          [sellerId]: {
+            ...prev[sellerId],
+            submitting: false,
+            error: typeof detail === 'string' ? detail : 'No se pudo enviar la calificación.',
+          },
+        }))
+      }
+    }
+  }
+
+  async function handleSubmitProductReview(productId) {
+    const entry = productReviews[productId]
+    if (!entry?.score || !selectedOrder) return
+    setProductReviews((prev) => ({ ...prev, [productId]: { ...prev[productId], submitting: true, error: null } }))
+    try {
+      await createProductReview(selectedOrder.id, { productId, score: entry.score, comment: entry.comment || null })
+      setProductReviews((prev) => ({ ...prev, [productId]: { ...prev[productId], submitting: false, done: true } }))
+    } catch (e) {
+      const status = e?.response?.status
+      if (status === 409) {
+        setProductReviews((prev) => ({ ...prev, [productId]: { ...prev[productId], submitting: false, alreadyReviewed: true } }))
+      } else {
+        const detail = e?.response?.data?.detail
+        setProductReviews((prev) => ({
+          ...prev,
+          [productId]: {
+            ...prev[productId],
+            submitting: false,
+            error: typeof detail === 'string' ? detail : 'No se pudo enviar la calificación.',
+          },
+        }))
+      }
     }
   }
 
@@ -551,6 +655,144 @@ export default function OrdersScreen() {
 
                 </View>
               )}
+
+              {/* ── Sección de Calificaciones (orden entregada) ── */}
+              {selectedOrder.status === 'delivered' && Object.keys(sellerReviews).length > 0 && (
+                <View style={styles.reviewSection}>
+                  <View style={styles.reviewSectionHeader}>
+                    <Ionicons name="star-outline" size={16} color={COLORS.secondary} />
+                    <Text style={styles.reviewSectionTitle}>Calificá tu compra</Text>
+                  </View>
+
+                  {/* Vendedores */}
+                  <Text style={styles.sectionLabel}>Vendedor{Object.keys(sellerReviews).length > 1 ? 'es' : ''}</Text>
+                  {Object.keys(sellerReviews).map((sellerId) => {
+                    const entry = sellerReviews[sellerId]
+                    return (
+                      <View key={sellerId} style={styles.reviewCard}>
+                        <Text style={styles.reviewEntityName} numberOfLines={1}>
+                          {sellerNames[sellerId] ?? `${sellerId}`}
+                        </Text>
+                        {entry.done ? (
+                          <View style={styles.reviewDoneRow}>
+                            <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                            <Text style={styles.reviewDoneText}>¡Calificación enviada!</Text>
+                          </View>
+                        ) : entry.alreadyReviewed ? (
+                          <View style={styles.reviewDoneRow}>
+                            <Ionicons name="information-circle-outline" size={18} color={COLORS.textMuted} />
+                            <Text style={styles.reviewAlreadyText}>Ya calificaste a este vendedor</Text>
+                          </View>
+                        ) : (
+                          <>
+                            <StarPicker
+                              score={entry.score}
+                              onSelect={(s) => setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], score: s } }))}
+                              disabled={entry.submitting}
+                            />
+                            <TextInput
+                              style={styles.reviewInput}
+                              placeholder="Comentario opcional..."
+                              placeholderTextColor={COLORS.textMuted}
+                              value={entry.comment}
+                              onChangeText={(t) => setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], comment: t } }))}
+                              editable={!entry.submitting}
+                              multiline
+                              maxLength={1000}
+                            />
+                            {entry.error ? (
+                              <Text style={styles.reviewError}>{entry.error}</Text>
+                            ) : null}
+                            <TouchableOpacity
+                              style={[
+                                styles.reviewSubmitBtn,
+                                (!entry.score || entry.submitting) && styles.reviewSubmitBtnDisabled,
+                              ]}
+                              onPress={() => handleSubmitSellerReview(sellerId)}
+                              disabled={!entry.score || entry.submitting}
+                              activeOpacity={0.8}
+                            >
+                              {entry.submitting ? (
+                                <ActivityIndicator color={COLORS.white} size="small" />
+                              ) : (
+                                <Text style={styles.reviewSubmitBtnText}>Enviar calificación</Text>
+                              )}
+                            </TouchableOpacity>
+                          </>
+                        )}
+                      </View>
+                    )
+                  })}
+
+                  {/* Productos */}
+                  {Object.keys(productReviews).length > 0 && (
+                    <>
+                      <Text style={[styles.sectionLabel, { marginTop: SPACING.sm }]}>
+                        Producto{Object.keys(productReviews).length > 1 ? 's' : ''}
+                      </Text>
+                      {(selectedOrder.items ?? []).map((item) => {
+                        const pid = String(item.product_id)
+                        const entry = productReviews[pid]
+                        if (!entry) return null
+                        const displayName = item.product_name ?? item.name ?? `Producto ${pid.slice(0, 8)}`
+                        return (
+                          <View key={pid} style={styles.reviewCard}>
+                            <Text style={styles.reviewEntityName} numberOfLines={2}>{displayName}</Text>
+                            {entry.done ? (
+                              <View style={styles.reviewDoneRow}>
+                                <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                                <Text style={styles.reviewDoneText}>¡Calificación enviada!</Text>
+                              </View>
+                            ) : entry.alreadyReviewed ? (
+                              <View style={styles.reviewDoneRow}>
+                                <Ionicons name="information-circle-outline" size={18} color={COLORS.textMuted} />
+                                <Text style={styles.reviewAlreadyText}>Ya calificaste este producto</Text>
+                              </View>
+                            ) : (
+                              <>
+                                <StarPicker
+                                  score={entry.score}
+                                  onSelect={(s) => setProductReviews((prev) => ({ ...prev, [pid]: { ...prev[pid], score: s } }))}
+                                  disabled={entry.submitting}
+                                />
+                                <TextInput
+                                  style={styles.reviewInput}
+                                  placeholder="Comentario opcional..."
+                                  placeholderTextColor={COLORS.textMuted}
+                                  value={entry.comment}
+                                  onChangeText={(t) => setProductReviews((prev) => ({ ...prev, [pid]: { ...prev[pid], comment: t } }))}
+                                  editable={!entry.submitting}
+                                  multiline
+                                  maxLength={1000}
+                                />
+                                {entry.error ? (
+                                  <Text style={styles.reviewError}>{entry.error}</Text>
+                                ) : null}
+                                <TouchableOpacity
+                                  style={[
+                                    styles.reviewSubmitBtn,
+                                    (!entry.score || entry.submitting) && styles.reviewSubmitBtnDisabled,
+                                  ]}
+                                  onPress={() => handleSubmitProductReview(pid)}
+                                  disabled={!entry.score || entry.submitting}
+                                  activeOpacity={0.8}
+                                >
+                                  {entry.submitting ? (
+                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                  ) : (
+                                    <Text style={styles.reviewSubmitBtnText}>Enviar calificación</Text>
+                                  )}
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                        )
+                      })}
+                    </>
+                  )}
+                </View>
+              )}
+
             </ScrollView>
           ) : null}
         </SafeAreaView>
@@ -558,3 +800,541 @@ export default function OrdersScreen() {
     </SafeAreaView>
   )
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
+  fullCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    gap: SPACING.md,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  title: {
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+  },
+
+  // Filtros — full width, padding dentro del contentContainer
+  filterScroll: {
+    flexGrow: 0,
+    marginBottom: SPACING.sm,
+  },
+  filterContent: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    paddingBottom: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: COLORS.divider,
+    backgroundColor: COLORS.white,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  filterChipTextActive: {
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+
+  // Lista
+  listContainer: {
+    flex: 1,
+  },
+  listContainerTablet: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  listContent: {
+    paddingBottom: SPACING.xl,
+    paddingTop: SPACING.xs,
+  },
+
+  // Tarjetas de orden
+  orderCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    gap: 4,
+  },
+  orderCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderCardBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  orderId: {
+    fontSize: FONT.small,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  orderDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  orderTotal: {
+    fontSize: FONT.medium,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+  },
+
+  // Badge de estado
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  badgeSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  badgeTextSmall: {
+    fontSize: 11,
+  },
+
+  // Estados vacíos
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
+  },
+  emptyTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  emptyText: {
+    fontSize: FONT.regular,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  actionButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 12,
+    marginTop: SPACING.xs,
+  },
+  actionButtonText: {
+    color: COLORS.white,
+    fontWeight: '800',
+    fontSize: FONT.regular,
+  },
+
+  // Modal de detalle
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  modalCloseBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: COLORS.background,
+  },
+  modalTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  modalBody: {
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+
+  // Detalle
+  detailHero: {
+    alignItems: 'flex-start',
+    gap: SPACING.xs,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+  },
+  detailOrderId: {
+    fontSize: FONT.large,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    letterSpacing: 0.5,
+  },
+  detailMeta: {
+    fontSize: FONT.small,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  detailSection: {
+    gap: SPACING.xs,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  detailSectionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    padding: SPACING.sm,
+  },
+  detailText: {
+    flex: 1,
+    fontSize: FONT.regular,
+    color: COLORS.textPrimary,
+    lineHeight: 20,
+  },
+  detailItem: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: SPACING.sm,
+    gap: 6,
+  },
+  detailItemNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.xs,
+  },
+  detailItemName: {
+    flex: 1,
+    fontSize: FONT.regular,
+    fontWeight: '700',
+    color: COLORS.primary,        // azul = indica que es tappable
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'solid',
+    textDecorationColor: COLORS.primary,
+  },
+  detailItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailItemMeta: {
+    fontSize: FONT.small,
+    color: COLORS.textSecondary,
+  },
+  detailItemSubtotal: {
+    fontSize: FONT.regular,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingVertical: SPACING.md,
+  },
+  totalLabel: {
+    fontSize: FONT.medium,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  totalAmount: {
+    fontSize: FONT.large,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+  },
+
+  // Historial
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  historyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 5,
+    flexShrink: 0,
+  },
+  historyStatus: {
+    fontSize: FONT.regular,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  historyDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+
+  // Tarjeta con pago rechazado
+  orderCardRejected: {
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fff8f8',
+  },
+  orderCardRejectedHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#fca5a5',
+  },
+  orderCardRejectedHintText: {
+    fontSize: 12,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+
+  // Banner de pago rechazado en el modal
+  rejectedBanner: {
+    backgroundColor: '#fff0f0',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  rejectedBannerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  rejectedBannerTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.error,
+  },
+  rejectedBannerText: {
+    fontSize: FONT.small,
+    color: '#b91c1c',
+    lineHeight: 20,
+  },
+  rejectedBannerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.white,
+  },
+  rejectedBannerBtnText: {
+    fontSize: FONT.small,
+    fontWeight: '800',
+    color: COLORS.error,
+  },
+
+  // Código de seguimiento
+  trackingCode: {
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+
+  // Confirmar entrega
+  confirmDeliveryBox: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    padding: SPACING.md,
+    gap: SPACING.xs,
+    alignItems: 'flex-start',
+  },
+  confirmDeliveryTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.success,
+  },
+  confirmDeliveryText: {
+    fontSize: FONT.small,
+    color: '#166534',
+    lineHeight: 20,
+  },
+  confirmDeliveryError: {
+    fontSize: FONT.small,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  confirmDeliveryBtn: {
+    backgroundColor: COLORS.success,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 10,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginTop: SPACING.xs,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  confirmDeliveryBtnDisabled: {
+    opacity: 0.6,
+  },
+  confirmDeliveryBtnText: {
+    color: COLORS.white,
+    fontSize: FONT.regular,
+    fontWeight: '800',
+  },
+
+  // Sección de calificaciones
+  reviewSection: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.divider,
+    paddingTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  reviewSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: 2,
+  },
+  reviewSectionTitle: {
+    fontSize: FONT.medium,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  reviewCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  reviewEntityName: {
+    fontSize: FONT.regular,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginBottom: 2,
+  },
+  starRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  starPickerItem: {
+    fontSize: 28,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    borderRadius: 8,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    fontSize: FONT.regular,
+    color: COLORS.textPrimary,
+    minHeight: 60,
+    textAlignVertical: 'top',
+    backgroundColor: COLORS.white,
+  },
+  reviewSubmitBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  reviewSubmitBtnDisabled: {
+    opacity: 0.45,
+  },
+  reviewSubmitBtnText: {
+    color: COLORS.white,
+    fontWeight: '800',
+    fontSize: FONT.regular,
+  },
+  reviewDoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+  },
+  reviewDoneText: {
+    fontSize: FONT.regular,
+    fontWeight: '700',
+    color: COLORS.success,
+  },
+  reviewAlreadyText: {
+    fontSize: FONT.regular,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  reviewError: {
+    fontSize: FONT.small,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+
+  // Estilos de los paquetes
+  packageCard: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  packageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  packageTitle: {
+    fontWeight: 'bold',
+    fontSize: FONT.medium,
+    color: COLORS.textPrimary,
+  },
+
+})

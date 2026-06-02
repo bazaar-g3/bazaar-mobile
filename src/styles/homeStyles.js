@@ -182,16 +182,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(255,152,0,0.15)",
   },
 
-  filterButtonText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: COLORS.white,
-  },
-
-  filterButtonTextActive: {
-    color: COLORS.secondary,
-  },
-
   filterBadge: {
     backgroundColor: COLORS.secondary,
     borderRadius: 10,

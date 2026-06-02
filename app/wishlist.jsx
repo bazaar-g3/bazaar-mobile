@@ -1,2 +1,2 @@
-import WishlistScreen from '../src/pages/WishlistScreen'
+import WishlistScreen from '../src/components/profile/WishlistScreen'
 export default WishlistScreen
