@@ -134,7 +134,7 @@ const modalStyles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "80%",
+    height: "80%",
     paddingBottom: 8,
   },
   handleBar: {
