@@ -58,6 +58,9 @@ export const styles = StyleSheet.create({
   },
 
   logoCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     alignItems: "center",
     justifyContent: "center",
     pointerEvents: "none",

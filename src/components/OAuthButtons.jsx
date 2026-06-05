@@ -14,12 +14,15 @@ export default function OAuthButtons({ onSuccess, onError }) {
 
     // En APK nativa usamos el cliente Android con SHA-1 registrado en Google Cloud Console.
     // Esto evita el Expo Auth Proxy (deprecado) y funciona con APKs standalone firmadas.
+    const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || undefined
+    const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || undefined
+
     const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest(
         googleClientId
             ? {
                 webClientId: googleClientId,
-                androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || null,
-                iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? googleClientId,
+                ...(androidClientId ? { androidClientId } : {}),
+                ...(iosClientId ? { iosClientId } : {}),
             }
             : null
     )
