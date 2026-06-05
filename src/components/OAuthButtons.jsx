@@ -1,7 +1,6 @@
-import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native'
+import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
 import * as Google from 'expo-auth-session/providers/google'
-import * as AuthSession from 'expo-auth-session'
 import { useState } from 'react'
 import { loginWithOAuth } from '../services/auth'
 import { COLORS } from '../constants/colors'
@@ -13,20 +12,14 @@ export default function OAuthButtons({ onSuccess, onError }) {
     // pasamos null para deshabilitar el request y evitar un crash nativo en Android.
     const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || null
 
-    // En APK nativa usamos el Expo Auth Proxy: Google redirige a auth.expo.io (HTTPS),
-    // que reenvía a bazaar://. Esto evita que Google rechace el custom URI scheme.
-    // El Web client en Google Cloud Console debe tener esta URL como redirect autorizado.
-    const redirectUri = Platform.select({
-        native: 'https://auth.expo.io/@mslepowron/bazaar-mobile',
-        default: AuthSession.makeRedirectUri(),
-    })
-
+    // En APK nativa usamos el cliente Android con SHA-1 registrado en Google Cloud Console.
+    // Esto evita el Expo Auth Proxy (deprecado) y funciona con APKs standalone firmadas.
     const [, googleResponse, promptGoogleAsync] = Google.useAuthRequest(
         googleClientId
             ? {
                 webClientId: googleClientId,
+                androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || null,
                 iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS ?? googleClientId,
-                redirectUri,
             }
             : null
     )
@@ -40,6 +33,10 @@ export default function OAuthButtons({ onSuccess, onError }) {
         try {
             const result = await promptGoogleAsync()
             if (result.type !== 'success') return
+            if (!result.authentication?.accessToken) {
+                onError('No se pudo obtener el token de Google')
+                return
+            }
 
             const userInfoRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
                 headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
