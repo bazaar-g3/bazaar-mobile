@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 
 import { COLORS } from '../../constants/colors'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../../services/catalog'
@@ -44,13 +45,16 @@ export default function ActiveProductsSummary({
         </View>
       ) : products.length === 0 ? (
         <View style={styles.summaryMessageCard}>
+          <View style={styles.summaryEmptyIcon}>
+            <Ionicons name="storefront-outline" size={48} color={COLORS.primaryLight} />
+          </View>
+
           <Text style={styles.summaryEmptyTitle}>
-            Todavía no tenés publicaciones activas.
+            Todavía no tenés publicaciones activas
           </Text>
 
           <Text style={styles.summaryEmptyText}>
-            Publicá tu primer producto para que empiece a aparecer en tu perfil
-            y en Home.
+            Publicá tu primer producto y empezará a aparecer aquí y en el inicio de Bazaar.
           </Text>
 
           <TouchableOpacity

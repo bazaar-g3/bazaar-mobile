@@ -873,7 +873,7 @@ const headerStyles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    pointerEvents: "none",
+    pointerEvents: "box-none",
   },
 
   headerBack: {

@@ -63,7 +63,7 @@ export const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: "none",
+    pointerEvents: "box-none",
   },
 
   logoNoMargin: {
