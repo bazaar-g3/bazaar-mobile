@@ -13,8 +13,17 @@ const COLORS = {
   cardBorder: "#F0E8E2",
 };
 
+// Paleta de colores por tipo de tag
+const TAG_STYLES = {
+  POPULAR:  { bg: "#FFF3E0", color: "#E65100" },   // naranja cálido
+  NUEVO:    { bg: "#E8F5E9", color: "#2E7D32" },   // verde esmeralda
+  "PARA VOS": { bg: "#E0F7FA", color: "#00695C" }, // teal suave
+};
+const DEFAULT_TAG_STYLE = { bg: "#EFE7FF", color: "#6C3BFF" }; // violeta (fallback)
+
 export default function ProductCard({ product, onPress, variant = "horizontal", isWishlisted = false }) {
   const badgeText = product.tag || "Recomendado";
+  const tagStyle = TAG_STYLES[badgeText] ?? DEFAULT_TAG_STYLE;
 
   if (variant === "grid") {
     return (
@@ -24,8 +33,8 @@ export default function ProductCard({ product, onPress, variant = "horizontal", 
         activeOpacity={0.9}
       >
         <Image source={{ uri: product.image }} style={styles.gridImage} />
-        <View style={styles.newBadge}>
-          <Text style={styles.newBadgeText}>{product.tag || "Nuevo"}</Text>
+        <View style={[styles.newBadge, { backgroundColor: tagStyle.bg }]}>
+          <Text style={[styles.newBadgeText, { color: tagStyle.color }]}>{product.tag || "Nuevo"}</Text>
         </View>
         {isWishlisted && (
           <View style={styles.wishlistedBadge}>
@@ -56,8 +65,8 @@ export default function ProductCard({ product, onPress, variant = "horizontal", 
           </View>
         )}
       </View>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{badgeText}</Text>
+      <View style={[styles.badge, { backgroundColor: tagStyle.bg }]}>
+        <Text style={[styles.badgeText, { color: tagStyle.color }]}>{badgeText}</Text>
       </View>
       <Text style={styles.productName} numberOfLines={2}>
         {product.name}
@@ -72,10 +81,15 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    padding: 8,
+    padding: 12,
     marginRight: 10,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
   },
   imageWrapper: {
     position: "relative",
@@ -89,14 +103,14 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: "#EFE7FF",
+    // backgroundColor inyectado dinámicamente según el tag
     borderRadius: 999,
     paddingVertical: 5,
     paddingHorizontal: 10,
     marginBottom: 8,
   },
   badgeText: {
-    color: COLORS.purple,
+    // color inyectado dinámicamente según el tag
     fontSize: 12,
     fontWeight: "700",
   },
@@ -120,6 +134,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
   },
   gridImage: {
     width: "100%",
@@ -130,13 +149,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    backgroundColor: COLORS.coral,
+    // backgroundColor inyectado dinámicamente según el tag
     borderRadius: 999,
     paddingVertical: 5,
     paddingHorizontal: 10,
   },
   newBadgeText: {
-    color: COLORS.white,
+    // color inyectado dinámicamente según el tag
     fontSize: 11,
     fontWeight: "800",
   },

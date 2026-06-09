@@ -22,6 +22,7 @@ import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { COLORS } from '../constants/colors'
 import { FONT, SPACING } from '../constants/theme'
+import Logo from '../components/Logo'
 
 const STATUS_CONFIG = {
   pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary,    icon: 'time-outline' },
@@ -344,6 +345,9 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <View style={styles.topBar}>
+        <Logo size={28} textSize={22} />
+      </View>
       <View style={[styles.header, { paddingHorizontal: hPad }]}>
         <Text style={[styles.title, { fontSize: isSmall ? FONT.large : 26 }]}>
           Mis órdenes
@@ -516,7 +520,8 @@ export default function OrdersScreen() {
                         <TouchableOpacity
                           onPress={() => {
                             closeDetail()
-                            router.push(`/product/${item.product_id}`)
+                            const sellerParam = item.seller_id ? `?sellerId=${item.seller_id}` : ''
+                            router.push(`/product/${item.product_id}${sellerParam}`)
                           }}
                           activeOpacity={0.7}
                           style={styles.detailItemNameRow}
@@ -805,6 +810,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.white,
+  },
+  topBar: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   fullCenter: {
     flex: 1,
