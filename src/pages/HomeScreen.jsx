@@ -33,6 +33,19 @@ import { getWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
 import { styles } from "../styles/homeStyles";
 
+// Configuración visual por slug de categoría: ícono Ionicons + colores del círculo
+const CATEGORY_CONFIG = {
+  tecnologia:     { icon: "laptop-outline",          circleColor: "#E0E7FF", iconColor: "#4338CA" },
+  hogar:          { icon: "home-outline",             circleColor: "#FEF3C7", iconColor: "#D97706" },
+  moda:           { icon: "shirt-outline",            circleColor: "#FCE7F3", iconColor: "#BE185D" },
+  deportes:       { icon: "football-outline",         circleColor: "#D1FAE5", iconColor: "#065F46" },
+  libros:         { icon: "book-outline",             circleColor: "#FEF9C3", iconColor: "#A16207" },
+  juguetes:       { icon: "game-controller-outline",  circleColor: "#EDE9FE", iconColor: "#5B21B6" },
+  coleccionables: { icon: "star-outline",             circleColor: "#FEE2E2", iconColor: "#991B1B" },
+  herramientas:   { icon: "build-outline",            circleColor: "#F1F5F9", iconColor: "#334155" },
+};
+const DEFAULT_CATEGORY_CONFIG = { icon: "grid-outline", circleColor: "#F3F4F6", iconColor: "#374151" };
+
 export default function HomeScreen() {
   const router = useRouter();
   const { isSmall, isMedium } = useResponsive();
@@ -134,12 +147,17 @@ export default function HomeScreen() {
       const catalogCategories = await listProductCategories();
 
       setCategories(
-        catalogCategories.map((category) => ({
-          id: String(category.id ?? category.slug ?? category.name ?? category.label),
-          name: String(category.label ?? category.name ?? "Categoría").toUpperCase(),
-          slug: category.slug,
-          emoji: "🛍️",
-        }))
+        catalogCategories.map((category) => {
+          const config = CATEGORY_CONFIG[category.slug] ?? DEFAULT_CATEGORY_CONFIG;
+          return {
+            id: String(category.id ?? category.slug ?? category.name ?? category.label),
+            name: String(category.label ?? category.name ?? "Categoría").toUpperCase(),
+            slug: category.slug,
+            icon: config.icon,
+            circleColor: config.circleColor,
+            iconColor: config.iconColor,
+          };
+        })
       );
     } catch (error) {
       setCategoriesError(
@@ -431,8 +449,8 @@ export default function HomeScreen() {
                   style={styles.categoryItem}
                   onPress={() => handleCategoryPress(cat)}
                 >
-                  <View style={styles.categoryCircle}>
-                    <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                  <View style={[styles.categoryCircle, { backgroundColor: cat.circleColor }]}>
+                    <Ionicons name={cat.icon} size={28} color={cat.iconColor} />
                   </View>
                   <Text style={styles.categoryLabel}>{cat.name}</Text>
                 </TouchableOpacity>

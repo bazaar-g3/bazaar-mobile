@@ -236,17 +236,18 @@ export const styles = StyleSheet.create({
   },
 
   categoryCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.white,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    // backgroundColor es inyectado dinámicamente por HomeScreen (uno por categoría)
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 5,
-  },
-
-  categoryEmoji: {
-    fontSize: 24,
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   categoryLabel: {
@@ -257,10 +258,11 @@ export const styles = StyleSheet.create({
 
   content: {
     padding: 16,
+    paddingTop: 8,
   },
 
   section: {
-    marginBottom: 10,
+    marginBottom: 28,
     width: "100%",
   },
 
@@ -268,7 +270,8 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     textAlign: "center",
-    marginVertical: 15,
+    marginTop: 8,
+    marginBottom: 16,
     color: COLORS.sectionTitle,
   },
 
