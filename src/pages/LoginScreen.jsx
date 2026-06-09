@@ -121,6 +121,8 @@ export default function LoginScreen() {
         setError('Dirección de correo electrónico o contraseña incorrectas')
       } else if (err.response?.status === 422) {
         setError('Ingrese una dirección de correo electrónico válida')
+      } else if (err.response?.status === 429) {
+        setError('Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.')
       } else {
         setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
