@@ -48,11 +48,11 @@ export default function BottomNavBar() {
             onPress={() => handlePress(tab)}
             activeOpacity={0.7}
           >
-            <View style={styles.iconWrapper}>
+            <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
               <Ionicons
                 name={iconName}
-                size={26}
-                color={isActive ? COLORS.primary : COLORS.textMuted}
+                size={24}
+                color={isActive ? COLORS.white : COLORS.textMuted}
               />
               {isCart && count > 0 && (
                 <View style={styles.badge}>
@@ -89,6 +89,12 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     position: 'relative',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+  },
+  iconWrapperActive: {
+    backgroundColor: COLORS.primary,
   },
   badge: {
     position: 'absolute',

@@ -23,6 +23,7 @@ import { COLORS } from '../constants/colors'
 import { FONT, SPACING } from '../constants/theme'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 import ConfirmModal from '../components/ConfirmModal'
+import Logo from '../components/Logo'
 
 export default function CartScreen() {
   const router = useRouter()
@@ -210,6 +211,9 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+      <View style={styles.topBar}>
+        <Logo size={28} textSize={22} />
+      </View>
       <View style={containerStyle}>
         <Text style={[styles.title, { fontSize: titleFont }]}>Mi carrito</Text>
 
@@ -289,6 +293,14 @@ export default function CartScreen() {
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
   fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
   container: {
     flex: 1,
