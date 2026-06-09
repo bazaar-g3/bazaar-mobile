@@ -484,7 +484,7 @@ export default function HomeScreen() {
                     product={product}
                     variant="horizontal"
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
+                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                   />
                 ))}
               </ScrollView>
@@ -508,7 +508,7 @@ export default function HomeScreen() {
                     product={product}
                     variant="horizontal"
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
+                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                   />
                 ))}
               </ScrollView>
@@ -552,7 +552,7 @@ export default function HomeScreen() {
                     product={product}
                     variant="horizontal"
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
+                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                   />
                 ))}
               </ScrollView>

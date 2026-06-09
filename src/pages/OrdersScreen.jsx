@@ -516,7 +516,8 @@ export default function OrdersScreen() {
                         <TouchableOpacity
                           onPress={() => {
                             closeDetail()
-                            router.push(`/product/${item.product_id}`)
+                            const sellerParam = item.seller_id ? `?sellerId=${item.seller_id}` : ''
+                            router.push(`/product/${item.product_id}${sellerParam}`)
                           }}
                           activeOpacity={0.7}
                           style={styles.detailItemNameRow}
