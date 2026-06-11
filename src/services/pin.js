@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store'
+import SecureStore from './secureStore'
 
 const PIN_ENABLED_KEY = 'pin_enabled'
 const PIN_VALUE_KEY = 'pin_value'
