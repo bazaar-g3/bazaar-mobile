@@ -29,6 +29,7 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { recordCategoryBrowse } from "../services/browseHistory";
 import { getWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
 import { styles } from "../styles/homeStyles";
@@ -92,6 +93,9 @@ export default function HomeScreen() {
       params.categoryId = filterCategory.id;
       params.categoryName = filterCategory.label;
       if (filterCategory.slug) params.categorySlug = filterCategory.slug;
+      if (isAuthenticated && filterCategory.slug) {
+        recordCategoryBrowse(filterCategory.slug).catch(() => {});
+      }
     }
     if (filterSortBy) params.sortBy = filterSortBy;
     if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
@@ -269,6 +273,9 @@ export default function HomeScreen() {
   };
 
   const handleCategoryPress = (category) => {
+    if (isAuthenticated && category.slug) {
+      recordCategoryBrowse(category.slug).catch(() => {});
+    }
     router.push({
       pathname: "/products",
       params: {
@@ -509,27 +516,58 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {!loadingForYou && forYouProducts.length > 0 && (
+          {isAuthenticated && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                PARA <Text style={styles.sectionAccent}>VOS</Text>
-              </Text>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recommendedList}
-              >
-                {forYouProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    variant="horizontal"
-                    isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
-                  />
-                ))}
-              </ScrollView>
+              {loadingForYou ? (
+                <View style={styles.sectionStatusCard}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.sectionStatusText}>
+                    Cargando recomendaciones...
+                  </Text>
+                </View>
+              ) : forYouProducts.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    PARA <Text style={styles.sectionAccent}>VOS</Text>
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.recommendedList}
+                  >
+                    {forYouProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        variant="horizontal"
+                        isWishlisted={wishlistIds.has(String(product.id))}
+                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              ) : popularProducts.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    TENDENCIAS <Text style={styles.sectionAccent}>PARA VOS</Text>
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.recommendedList}
+                  >
+                    {popularProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        variant="horizontal"
+                        isWishlisted={wishlistIds.has(String(product.id))}
+                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
             </View>
           )}
 

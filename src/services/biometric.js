@@ -1,5 +1,5 @@
 import * as LocalAuthentication from 'expo-local-authentication'
-import * as SecureStore from 'expo-secure-store'
+import SecureStore from './secureStore'
 
 const BIOMETRIC_REFRESH_TOKEN_KEY = 'biometric_refresh_token'
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled'
