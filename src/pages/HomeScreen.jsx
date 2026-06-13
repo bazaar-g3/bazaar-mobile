@@ -198,7 +198,7 @@ export default function HomeScreen() {
     setPopularProductsError("");
 
     try {
-      const products = await listPopularProducts({ limit: 20, offset: 0 });
+      const products = await listPopularProducts({ limit: 25, offset: 0 });
 
       setPopularProducts(
         products.map((product) =>
@@ -322,6 +322,16 @@ export default function HomeScreen() {
     setProfileMenuVisible(false);
     router.replace("/home");
   };
+
+  // Productos para el fallback "RECOMENDACIONES PARA VOS" (autenticado sin historial).
+  // Si hay más de 20 populares: primero los 5 extra (distintos de "POPULARES EN BAZAAR"),
+  // luego los 20 primeros en orden inverso. Si no hay suficientes: solo orden inverso.
+  const popularForMain = popularProducts.slice(0, 20);
+  // Si hay > 20 populares: 5 distintos (pos 21-25) + 15 de los primeros 20 invertidos = 20 total.
+  // Si no hay suficientes: mismos 20 en orden invertido.
+  const trendingProducts = popularProducts.length > 20
+    ? [...popularProducts.slice(20, 25), ...[...popularProducts.slice(0, 15)].reverse()]
+    : [...popularProducts].reverse();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -503,7 +513,7 @@ export default function HomeScreen() {
                 alwaysBounceHorizontal={true}
                 directionalLockEnabled={true}
               >
-                {popularProducts.map((product) => (
+                {popularForMain.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -528,7 +538,7 @@ export default function HomeScreen() {
               ) : forYouProducts.length > 0 ? (
                 <>
                   <Text style={styles.sectionTitle}>
-                    PARA <Text style={styles.sectionAccent}>VOS</Text>
+                    RECOMENDACIONES <Text style={styles.sectionAccent}>PARA VOS</Text>
                   </Text>
                   <ScrollView
                     horizontal
@@ -546,17 +556,17 @@ export default function HomeScreen() {
                     ))}
                   </ScrollView>
                 </>
-              ) : popularProducts.length > 0 ? (
+              ) : trendingProducts.length > 0 ? (
                 <>
                   <Text style={styles.sectionTitle}>
-                    TENDENCIAS <Text style={styles.sectionAccent}>PARA VOS</Text>
+                    RECOMENDACIONES <Text style={styles.sectionAccent}>PARA VOS</Text>
                   </Text>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.recommendedList}
                   >
-                    {popularProducts.map((product) => (
+                    {trendingProducts.map((product) => (
                       <ProductCard
                         key={product.id}
                         product={product}
