@@ -1,7 +1,6 @@
 import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import { Platform } from 'react-native'
-import Constants from 'expo-constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import api from '../api/api'
 
@@ -30,15 +29,15 @@ export async function registerForPushNotifications() {
       return null
     }
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId
-    const { data: expoPushToken } = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    )
+    // getDevicePushTokenAsync() devuelve el token FCM nativo (Android) o APNs (iOS),
+    // que es lo que espera Firebase Admin SDK en el backend.
+    // getExpoPushTokenAsync() devuelve un token del proxy de Expo que NO es válido para FCM directo.
+    const { data: fcmToken } = await Notifications.getDevicePushTokenAsync()
 
-    await AsyncStorage.setItem(PUSH_TOKEN_KEY, expoPushToken)
-    await api.post('/notifications/register-device', { token: expoPushToken, platform: 'expo' })
-    console.log('Push token registrado:', expoPushToken)
-    return expoPushToken
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, fcmToken)
+    await api.post('/notifications/register-device', { token: fcmToken, platform: Platform.OS })
+    console.log('Push token FCM registrado:', fcmToken)
+    return fcmToken
   } catch (error) {
     console.warn('No se pudo registrar el dispositivo para push notifications', error)
     return null
