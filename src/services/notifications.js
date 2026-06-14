@@ -45,6 +45,22 @@ export async function registerForPushNotifications() {
 }
 
 /*
+ Obtiene el historial de notificaciones del usuario autenticado.
+*/
+export async function getNotificationsHistory() {
+  const response = await api.get('/notifications/history')
+  return response.data
+}
+
+/*
+ Marca todas las notificaciones del usuario como leídas.
+*/
+export async function markAllNotificationsRead() {
+  const response = await api.post('/notifications/history/read-all')
+  return response.data
+}
+
+/*
  Da de baja el token push del dispositivo.
  Debe llamarse al cerrar sesión.
 */

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Stack, useRouter } from 'expo-router'
-import { View } from 'react-native'
+import { View, Platform } from 'react-native'
 import { useFonts } from 'expo-font'
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
@@ -19,6 +19,17 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 })
+
+// Canal Android con importancia HIGH → activa el banner emergente cuando la app está en background
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Bazaar',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#0B3A46',
+    sound: 'default',
+  })
+}
 
 export default function RootLayout() {
   const router = useRouter()

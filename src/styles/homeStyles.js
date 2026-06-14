@@ -125,6 +125,25 @@ export const styles = StyleSheet.create({
     fontSize: 22,
   },
 
+  notifBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -6,
+    backgroundColor: '#F44336',
+    borderRadius: 999,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
   profileAvatar: {
     width: 36,
     height: 36,
