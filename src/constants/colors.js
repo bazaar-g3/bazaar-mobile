@@ -32,7 +32,4 @@ export const COLORS = {
 
   lightPurple: '#ded1ff',
   lightPink: '#f7e9ee',
-
-  warning: '#D97706',
-  warningLight: '#FFF7ED',
 }
