@@ -169,30 +169,32 @@ export default function EditProductModal({
             </View>
           ) : (
             <>
+              {/* Sección imágenes fuera del ScrollView — evita conflicto de gestures en Modal Android APK */}
+              <View style={styles.imagesSection}>
+                <Text style={styles.label}>Imágenes</Text>
+
+                {imagenes.length > 0 && (
+                  <DraggableImageList
+                    images={imagenes.map((uri) => ({ uri: uri || PRODUCT_IMAGE_PLACEHOLDER }))}
+                    onReorder={handleReorderImages}
+                    onRemove={handleRemoveImage}
+                  />
+                )}
+
+                <TouchableOpacity
+                  style={styles.addImageCard}
+                  onPress={handlePickImages}
+                >
+                  <Text style={styles.addImagePlus}>+</Text>
+                  <Text style={styles.addImageText}>Agregar foto</Text>
+                </TouchableOpacity>
+              </View>
+
               <ScrollView
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
               >
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Imágenes</Text>
-
-                  {imagenes.length > 0 && (
-                    <DraggableImageList
-                      images={imagenes.map((uri) => ({ uri: uri || PRODUCT_IMAGE_PLACEHOLDER }))}
-                      onReorder={handleReorderImages}
-                      onRemove={handleRemoveImage}
-                    />
-                  )}
-
-                  <TouchableOpacity
-                    style={styles.addImageCard}
-                    onPress={handlePickImages}
-                  >
-                    <Text style={styles.addImagePlus}>+</Text>
-                    <Text style={styles.addImageText}>Agregar foto</Text>
-                  </TouchableOpacity>
-                </View>
-
                 <View style={styles.fieldGroup}>
                   <Text style={styles.label}>Nombre</Text>
                   <TextInput
@@ -339,6 +341,15 @@ const styles = StyleSheet.create({
     fontSize: FONT.small,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+
+  imagesSection: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.divider,
+    paddingBottom: SPACING.md,
   },
 
   content: {

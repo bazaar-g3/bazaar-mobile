@@ -20,6 +20,7 @@ import OAuthButtons from '../components/OAuthButtons'
 import { useCartContext } from '../context/CartContext'
 import AccountBlockedModal from '../components/AccountBlockedModal'
 import BiometricEnrollmentModal from '../components/BiometricEnrollmentModal'
+import PinEnrollmentModal from '../components/PinEnrollmentModal'
 import {
   isBiometricHardwareAvailable,
   isBiometricEnabled,
@@ -28,6 +29,7 @@ import {
   getBiometricRefreshToken,
   authenticateWithBiometrics,
 } from '../services/biometric'
+import { isPinEnabled } from '../services/pin'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -48,20 +50,28 @@ export default function LoginScreen() {
   const [enrollmentModalVisible, setEnrollmentModalVisible] = useState(false)
   const [pendingRefreshToken, setPendingRefreshToken] = useState(null)
 
+  // Estado de PIN
+  const [pinEnabled, setPinEnabled] = useState(false)
+  const [pinEnrollmentModalVisible, setPinEnrollmentModalVisible] = useState(false)
+  const [pendingPostAuthDestination, setPendingPostAuthDestination] = useState(null)
+
   const successMessage = params.passwordReset === 'success'
     ? 'Se ha actualizado tu contraseña correctamente. Inicia sesión con la nueva contraseña.'
     : ''
 
-  // Al montar la pantalla verificamos si el dispositivo tiene biométrica disponible y habilitada
+  // Al montar la pantalla verificamos disponibilidad biométrica y estado del PIN
   useEffect(() => {
-    async function checkBiometric() {
+    async function checkAuthOptions() {
       const available = await isBiometricHardwareAvailable()
-      if (!available) return
-      setBiometricAvailable(true)
-      const enabled = await isBiometricEnabled()
-      setBiometricEnabled(enabled)
+      if (available) {
+        setBiometricAvailable(true)
+        const enabled = await isBiometricEnabled()
+        setBiometricEnabled(enabled)
+      }
+      const pinOn = await isPinEnabled()
+      setPinEnabled(pinOn)
     }
-    checkBiometric()
+    checkAuthOptions()
   }, [])
 
   function validate() {
@@ -105,14 +115,26 @@ export default function LoginScreen() {
         console.warn('Cart refresh failed after login', cartError)
       }
 
-      // CA1: si el dispositivo soporta biométrica y el usuario no la activó aún, ofrecer activación
+      // Determinar destino post-login para preservarlo durante los modales de enrollment
+      const destination = buildPostAuthDestination(params)
+
+      // Si el dispositivo soporta biométrica y el usuario no la activó aún, ofrecer activación
       const available = await isBiometricHardwareAvailable()
       const alreadyEnabled = await isBiometricEnabled()
       if (available && !alreadyEnabled && refreshToken) {
         setPendingRefreshToken(refreshToken)
+        setPendingPostAuthDestination(destination)
         setEnrollmentModalVisible(true)
       } else {
-        router.replace(buildPostAuthDestination(params))
+        // Sin biométrica: verificar si ofrecer PIN enrollment
+        const pinAlreadyEnabled = await isPinEnabled()
+        if (!pinAlreadyEnabled && refreshToken) {
+          setPendingRefreshToken(refreshToken)
+          setPendingPostAuthDestination(destination)
+          setPinEnrollmentModalVisible(true)
+        } else {
+          router.replace(destination)
+        }
       }
     } catch (err) {
       if (err.response?.status === 403) {
@@ -121,6 +143,8 @@ export default function LoginScreen() {
         setError('Dirección de correo electrónico o contraseña incorrectas')
       } else if (err.response?.status === 422) {
         setError('Ingrese una dirección de correo electrónico válida')
+      } else if (err.response?.status === 429) {
+        setError('Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.')
       } else {
         setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
@@ -130,8 +154,8 @@ export default function LoginScreen() {
   }
 
   /**
-   * CA1: el usuario aceptó activar el login biométrico desde el modal de enrolamiento.
-   * Guarda el refresh token en almacenamiento seguro y navega al destino post-login.
+   * El usuario aceptó activar el login biométrico. Guarda el refresh token y, si el PIN
+   * no está configurado, ofrece configurarlo antes de navegar al destino post-login.
    */
   async function handleEnrollBiometric() {
     try {
@@ -141,22 +165,58 @@ export default function LoginScreen() {
       // si falla el guardado igual dejamos pasar al usuario
     } finally {
       setEnrollmentModalVisible(false)
-      router.replace(buildPostAuthDestination(params))
+      await checkPinEnrollmentOrNavigate()
     }
   }
 
   /**
-   * El usuario eligió no activar biométrica ahora. Solo navega al destino post-login.
+   * El usuario eligió no activar biométrica ahora. Verifica si ofrecer PIN enrollment.
    */
-  function handleSkipEnrollment() {
+  async function handleSkipEnrollment() {
     setEnrollmentModalVisible(false)
-    router.replace(buildPostAuthDestination(params))
+    await checkPinEnrollmentOrNavigate()
   }
 
   /**
-   * CA2 y CA3: intenta autenticar al usuario usando la biométrica del dispositivo.
-   * Si la autenticación biométrica falla o la sesión expiró, muestra el error correspondiente.
-   * CA4: si el refresh token almacenado ya no es válido (sesión expirada), limpia los datos
+   * Después de la decisión biométrica, verifica si ofrecer enrollment de PIN.
+   * Si el PIN ya está configurado o no hay refresh token, navega directamente.
+   */
+  async function checkPinEnrollmentOrNavigate() {
+    const pinAlreadyEnabled = await isPinEnabled()
+    if (!pinAlreadyEnabled && pendingRefreshToken) {
+      setPinEnrollmentModalVisible(true)
+    } else {
+      router.replace(pendingPostAuthDestination ?? buildPostAuthDestination(params))
+    }
+  }
+
+  /**
+   * El usuario aceptó configurar el PIN desde el modal de enrollment post-login.
+   * Navega a la pantalla de configuración de PIN con el refresh token y el destino.
+   */
+  function handleSetupPin() {
+    setPinEnrollmentModalVisible(false)
+    const destination = pendingPostAuthDestination ?? buildPostAuthDestination(params)
+    router.replace({
+      pathname: '/pin-setup',
+      params: {
+        refreshToken: pendingRefreshToken,
+        redirectPath: typeof destination === 'string' ? destination : destination.pathname,
+      },
+    })
+  }
+
+  /**
+   * El usuario eligió no configurar el PIN ahora. Navega al destino post-login.
+   */
+  function handleSkipPinEnrollment() {
+    setPinEnrollmentModalVisible(false)
+    router.replace(pendingPostAuthDestination ?? buildPostAuthDestination(params))
+  }
+
+  /**
+   * Intenta autenticar al usuario usando la biométrica del dispositivo.
+   * Si el refresh token almacenado ya no es válido (sesión expirada), limpia los datos
    * biométricos y pide al usuario que vuelva a ingresar con correo y contraseña.
    */
   async function handleBiometricLogin() {
@@ -166,7 +226,7 @@ export default function LoginScreen() {
       // Prompt nativo del dispositivo (huella / face ID)
       const result = await authenticateWithBiometrics()
 
-      // CA3: la validación biométrica falló o fue cancelada por el usuario
+      // La validación biométrica falló o fue cancelada por el usuario
       if (!result.success) {
         if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
           setError('No se pudo verificar tu identidad. Intentá de nuevo o usá tu contraseña.')
@@ -174,7 +234,7 @@ export default function LoginScreen() {
         return
       }
 
-      // CA2: biométrica validada — recuperar el refresh token guardado
+      // Biométrica validada — recuperar el refresh token guardado
       const storedRefreshToken = await getBiometricRefreshToken()
       if (!storedRefreshToken) {
         await disableBiometric()
@@ -197,7 +257,7 @@ export default function LoginScreen() {
       router.replace(buildPostAuthDestination(params))
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
-        // CA4: sesión expirada o usuario bloqueado — limpiar biométrica y pedir login manual
+        // Sesión expirada o usuario bloqueado — limpiar biométrica y pedir login manual
         await disableBiometric()
         setBiometricEnabled(false)
         if (err.response?.status === 403) {
@@ -223,6 +283,11 @@ export default function LoginScreen() {
         visible={enrollmentModalVisible}
         onEnable={handleEnrollBiometric}
         onSkip={handleSkipEnrollment}
+      />
+      <PinEnrollmentModal
+        visible={pinEnrollmentModalVisible}
+        onSetup={handleSetupPin}
+        onSkip={handleSkipPinEnrollment}
       />
     <ScrollView
       contentContainerStyle={styles.scrollContent}
@@ -291,7 +356,6 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* CA2: botón de login biométrico — solo visible si el usuario lo activó previamente */}
           {biometricAvailable && biometricEnabled && (
             <TouchableOpacity
               style={[styles.biometricButton, biometricLoading && styles.buttonDisabled]}
@@ -306,6 +370,18 @@ export default function LoginScreen() {
                   <Text style={styles.biometricButtonText}>Ingresar con biométrica</Text>
                 </View>
               )}
+            </TouchableOpacity>
+          )}
+
+          {pinEnabled && (
+            <TouchableOpacity
+              style={styles.pinButton}
+              onPress={() => router.push(buildAuthScreenNavigation('/pin-login', params))}
+            >
+              <View style={styles.buttonContent}>
+                <Ionicons name="keypad-outline" size={22} color={COLORS.primary} />
+                <Text style={styles.pinButtonText}>Ingresar con PIN</Text>
+              </View>
             </TouchableOpacity>
           )}
 
@@ -446,6 +522,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   biometricButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  pinButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
+  },
+  pinButtonText: {
     color: COLORS.primary,
     fontSize: 15,
     fontWeight: '800',

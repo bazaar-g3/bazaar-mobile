@@ -1,7 +1,7 @@
 import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
 import * as Google from 'expo-auth-session/providers/google'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { loginWithOAuth } from '../services/auth'
 import { COLORS } from '../constants/colors'
 
@@ -27,38 +27,59 @@ export default function OAuthButtons({ onSuccess, onError }) {
             : null
     )
 
-    async function handleGoogle() {
+    // Ref para evitar doble procesamiento si tanto la promesa como el useEffect
+    // intentan procesar el mismo token (puede ocurrir en condiciones de carrera).
+    const processedTokenRef = useRef(null)
+
+    // En Android con Chrome Custom Tabs existe una condición de carrera:
+    // la pestaña se cierra antes de que el listener de Linking procese la URL de redirect,
+    // por lo que promptGoogleAsync() puede resolver con { type: 'dismiss' } aunque
+    // el usuario completó el OAuth. googleResponse se actualiza correctamente vía
+    // el listener interno de expo-auth-session incluso después de ese dismiss.
+    useEffect(() => {
+        if (!googleResponse) return
+
+        if (googleResponse.type !== 'success') {
+            setLoadingProvider(null)
+            return
+        }
+
+        const accessToken = googleResponse.authentication?.accessToken
+        if (!accessToken || accessToken === processedTokenRef.current) return
+        processedTokenRef.current = accessToken
+
+        setLoadingProvider('GOOGLE')
+        ;(async () => {
+            try {
+                const userInfoRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                })
+                const userInfo = await userInfoRes.json()
+                await loginWithOAuth({
+                    provider: 'GOOGLE',
+                    providerId: userInfo.id,
+                    email: userInfo.email,
+                    fullName: userInfo.name,
+                    avatarUrl: userInfo.picture,
+                })
+                onSuccess()
+            } catch {
+                processedTokenRef.current = null
+                onError('No se pudo iniciar sesión con Google')
+            } finally {
+                setLoadingProvider(null)
+            }
+        })()
+    }, [googleResponse])
+
+    function handleGoogle() {
         if (!googleClientId || !promptGoogleAsync) {
             onError('Google Sign-In no está disponible en este entorno.')
             return
         }
+        processedTokenRef.current = null
         setLoadingProvider('GOOGLE')
-        try {
-            const result = await promptGoogleAsync()
-            if (result.type !== 'success') return
-            if (!result.authentication?.accessToken) {
-                onError('No se pudo obtener el token de Google')
-                return
-            }
-
-            const userInfoRes = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-                headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
-            })
-            const userInfo = await userInfoRes.json()
-
-            await loginWithOAuth({
-                provider: 'GOOGLE',
-                providerId: userInfo.id,
-                email: userInfo.email,
-                fullName: userInfo.name,
-                avatarUrl: userInfo.picture,
-            })
-            onSuccess()
-        } catch (err) {
-            onError('No se pudo iniciar sesión con Google')
-        } finally {
-            setLoadingProvider(null)
-        }
+        promptGoogleAsync()
     }
 
     return (
