@@ -21,7 +21,10 @@
               "scheme": "com.bazaar.app"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -48,7 +51,8 @@
             "networkSecurityConfig": "./network-security-config.xml"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "newArchEnabled": false,
     "extra": {

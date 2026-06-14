@@ -30,6 +30,7 @@ import {
 } from "../utils/authRedirect";
 import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 import { getProductReputation, formatAverageScore } from "../services/reviews";
+import { recordProductView } from "../services/browseHistory";
 
 import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
 
@@ -131,6 +132,7 @@ export default function ProductDetailScreen() {
             seller: sellerProfile.fullName,
             status: product.status || "active",
           });
+          recordProductView(String(product.id)).catch(() => {});
         }
       } catch (error) {
         if (!cancelled) {

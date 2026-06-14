@@ -3,13 +3,15 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 
 import api from '../api/api'
 import ProfileHeader from '../components/profile/ProfileHeader'
@@ -28,6 +30,8 @@ import {
 } from '../services/catalog'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
+import { isPinEnabled } from '../services/pin'
+import DisablePinModal from '../components/DisablePinModal'
 
 export default function ProfileScreen() {
   const router = useRouter()
@@ -57,6 +61,10 @@ export default function ProfileScreen() {
   const [activeProductsSummaryError, setActiveProductsSummaryError] =
     useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+
+  // Estado de PIN
+  const [pinEnabled, setPinEnabled] = useState(false)
+  const [disablePinModalVisible, setDisablePinModalVisible] = useState(false)
 
   const refreshCatalogKey = Array.isArray(refreshCatalog)
     ? refreshCatalog[0]
@@ -229,6 +237,17 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadActiveProductsSummary()
   }, [loadActiveProductsSummary, refreshCatalogKey])
+
+  // Verificar estado del PIN al ganar foco (se actualiza al volver de pin-setup)
+  useFocusEffect(
+    useCallback(() => {
+      async function checkPin() {
+        const enabled = await isPinEnabled()
+        setPinEnabled(enabled)
+      }
+      checkPin()
+    }, [])
+  )
 
   const handleOpenPublish = useCallback(async () => {
     const token = await AsyncStorage.getItem('token')
@@ -436,30 +455,92 @@ export default function ProfileScreen() {
     }
 
     return (
-      <ProfileInfoTab
-        profile={profile}
-        editing={editing}
-        setEditing={setEditing}
-        fullName={fullName}
-        setFullName={setFullName}
-        description={description}
-        setDescription={setDescription}
-        avatarUri={avatarUri}
-        saveSuccess={saveSuccess}
-        saveError={saveError}
-        fieldErrors={fieldErrors}
-        setFieldErrors={setFieldErrors}
-        saving={saving}
-        onPickImage={handlePickImage}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        activeProductsSummary={activeProductsSummary}
-        loadingActiveProductsSummary={loadingActiveProductsSummary}
-        activeProductsSummaryError={activeProductsSummaryError}
-        onReloadActiveProductsSummary={loadActiveProductsSummary}
-        onOpenPublish={handleOpenPublish}
-        onGoToSalesTab={handleGoToSalesTab}
-      />
+      <>
+        <ProfileInfoTab
+          profile={profile}
+          editing={editing}
+          setEditing={setEditing}
+          fullName={fullName}
+          setFullName={setFullName}
+          description={description}
+          setDescription={setDescription}
+          avatarUri={avatarUri}
+          saveSuccess={saveSuccess}
+          saveError={saveError}
+          fieldErrors={fieldErrors}
+          setFieldErrors={setFieldErrors}
+          saving={saving}
+          onPickImage={handlePickImage}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          activeProductsSummary={activeProductsSummary}
+          loadingActiveProductsSummary={loadingActiveProductsSummary}
+          activeProductsSummaryError={activeProductsSummaryError}
+          onReloadActiveProductsSummary={loadActiveProductsSummary}
+          onOpenPublish={handleOpenPublish}
+          onGoToSalesTab={handleGoToSalesTab}
+        />
+
+        {/* Sección Seguridad */}
+        <View style={securityStyles.card}>
+          <Text style={securityStyles.sectionTitle}>Seguridad</Text>
+          <View style={securityStyles.row}>
+            <View style={securityStyles.rowLeft}>
+              <Ionicons
+                name="keypad-outline"
+                size={22}
+                color={COLORS.primary}
+                style={securityStyles.rowIcon}
+              />
+              <View>
+                <Text style={securityStyles.rowLabel}>PIN de acceso</Text>
+                <Text style={securityStyles.rowSubLabel}>
+                  Acceso rápido desde este dispositivo
+                </Text>
+              </View>
+            </View>
+            <View style={securityStyles.rowRight}>
+              <View
+                style={[
+                  securityStyles.badge,
+                  pinEnabled ? securityStyles.badgeActive : securityStyles.badgeInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    securityStyles.badgeText,
+                    pinEnabled ? securityStyles.badgeTextActive : securityStyles.badgeTextInactive,
+                  ]}
+                >
+                  {pinEnabled ? 'Activo' : 'Inactivo'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  securityStyles.actionButton,
+                  pinEnabled ? securityStyles.actionButtonDanger : securityStyles.actionButtonPrimary,
+                ]}
+                onPress={() => {
+                  if (pinEnabled) {
+                    setDisablePinModalVisible(true)
+                  } else {
+                    router.push('/pin-setup')
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    securityStyles.actionButtonText,
+                    pinEnabled ? securityStyles.actionButtonTextDanger : securityStyles.actionButtonTextPrimary,
+                  ]}
+                >
+                  {pinEnabled ? 'Desactivar' : 'Activar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </>
     )
   }
 
@@ -476,6 +557,16 @@ export default function ProfileScreen() {
       <ProfileHeader
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
         onGoHome={() => router.replace('/')}
+      />
+
+      <DisablePinModal
+        visible={disablePinModalVisible}
+        userEmail={profile?.email ?? ''}
+        onSuccess={() => {
+          setPinEnabled(false)
+          setDisablePinModalVisible(false)
+        }}
+        onCancel={() => setDisablePinModalVisible(false)}
       />
 
       <View style={styles.mainWrapper}>
@@ -508,3 +599,98 @@ export default function ProfileScreen() {
     </View>
   )
 }
+
+const securityStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  rowIcon: {
+    marginRight: 10,
+  },
+  rowLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  rowSubLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  badgeActive: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeInactive: {
+    backgroundColor: '#f3f4f6',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeTextActive: {
+    color: '#15803d',
+  },
+  badgeTextInactive: {
+    color: COLORS.textMuted,
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  actionButtonPrimary: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'transparent',
+  },
+  actionButtonDanger: {
+    borderColor: COLORS.error,
+    backgroundColor: 'transparent',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  actionButtonTextPrimary: {
+    color: COLORS.primary,
+  },
+  actionButtonTextDanger: {
+    color: COLORS.error,
+  },
+})
