@@ -12,13 +12,15 @@ import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import {
   verifyPin,
-  getPinRefreshToken,
+  getPinAccounts,
+  getPinRefreshTokenForAccount,
   incrementFailedAttempts,
   resetFailedAttempts,
   isLockedOut,
   getLockoutRemainingSeconds,
-  disablePin,
+  removePinAccount,
 } from '../services/pin'
+import AccountSelectorSheet from '../components/AccountSelectorSheet'
 import { registerForPushNotifications } from '../services/notifications'
 import { COLORS } from '../constants/colors'
 import Logo from '../components/Logo'
@@ -40,6 +42,8 @@ export default function PinLoginScreen() {
   const [error, setError] = useState('')
   const [lockedOut, setLockedOut] = useState(false)
   const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [accountSelectorVisible, setAccountSelectorVisible] = useState(false)
+  const [pendingAccounts, setPendingAccounts] = useState([])
 
   // Verificar estado de bloqueo al montar y cuando cambia lockedOut
   const checkLockout = useCallback(async () => {
@@ -119,35 +123,68 @@ export default function PinLoginScreen() {
         return
       }
 
-      // PIN correcto — usar el refresh token almacenado para obtener un nuevo accessToken
-      const storedRefreshToken = await getPinRefreshToken()
-      if (!storedRefreshToken) {
-        await disablePin()
+      // PIN correcto — determinar con qué cuenta continuar
+      const accounts = await getPinAccounts()
+      if (accounts.length === 0) {
         setError('Datos de PIN no encontrados. Configuralo de nuevo desde tu perfil.')
+        return
+      }
+
+      await resetFailedAttempts()
+
+      if (accounts.length === 1) {
+        await loginWithAccount(accounts[0])
+      } else {
+        // Múltiples cuentas: mostrar selector
+        pinRef.current = ''
+        setPinEntry('')
+        setPendingAccounts(accounts)
+        setAccountSelectorVisible(true)
+      }
+    } catch (err) {
+      pinRef.current = ''
+      setPinEntry('')
+      setError('Error de conexión. Intentá de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loginWithAccount(account) {
+    try {
+      const storedRefreshToken = await getPinRefreshTokenForAccount(account.email)
+      if (!storedRefreshToken) {
+        await removePinAccount(account.email)
+        setError('Sesión de esta cuenta no encontrada. Reactivá el PIN desde el perfil.')
         return
       }
 
       const response = await api.post('/auth/refresh', { refreshToken: storedRefreshToken })
       const newToken = response.data.accessToken
       await AsyncStorage.setItem('token', newToken)
-      await resetFailedAttempts()
 
       try { await registerForPushNotifications() } catch {}
       try { await refreshCart() } catch {}
 
       router.replace(buildPostAuthDestination(params))
     } catch (err) {
-      pinRef.current = ''
-      setPinEntry('')
       if (err.response?.status === 401 || err.response?.status === 403) {
-        // Sesión expirada o usuario bloqueado — limpiar PIN y pedir login completo
-        await disablePin()
-        setError('Tu sesión expiró. Ingresá con email y contraseña para reactivar el PIN.')
+        await removePinAccount(account.email)
+        const remaining = (await getPinAccounts()).filter(a => a.email !== account.email)
+        if (remaining.length > 0) {
+          setPendingAccounts(remaining)
+          setError('La sesión de esa cuenta expiró. Seleccioná otra.')
+        } else {
+          setAccountSelectorVisible(false)
+          if (err.response?.status === 403) {
+            setError('Tu cuenta está suspendida. Ingresá con email y contraseña.')
+          } else {
+            setError('Tu sesión expiró. Ingresá con email y contraseña para reactivar el PIN.')
+          }
+        }
       } else {
         setError('Error de conexión. Intentá de nuevo.')
       }
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -165,6 +202,19 @@ export default function PinLoginScreen() {
 
   return (
     <View style={styles.screen}>
+      <AccountSelectorSheet
+        visible={accountSelectorVisible}
+        accounts={pendingAccounts}
+        onSelect={(account) => {
+          setAccountSelectorVisible(false)
+          loginWithAccount(account)
+        }}
+        onCancel={() => {
+          setAccountSelectorVisible(false)
+          pinRef.current = ''
+          setPinEntry('')
+        }}
+      />
       <Logo />
 
       <View style={styles.card}>

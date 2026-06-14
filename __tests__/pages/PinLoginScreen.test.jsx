@@ -17,9 +17,9 @@ jest.mock('expo-secure-store', () => {
 // Mock de AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(async () => null),
-  setItem: jest.fn(async () => {}),
-  removeItem: jest.fn(async () => {}),
-  multiRemove: jest.fn(async () => {}),
+  setItem: jest.fn(async () => { }),
+  removeItem: jest.fn(async () => { }),
+  multiRemove: jest.fn(async () => { }),
 }))
 
 // Mock de expo-router
@@ -38,31 +38,33 @@ jest.mock('../../src/api/api', () => ({
 
 // Mock de notificaciones
 jest.mock('../../src/services/notifications', () => ({
-  registerForPushNotifications: jest.fn(async () => {}),
+  registerForPushNotifications: jest.fn(async () => { }),
 }))
 
 // Mock del CartContext
 jest.mock('../../src/context/CartContext', () => ({
-  useCartContext: () => ({ refresh: jest.fn(async () => {}) }),
+  useCartContext: () => ({ refresh: jest.fn(async () => { }) }),
 }))
 
 // Mock del servicio pin (controlable por test)
 const mockVerifyPin = jest.fn()
-const mockGetPinRefreshToken = jest.fn()
+const mockGetPinAccounts = jest.fn()
+const mockGetPinRefreshTokenForAccount = jest.fn()
 const mockIncrementFailedAttempts = jest.fn()
 const mockResetFailedAttempts = jest.fn()
 const mockIsLockedOut = jest.fn()
 const mockGetLockoutRemainingSeconds = jest.fn()
-const mockDisablePin = jest.fn()
+const mockRemovePinAccount = jest.fn()
 
 jest.mock('../../src/services/pin', () => ({
   verifyPin: (...args) => mockVerifyPin(...args),
-  getPinRefreshToken: (...args) => mockGetPinRefreshToken(...args),
+  getPinAccounts: (...args) => mockGetPinAccounts(...args),
+  getPinRefreshTokenForAccount: (...args) => mockGetPinRefreshTokenForAccount(...args),
   incrementFailedAttempts: (...args) => mockIncrementFailedAttempts(...args),
   resetFailedAttempts: (...args) => mockResetFailedAttempts(...args),
   isLockedOut: (...args) => mockIsLockedOut(...args),
   getLockoutRemainingSeconds: (...args) => mockGetLockoutRemainingSeconds(...args),
-  disablePin: (...args) => mockDisablePin(...args),
+  removePinAccount: (...args) => mockRemovePinAccount(...args),
 }))
 
 // Mock del componente Logo
@@ -80,10 +82,11 @@ beforeEach(() => {
   mockIsLockedOut.mockResolvedValue(false)
   mockGetLockoutRemainingSeconds.mockResolvedValue(0)
   mockVerifyPin.mockResolvedValue(false)
-  mockGetPinRefreshToken.mockResolvedValue('stored-refresh')
+  mockGetPinAccounts.mockResolvedValue([{ email: 'test@bazaar.com' }])
+  mockGetPinRefreshTokenForAccount.mockResolvedValue('stored-refresh')
   mockIncrementFailedAttempts.mockResolvedValue(1)
   mockResetFailedAttempts.mockResolvedValue(undefined)
-  mockDisablePin.mockResolvedValue(undefined)
+  mockRemovePinAccount.mockResolvedValue(undefined)
 })
 
 describe('PinLoginScreen — estado inicial', () => {
@@ -123,11 +126,12 @@ describe('PinLoginScreen — login exitoso', () => {
     await waitFor(() => expect(getByText('1')).toBeTruthy())
 
     await act(async () => {
-      ;['1','2','3','4','5','6'].forEach(d => fireEvent.press(getByText(d)))
+      ;['1', '2', '3', '4', '5', '6'].forEach(d => fireEvent.press(getByText(d)))
     })
 
     await waitFor(() => {
       expect(mockVerifyPin).toHaveBeenCalledWith('123456')
+      expect(mockGetPinRefreshTokenForAccount).toHaveBeenCalledWith('test@bazaar.com')
       expect(api.post).toHaveBeenCalledWith('/auth/refresh', { refreshToken: 'stored-refresh' })
       expect(mockResetFailedAttempts).toHaveBeenCalled()
       expect(mockReplace).toHaveBeenCalled()
@@ -144,7 +148,7 @@ describe('PinLoginScreen — intentos fallidos y bloqueo', () => {
     await waitFor(() => expect(getByText('1')).toBeTruthy())
 
     await act(async () => {
-      ;['9','9','9','9','9','9'].forEach(d => fireEvent.press(getByText('9')))
+      ;['9', '9', '9', '9', '9', '9'].forEach(d => fireEvent.press(getByText('9')))
     })
 
     await waitFor(() => {
@@ -164,7 +168,7 @@ describe('PinLoginScreen — intentos fallidos y bloqueo', () => {
     await waitFor(() => expect(getByText('1')).toBeTruthy())
 
     await act(async () => {
-      ;['9','9','9','9','9','9'].forEach(d => fireEvent.press(getByText('9')))
+      ;['9', '9', '9', '9', '9', '9'].forEach(d => fireEvent.press(getByText('9')))
     })
 
     await waitFor(() => {
@@ -180,11 +184,11 @@ describe('PinLoginScreen — intentos fallidos y bloqueo', () => {
     await waitFor(() => expect(getByText('1')).toBeTruthy())
 
     await act(async () => {
-      ;['1','2','3','4','5','6'].forEach(d => fireEvent.press(getByText(d)))
+      ;['1', '2', '3', '4', '5', '6'].forEach(d => fireEvent.press(getByText(d)))
     })
 
     await waitFor(() => {
-      expect(mockDisablePin).toHaveBeenCalled()
+      expect(mockRemovePinAccount).toHaveBeenCalled()
       expect(getByText(/Tu sesión expiró/)).toBeTruthy()
     })
   })

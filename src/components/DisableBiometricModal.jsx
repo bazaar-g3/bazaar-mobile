@@ -10,35 +10,31 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
-import { verifyPin, disablePinForAccount } from '../services/pin'
+import { authenticateWithBiometrics, disableBiometricForAccount } from '../services/biometric'
 import { COLORS } from '../constants/colors'
-import PinPad from './PinPad'
 
-const MODE_PIN = 'pin'
+const MODE_BIOMETRIC = 'biometric'
 const MODE_PASSWORD = 'password'
-const MAX_PIN_LENGTH = 8
 
 /**
- * Modal de confirmación para desactivar el PIN.
- * El usuario debe verificar su identidad usando el PIN actual o su contraseña
- * de cuenta antes de poder desactivarlo.
+ * Modal de confirmación para desactivar el login biométrico.
+ * El usuario debe verificar su identidad usando biometría o contraseña.
  *
- * @param {boolean} visible - Controla la visibilidad del modal.
- * @param {string} userEmail - Email de la cuenta, necesario para verificar por contraseña.
- * @param {Function} onSuccess - Callback invocado tras desactivar el PIN correctamente.
- * @param {Function} onCancel - Callback invocado al cancelar la operación.
+ * @param {boolean} visible
+ * @param {string} email - Email de la cuenta a desvincular.
+ * @param {string} userEmail - Email para verificar por contraseña (puede ser el mismo).
+ * @param {Function} onSuccess
+ * @param {Function} onCancel
  */
-export default function DisablePinModal({ visible, userEmail, onSuccess, onCancel, email }) {
-  const [mode, setMode] = useState(MODE_PIN)
-  const [pinEntry, setPinEntry] = useState('')
+export default function DisableBiometricModal({ visible, email, userEmail, onSuccess, onCancel }) {
+  const [mode, setMode] = useState(MODE_BIOMETRIC)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   function resetState() {
-    setMode(MODE_PIN)
-    setPinEntry('')
+    setMode(MODE_BIOMETRIC)
     setPassword('')
     setError('')
     setLoading(false)
@@ -50,33 +46,22 @@ export default function DisablePinModal({ visible, userEmail, onSuccess, onCance
     onCancel()
   }
 
-  function handleDigit(d) {
-    if (pinEntry.length >= MAX_PIN_LENGTH) return
-    setPinEntry(prev => prev + d)
-    setError('')
-  }
-
-  function handleDelete() {
-    setPinEntry(prev => prev.slice(0, -1))
-    setError('')
-  }
-
-  async function handleConfirmPin() {
-    if (pinEntry.length < 6) {
-      setError('El PIN debe tener al menos 6 dígitos')
-      return
-    }
+  async function handleConfirmBiometric() {
     setLoading(true)
+    setError('')
     try {
-      const ok = await verifyPin(pinEntry)
-      if (!ok) {
-        setError('PIN incorrecto. Verificá e intentá nuevamente.')
-        setPinEntry('')
+      const result = await authenticateWithBiometrics()
+      if (!result.success) {
+        if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+          setError('No se pudo verificar tu identidad. Intentá de nuevo.')
+        }
         return
       }
-      await disablePinForAccount(email ?? userEmail)
+      await disableBiometricForAccount(email ?? userEmail)
       resetState()
       onSuccess()
+    } catch {
+      setError('Error al verificar. Intentá de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -90,7 +75,7 @@ export default function DisablePinModal({ visible, userEmail, onSuccess, onCance
     setLoading(true)
     try {
       await api.post('/auth/login', { email: userEmail, password })
-      await disablePinForAccount(email ?? userEmail)
+      await disableBiometricForAccount(email ?? userEmail)
       resetState()
       onSuccess()
     } catch (err) {
@@ -106,23 +91,20 @@ export default function DisablePinModal({ visible, userEmail, onSuccess, onCance
     }
   }
 
-  const pinDots = Array.from({ length: 6 }).map((_, i) => i < pinEntry.length)
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Text style={styles.title}>Desactivar PIN</Text>
+          <Text style={styles.title}>Desactivar biometría</Text>
           <Text style={styles.subtitle}>Verificá tu identidad para continuar</Text>
 
-          {/* Tabs de modo */}
           <View style={styles.tabBar}>
             <TouchableOpacity
-              style={[styles.tab, mode === MODE_PIN && styles.tabActive]}
-              onPress={() => { setMode(MODE_PIN); setError(''); setPinEntry('') }}
+              style={[styles.tab, mode === MODE_BIOMETRIC && styles.tabActive]}
+              onPress={() => { setMode(MODE_BIOMETRIC); setError('') }}
             >
-              <Text style={[styles.tabText, mode === MODE_PIN && styles.tabTextActive]}>
-                Usar PIN
+              <Text style={[styles.tabText, mode === MODE_BIOMETRIC && styles.tabTextActive]}>
+                Usar biometría
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -137,23 +119,21 @@ export default function DisablePinModal({ visible, userEmail, onSuccess, onCance
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          {mode === MODE_PIN ? (
+          {mode === MODE_BIOMETRIC ? (
             <>
-              <View style={styles.dotsRow}>
-                {pinDots.map((filled, i) => (
-                  <View key={i} style={[styles.dot, filled && styles.dotFilled]} />
-                ))}
-              </View>
-              <PinPad onDigit={handleDigit} onDelete={handleDelete} disabled={loading} />
+              <Ionicons name="finger-print" size={52} color={COLORS.primary} style={styles.biometricIcon} />
+              <Text style={styles.biometricHint}>
+                Usá tu huella dactilar o reconocimiento facial para confirmar
+              </Text>
               <TouchableOpacity
-                style={[styles.confirmButton, (pinEntry.length < 6 || loading) && styles.buttonDisabled]}
-                onPress={handleConfirmPin}
-                disabled={pinEntry.length < 6 || loading}
+                style={[styles.confirmButton, loading && styles.buttonDisabled]}
+                onPress={handleConfirmBiometric}
+                disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color={COLORS.white} />
                 ) : (
-                  <Text style={styles.confirmButtonText}>Confirmar</Text>
+                  <Text style={styles.confirmButtonText}>Verificar con biometría</Text>
                 )}
               </TouchableOpacity>
             </>
@@ -266,22 +246,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 14,
+  biometricIcon: {
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  biometricHint: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
     marginBottom: 20,
-  },
-  dot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    backgroundColor: 'transparent',
-  },
-  dotFilled: {
-    backgroundColor: COLORS.primary,
   },
   confirmButton: {
     width: '100%',
@@ -290,7 +264,7 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 4,
     marginBottom: 8,
   },
   buttonDisabled: {

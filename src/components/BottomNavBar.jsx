@@ -8,10 +8,10 @@ import { buildLoginRedirect } from '../utils/authRedirect'
 import { useCartContext } from '../context/CartContext'
 
 const TABS = [
-  { label: 'Inicio',      icon: 'home-outline',    activeIcon: 'home',    path: '/home' },
-  { label: 'Carrito',     icon: 'cart-outline',    activeIcon: 'cart',    path: '/cart',   requiresAuth: true },
+  { label: 'Inicio', icon: 'home-outline', activeIcon: 'home', path: '/home' },
+  { label: 'Carrito', icon: 'cart-outline', activeIcon: 'cart', path: '/cart', requiresAuth: true },
   { label: 'Mis órdenes', icon: 'receipt-outline', activeIcon: 'receipt', path: '/orders', requiresAuth: true },
-  { label: 'Perfil',      icon: 'person-outline',  activeIcon: 'person',  path: '/profile', requiresAuth: true },
+  { label: 'Perfil', icon: 'person-outline', activeIcon: 'person', path: '/profile', requiresAuth: true },
 ]
 
 export default function BottomNavBar() {
@@ -48,11 +48,11 @@ export default function BottomNavBar() {
             onPress={() => handlePress(tab)}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconWrapper, isActive && styles.iconWrapperActive]}>
+            <View style={styles.iconWrapper}>
               <Ionicons
                 name={iconName}
-                size={24}
-                color={isActive ? COLORS.white : COLORS.textMuted}
+                size={26}
+                color={isActive ? COLORS.primary : COLORS.textMuted}
               />
               {isCart && count > 0 && (
                 <View style={styles.badge}>
@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 18,
     paddingVertical: 7,
+    backgroundColor: '#EEF5F4',
   },
   iconWrapperActive: {
     backgroundColor: COLORS.primary,

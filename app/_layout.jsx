@@ -11,6 +11,15 @@ import BottomNavBar from '../src/components/BottomNavBar'
 
 WebBrowser.maybeCompleteAuthSession()
 
+// Mostrar notificaciones aunque la app esté en primer plano
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
+
 export default function RootLayout() {
   const router = useRouter()
   const notificationListener = useRef(null)
@@ -27,7 +36,6 @@ export default function RootLayout() {
       (response) => {
         const data = response.notification.request.content.data
         if (data?.order_id) {
-          // Navegar a la pantalla de órdenes con el orderId para auto-abrir el detalle
           router.push(`/orders?orderId=${data.order_id}`)
         }
       }
