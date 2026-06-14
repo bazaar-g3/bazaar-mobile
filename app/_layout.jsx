@@ -35,7 +35,7 @@ export default function RootLayout() {
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current)
+        notificationListener.current.remove()
       }
     }
   }, [router])
