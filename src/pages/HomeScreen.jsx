@@ -10,6 +10,10 @@ import {
   Modal,
   Image,
 } from "react-native";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import * as Clipboard from "expo-clipboard";
+import { Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,6 +71,28 @@ export default function HomeScreen() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
   const [recentProductsError, setRecentProductsError] = useState("");
+
+  // ── DEBUG TEMPORAL: mostrar push token para testear notifications-api ──
+  const [debugPushToken, setDebugPushToken] = useState("");
+  const [debugCopied, setDebugCopied] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === "web" || !Device.isDevice) return;
+    Notifications.requestPermissionsAsync().then(({ status }) => {
+      if (status === "granted") {
+        Notifications.getExpoPushTokenAsync().then(({ data }) => {
+          setDebugPushToken(data);
+        });
+      }
+    });
+  }, []);
+
+  const handleCopyToken = async () => {
+    await Clipboard.setStringAsync(debugPushToken);
+    setDebugCopied(true);
+    setTimeout(() => setDebugCopied(false), 2000);
+  };
+  // ── FIN DEBUG ──
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
@@ -421,6 +447,27 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* ── DEBUG TEMPORAL: banner con push token — borrar después de testear ── */}
+      {debugPushToken ? (
+        <TouchableOpacity
+          onPress={handleCopyToken}
+          style={{
+            backgroundColor: "#175E72",
+            padding: 10,
+            margin: 8,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "bold", marginBottom: 2 }}>
+            {debugCopied ? "✅ Copiado!" : "📋 Tocá para copiar el push token:"}
+          </Text>
+          <Text style={{ color: "#69BDB6", fontSize: 9 }} selectable>
+            {debugPushToken}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+      {/* ── FIN DEBUG ── */}
 
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.categoriesBar}>
