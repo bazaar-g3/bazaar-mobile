@@ -1,5 +1,6 @@
 import api from '../api/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { unregisterPushNotifications } from './notifications'
 
 /**
  * Inicia sesión con OAuth.
@@ -32,6 +33,9 @@ export async function loginWithOAuth({ provider, providerId, email, fullName, av
  * Cierra sesión del usuario.
  */
 export async function logout() {
+    // Dar de baja el token push antes de limpiar el JWT (necesita auth)
+    await unregisterPushNotifications()
+
     try {
         await api.post('/auth/logout')
     } catch {

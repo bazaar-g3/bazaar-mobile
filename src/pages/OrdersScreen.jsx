@@ -13,7 +13,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router'
 import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
 import { createSellerReview, createProductReview } from '../services/reviews'
 import { getPublicProfile } from '../services/user'
@@ -108,6 +108,7 @@ function _initReviewEntry() {
 
 export default function OrdersScreen() {
   const router = useRouter()
+  const { orderId } = useLocalSearchParams()
   const { isSmall, isTablet } = useResponsive()
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
@@ -136,6 +137,24 @@ export default function OrdersScreen() {
     ensureAuth()
     return () => { cancelled = true }
   }, [router])
+
+  // CA3: si llegamos desde una notificación push con orderId, auto-abrir el detalle
+  useEffect(() => {
+    if (!orderId || checkingSession) return
+    async function openOrderFromNotification() {
+      try {
+        setDetailLoading(true)
+        setDetailError(null)
+        const detail = await getOrderById(orderId)
+        setSelectedOrder(detail)
+      } catch (e) {
+        setDetailError(e)
+      } finally {
+        setDetailLoading(false)
+      }
+    }
+    openOrderFromNotification()
+  }, [orderId, checkingSession])
 
   const loadOrders = useCallback(async (statusFilter) => {
     setLoading(true)
