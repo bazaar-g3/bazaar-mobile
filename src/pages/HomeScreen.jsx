@@ -360,7 +360,7 @@ export default function HomeScreen() {
     : [...popularProducts].reverse();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <View style={[styles.topBar, isSmall && styles.topBarSmall]}>
           <View style={styles.topBarContent}>
@@ -373,7 +373,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.logoCenter}>
-              <Logo size={34} textSize={32} style={styles.logoNoMargin} />
+              <Logo size={28} textSize={24} style={styles.logoNoMargin} />
             </View>
 
             <View style={styles.iconsContainer}>
