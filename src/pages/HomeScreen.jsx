@@ -30,6 +30,7 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { getNotificationsHistory } from "../services/notifications";
 import { recordCategoryBrowse } from "../services/browseHistory";
 import { getWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
@@ -71,6 +72,7 @@ export default function HomeScreen() {
   const [recentProductsError, setRecentProductsError] = useState("");
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState(null);
   const [wishlistIds, setWishlistIds] = useState(new Set());
@@ -134,8 +136,15 @@ export default function HomeScreen() {
         } catch {
           // non-critical
         }
+        try {
+          const notifData = await getNotificationsHistory();
+          setUnreadNotifications(notifData.unread_count ?? 0);
+        } catch {
+          // non-critical
+        }
       } else {
         setWishlistIds(new Set());
+        setUnreadNotifications(0);
       }
     } catch (error) {
       const token = await AsyncStorage.getItem("token");
@@ -388,19 +397,23 @@ export default function HomeScreen() {
                 style={styles.iconButton}
                 onPress={async () => {
                   const token = await AsyncStorage.getItem("token");
-
                   if (token) {
-                    router.push("/cart");
+                    router.push("/notifications");
                   } else {
-                    router.push(
-                      buildLoginRedirect({
-                        redirectPath: "/cart",
-                      })
-                    );
+                    router.push(buildLoginRedirect({ redirectPath: "/notifications" }));
                   }
                 }}
               >
-                <Text style={styles.icon}>🛒</Text>
+                <View style={{ position: 'relative' }}>
+                  <Ionicons name="notifications-outline" size={26} color={COLORS.primary} />
+                  {unreadNotifications > 0 && (
+                    <View style={styles.notifBadge}>
+                      <Text style={styles.notifBadgeText}>
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             </View>
           </View>
