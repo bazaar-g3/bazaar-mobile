@@ -89,9 +89,9 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     position: 'relative',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 5,
+    borderRadius: 100,
+    paddingHorizontal: 18,
+    paddingVertical: 7,
   },
   iconWrapperActive: {
     backgroundColor: COLORS.primary,
