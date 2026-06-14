@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -19,6 +19,18 @@ import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/au
 import OAuthButtons from '../components/OAuthButtons'
 import { useCartContext } from '../context/CartContext'
 import AccountBlockedModal from '../components/AccountBlockedModal'
+import BiometricEnrollmentModal from '../components/BiometricEnrollmentModal'
+import PinEnrollmentModal from '../components/PinEnrollmentModal'
+import {
+  isBiometricHardwareAvailable,
+  getBiometricAccounts,
+  enableBiometricForAccount,
+  removeBiometricAccount,
+  authenticateWithBiometrics,
+  getBiometricRefreshTokenForAccount,
+} from '../services/biometric'
+import { getPinAccounts, isPinSetOnDevice } from '../services/pin'
+import AccountSelectorSheet from '../components/AccountSelectorSheet'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -32,9 +44,40 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [blockedModalVisible, setBlockedModalVisible] = useState(false)
 
+  // Estado de biométrica
+  const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [biometricLoading, setBiometricLoading] = useState(false)
+  const [enrollmentModalVisible, setEnrollmentModalVisible] = useState(false)
+  const [pendingRefreshToken, setPendingRefreshToken] = useState(null)
+
+  // Estado de PIN
+  const [pinEnabled, setPinEnabled] = useState(false)
+  const [pinEnrollmentModalVisible, setPinEnrollmentModalVisible] = useState(false)
+  const [pendingPostAuthDestination, setPendingPostAuthDestination] = useState(null)
+
+  // Selector de cuenta (biométrica multi-cuenta)
+  const [accountSelectorVisible, setAccountSelectorVisible] = useState(false)
+  const [pendingBiometricAccounts, setPendingBiometricAccounts] = useState([])
+
   const successMessage = params.passwordReset === 'success'
     ? 'Se ha actualizado tu contraseña correctamente. Inicia sesión con la nueva contraseña.'
     : ''
+
+  // Al montar la pantalla verificamos disponibilidad biométrica y estado del PIN
+  useEffect(() => {
+    async function checkAuthOptions() {
+      const available = await isBiometricHardwareAvailable()
+      if (available) {
+        setBiometricAvailable(true)
+        const bioAccounts = await getBiometricAccounts()
+        setBiometricEnabled(bioAccounts.length > 0)
+      }
+      const pinOn = await isPinSetOnDevice()
+      setPinEnabled(pinOn)
+    }
+    checkAuthOptions()
+  }, [])
 
   function validate() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Ingrese una dirección de correo electrónico válida'
@@ -54,12 +97,16 @@ export default function LoginScreen() {
     try {
       const res = await api.post('/auth/login', { email, password })
       const token = res.data.accessToken ?? res.data.access_token
+      const refreshToken = res.data.refreshToken
 
       if (!token) {
         throw new Error('Missing access token')
       }
 
       await AsyncStorage.setItem('token', token)
+      if (refreshToken) {
+        await AsyncStorage.setItem('refreshToken', refreshToken)
+      }
 
       try {
         await registerForPushNotifications()
@@ -73,15 +120,38 @@ export default function LoginScreen() {
         console.warn('Cart refresh failed after login', cartError)
       }
 
-      router.replace(buildPostAuthDestination(params))
+      // Determinar destino post-login para preservarlo durante los modales de enrollment
+      const destination = buildPostAuthDestination(params)
+
+      // Si el dispositivo soporta biométrica y el usuario no la activó aún, ofrecer activación
+      const available = await isBiometricHardwareAvailable()
+      const bioAccounts = await getBiometricAccounts()
+      const alreadyBioEnabled = bioAccounts.some(a => a.email === email)
+      if (available && !alreadyBioEnabled && refreshToken) {
+        setPendingRefreshToken(refreshToken)
+        setPendingPostAuthDestination(destination)
+        setEnrollmentModalVisible(true)
+      } else {
+        // Sin biométrica: verificar si ofrecer PIN enrollment
+        const pinAccounts = await getPinAccounts()
+        const pinAlreadyEnabled = pinAccounts.some(a => a.email === email)
+        if (!pinAlreadyEnabled && refreshToken) {
+          setPendingRefreshToken(refreshToken)
+          setPendingPostAuthDestination(destination)
+          setPinEnrollmentModalVisible(true)
+        } else {
+          router.replace(destination)
+        }
+      }
     } catch (err) {
       if (err.response?.status === 403) {
-        // CA2: cuenta suspendida — mostramos modal en lugar de texto de error
         setBlockedModalVisible(true)
       } else if (err.response?.status === 401) {
         setError('Dirección de correo electrónico o contraseña incorrectas')
       } else if (err.response?.status === 422) {
         setError('Ingrese una dirección de correo electrónico válida')
+      } else if (err.response?.status === 429) {
+        setError('Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.')
       } else {
         setError('Algo salió mal. Por favor, inténtalo de nuevo.')
       }
@@ -90,11 +160,197 @@ export default function LoginScreen() {
     }
   }
 
+  /**
+   * El usuario aceptó activar el login biométrico. Obtiene el perfil para guardar
+   * nombre y avatar, activa la biometría para esta cuenta y luego evalúa el PIN.
+   */
+  async function handleEnrollBiometric() {
+    try {
+      let name = email
+      let avatarUrl = null
+      try {
+        const token = await AsyncStorage.getItem('token')
+        const res = await api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } })
+        name = res.data.fullName ?? res.data.name ?? res.data.username ?? email
+        avatarUrl = res.data.avatarUrl ?? res.data.avatar ?? null
+      } catch {
+        // Si falla el fetch del perfil, guardamos solo con el email
+      }
+      await enableBiometricForAccount(email, name, avatarUrl, pendingRefreshToken)
+      setBiometricEnabled(true)
+    } catch {
+      // si falla el guardado igual dejamos pasar al usuario
+    } finally {
+      setEnrollmentModalVisible(false)
+      await checkPinEnrollmentOrNavigate()
+    }
+  }
+
+  /**
+   * El usuario eligió no activar biométrica ahora. Verifica si ofrecer PIN enrollment.
+   */
+  async function handleSkipEnrollment() {
+    setEnrollmentModalVisible(false)
+    await checkPinEnrollmentOrNavigate()
+  }
+
+  /**
+   * Después de la decisión biométrica, verifica si ofrecer enrollment de PIN.
+   * Si el PIN ya está configurado para esta cuenta o no hay refresh token, navega directamente.
+   */
+  async function checkPinEnrollmentOrNavigate() {
+    const pinAccounts = await getPinAccounts()
+    const pinAlreadyEnabled = pinAccounts.some(a => a.email === email)
+    if (!pinAlreadyEnabled && pendingRefreshToken) {
+      setPinEnrollmentModalVisible(true)
+    } else {
+      router.replace(pendingPostAuthDestination ?? buildPostAuthDestination(params))
+    }
+  }
+
+  /**
+   * El usuario aceptó configurar el PIN desde el modal de enrollment post-login.
+   * Navega a la pantalla de configuración de PIN con el refresh token, el destino y los datos del perfil.
+   */
+  async function handleSetupPin() {
+    setPinEnrollmentModalVisible(false)
+    const destination = pendingPostAuthDestination ?? buildPostAuthDestination(params)
+
+    let name = email
+    let avatarUrl = ''
+    try {
+      const token = await AsyncStorage.getItem('token')
+      const res = await api.get('/users/me', { headers: { Authorization: `Bearer ${token}` } })
+      name = res.data.fullName ?? res.data.name ?? res.data.username ?? email
+      avatarUrl = res.data.avatarUrl ?? res.data.avatar ?? ''
+    } catch {
+      // Si falla el fetch del perfil, continuamos con el email como nombre
+    }
+
+    router.replace({
+      pathname: '/pin-setup',
+      params: {
+        refreshToken: pendingRefreshToken,
+        redirectPath: typeof destination === 'string' ? destination : destination.pathname,
+        email,
+        name,
+        avatarUrl,
+      },
+    })
+  }
+
+  /**
+   * El usuario eligió no configurar el PIN ahora. Navega al destino post-login.
+   */
+  function handleSkipPinEnrollment() {
+    setPinEnrollmentModalVisible(false)
+    router.replace(pendingPostAuthDestination ?? buildPostAuthDestination(params))
+  }
+
+  /**
+   * Intenta autenticar al usuario usando la biométrica del dispositivo.
+   * Si hay múltiples cuentas vinculadas muestra el selector. Si hay solo una, ingresa directo.
+   */
+  async function handleBiometricLogin() {
+    setBiometricLoading(true)
+    setError('')
+    try {
+      const result = await authenticateWithBiometrics()
+
+      if (!result.success) {
+        if (result.error !== 'user_cancel' && result.error !== 'system_cancel') {
+          setError('No se pudo verificar tu identidad. Intentá de nuevo o usá tu contraseña.')
+        }
+        return
+      }
+
+      const accounts = await getBiometricAccounts()
+      if (accounts.length === 0) {
+        setBiometricEnabled(false)
+        setError('No se encontraron datos biométricos. Ingresá con tu correo y contraseña.')
+        return
+      }
+
+      if (accounts.length === 1) {
+        await loginWithBiometricAccount(accounts[0])
+      } else {
+        setPendingBiometricAccounts(accounts)
+        setAccountSelectorVisible(true)
+      }
+    } catch {
+      setError('No se pudo iniciar sesión. Intentá de nuevo.')
+    } finally {
+      setBiometricLoading(false)
+    }
+  }
+
+  async function loginWithBiometricAccount(account) {
+    try {
+      const storedRefreshToken = await getBiometricRefreshTokenForAccount(account.email)
+      if (!storedRefreshToken) {
+        await removeBiometricAccount(account.email)
+        setError('Sesión no encontrada. Reactivá la biometría desde el perfil.')
+        return
+      }
+
+      const response = await api.post('/auth/refresh', { refreshToken: storedRefreshToken })
+      const newToken = response.data.accessToken
+      await AsyncStorage.setItem('token', newToken)
+
+      try { await registerForPushNotifications() } catch {}
+      try { await refreshCart() } catch {}
+
+      router.replace(buildPostAuthDestination(params))
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        await removeBiometricAccount(account.email)
+        const remaining = (await getBiometricAccounts())
+        if (remaining.length > 0) {
+          setPendingBiometricAccounts(remaining)
+          setError('La sesión de esa cuenta expiró. Seleccioná otra.')
+        } else {
+          setAccountSelectorVisible(false)
+          setBiometricEnabled(false)
+          if (err.response?.status === 403) {
+            setBlockedModalVisible(true)
+          } else {
+            setError('Tu sesión expiró. Ingresá con tu correo y contraseña para continuar.')
+          }
+        }
+      } else {
+        setError('No se pudo iniciar sesión. Intentá de nuevo.')
+      }
+    }
+  }
+
   return (
     <>
       <AccountBlockedModal
         visible={blockedModalVisible}
         onClose={() => setBlockedModalVisible(false)}
+      />
+      <AccountSelectorSheet
+        visible={accountSelectorVisible}
+        accounts={pendingBiometricAccounts}
+        onSelect={(account) => {
+          setAccountSelectorVisible(false)
+          setPendingBiometricAccounts([])
+          loginWithBiometricAccount(account)
+        }}
+        onCancel={() => {
+          setAccountSelectorVisible(false)
+          setPendingBiometricAccounts([])
+        }}
+      />
+      <BiometricEnrollmentModal
+        visible={enrollmentModalVisible}
+        onEnable={handleEnrollBiometric}
+        onSkip={handleSkipEnrollment}
+      />
+      <PinEnrollmentModal
+        visible={pinEnrollmentModalVisible}
+        onSetup={handleSetupPin}
+        onSkip={handleSkipPinEnrollment}
       />
     <ScrollView
       contentContainerStyle={styles.scrollContent}
@@ -162,6 +418,35 @@ export default function LoginScreen() {
               </View>
             )}
           </TouchableOpacity>
+
+          {biometricAvailable && biometricEnabled && (
+            <TouchableOpacity
+              style={[styles.biometricButton, biometricLoading && styles.buttonDisabled]}
+              onPress={handleBiometricLogin}
+              disabled={biometricLoading}
+            >
+              {biometricLoading ? (
+                <ActivityIndicator color={COLORS.primary} />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <Ionicons name="finger-print" size={22} color={COLORS.primary} />
+                  <Text style={styles.biometricButtonText}>Ingresar con biométrica</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {pinEnabled && (
+            <TouchableOpacity
+              style={styles.pinButton}
+              onPress={() => router.push(buildAuthScreenNavigation('/pin-login', params))}
+            >
+              <View style={styles.buttonContent}>
+                <Ionicons name="keypad-outline" size={22} color={COLORS.primary} />
+                <Text style={styles.pinButtonText}>Ingresar con PIN</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.guestButton}
@@ -273,7 +558,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 18,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   buttonDisabled: {
     opacity: 0.75,
@@ -286,6 +571,38 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.white,
     fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  biometricButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
+  },
+  biometricButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  pinButton: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: 12,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: 'transparent',
+  },
+  pinButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
@@ -328,7 +645,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: 'transparent',
   },
-
   guestButtonText: {
     color: COLORS.primary,
     fontSize: 15,

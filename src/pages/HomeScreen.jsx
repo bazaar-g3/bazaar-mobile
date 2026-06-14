@@ -10,6 +10,10 @@ import {
   Modal,
   Image,
 } from "react-native";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import * as Clipboard from "expo-clipboard";
+import { Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,9 +33,23 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { recordCategoryBrowse } from "../services/browseHistory";
 import { getWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
 import { styles } from "../styles/homeStyles";
+
+// Configuración visual por slug de categoría: ícono Ionicons + colores del círculo
+const CATEGORY_CONFIG = {
+  tecnologia:     { icon: "laptop-outline",          circleColor: "#E0E7FF", iconColor: "#4338CA" },
+  hogar:          { icon: "home-outline",             circleColor: "#FEF3C7", iconColor: "#D97706" },
+  moda:           { icon: "shirt-outline",            circleColor: "#FCE7F3", iconColor: "#BE185D" },
+  deportes:       { icon: "football-outline",         circleColor: "#D1FAE5", iconColor: "#065F46" },
+  libros:         { icon: "book-outline",             circleColor: "#FEF9C3", iconColor: "#A16207" },
+  juguetes:       { icon: "game-controller-outline",  circleColor: "#EDE9FE", iconColor: "#5B21B6" },
+  coleccionables: { icon: "star-outline",             circleColor: "#FEE2E2", iconColor: "#991B1B" },
+  herramientas:   { icon: "build-outline",            circleColor: "#F1F5F9", iconColor: "#334155" },
+};
+const DEFAULT_CATEGORY_CONFIG = { icon: "grid-outline", circleColor: "#F3F4F6", iconColor: "#374151" };
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -54,6 +72,28 @@ export default function HomeScreen() {
   const [recentProducts, setRecentProducts] = useState([]);
   const [loadingRecentProducts, setLoadingRecentProducts] = useState(true);
   const [recentProductsError, setRecentProductsError] = useState("");
+
+  // ── DEBUG TEMPORAL: mostrar push token para testear notifications-api ──
+  const [debugPushToken, setDebugPushToken] = useState("");
+  const [debugCopied, setDebugCopied] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === "web" || !Device.isDevice) return;
+    Notifications.requestPermissionsAsync().then(({ status }) => {
+      if (status === "granted") {
+        Notifications.getExpoPushTokenAsync().then(({ data }) => {
+          setDebugPushToken(data);
+        });
+      }
+    });
+  }, []);
+
+  const handleCopyToken = async () => {
+    await Clipboard.setStringAsync(debugPushToken);
+    setDebugCopied(true);
+    setTimeout(() => setDebugCopied(false), 2000);
+  };
+  // ── FIN DEBUG ──
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
@@ -79,6 +119,9 @@ export default function HomeScreen() {
       params.categoryId = filterCategory.id;
       params.categoryName = filterCategory.label;
       if (filterCategory.slug) params.categorySlug = filterCategory.slug;
+      if (isAuthenticated && filterCategory.slug) {
+        recordCategoryBrowse(filterCategory.slug).catch(() => {});
+      }
     }
     if (filterSortBy) params.sortBy = filterSortBy;
     if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
@@ -134,12 +177,17 @@ export default function HomeScreen() {
       const catalogCategories = await listProductCategories();
 
       setCategories(
-        catalogCategories.map((category) => ({
-          id: String(category.id ?? category.slug ?? category.name ?? category.label),
-          name: String(category.label ?? category.name ?? "Categoría").toUpperCase(),
-          slug: category.slug,
-          emoji: "🛍️",
-        }))
+        catalogCategories.map((category) => {
+          const config = CATEGORY_CONFIG[category.slug] ?? DEFAULT_CATEGORY_CONFIG;
+          return {
+            id: String(category.id ?? category.slug ?? category.name ?? category.label),
+            name: String(category.label ?? category.name ?? "Categoría").toUpperCase(),
+            slug: category.slug,
+            icon: config.icon,
+            circleColor: config.circleColor,
+            iconColor: config.iconColor,
+          };
+        })
       );
     } catch (error) {
       setCategoriesError(
@@ -176,7 +224,7 @@ export default function HomeScreen() {
     setPopularProductsError("");
 
     try {
-      const products = await listPopularProducts({ limit: 20, offset: 0 });
+      const products = await listPopularProducts({ limit: 25, offset: 0 });
 
       setPopularProducts(
         products.map((product) =>
@@ -251,6 +299,9 @@ export default function HomeScreen() {
   };
 
   const handleCategoryPress = (category) => {
+    if (isAuthenticated && category.slug) {
+      recordCategoryBrowse(category.slug).catch(() => {});
+    }
     router.push({
       pathname: "/products",
       params: {
@@ -298,8 +349,18 @@ export default function HomeScreen() {
     router.replace("/home");
   };
 
+  // Productos para el fallback "RECOMENDACIONES PARA VOS" (autenticado sin historial).
+  // Si hay más de 20 populares: primero los 5 extra (distintos de "POPULARES EN BAZAAR"),
+  // luego los 20 primeros en orden inverso. Si no hay suficientes: solo orden inverso.
+  const popularForMain = popularProducts.slice(0, 20);
+  // Si hay > 20 populares: 5 distintos (pos 21-25) + 15 de los primeros 20 invertidos = 20 total.
+  // Si no hay suficientes: mismos 20 en orden invertido.
+  const trendingProducts = popularProducts.length > 20
+    ? [...popularProducts.slice(20, 25), ...[...popularProducts.slice(0, 15)].reverse()]
+    : [...popularProducts].reverse();
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <View style={[styles.topBar, isSmall && styles.topBarSmall]}>
           <View style={styles.topBarContent}>
@@ -312,7 +373,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.logoCenter}>
-              <Logo size={34} textSize={32} style={styles.logoNoMargin} />
+              <Logo size={28} textSize={24} style={styles.logoNoMargin} />
             </View>
 
             <View style={styles.iconsContainer}>
@@ -404,6 +465,27 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* ── DEBUG TEMPORAL: banner con push token — borrar después de testear ── */}
+      {debugPushToken ? (
+        <TouchableOpacity
+          onPress={handleCopyToken}
+          style={{
+            backgroundColor: "#175E72",
+            padding: 10,
+            margin: 8,
+            borderRadius: 8,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "bold", marginBottom: 2 }}>
+            {debugCopied ? "✅ Copiado!" : "📋 Tocá para copiar el push token:"}
+          </Text>
+          <Text style={{ color: "#69BDB6", fontSize: 9 }} selectable>
+            {debugPushToken}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+      {/* ── FIN DEBUG ── */}
+
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.categoriesBar}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -431,8 +513,8 @@ export default function HomeScreen() {
                   style={styles.categoryItem}
                   onPress={() => handleCategoryPress(cat)}
                 >
-                  <View style={styles.categoryCircle}>
-                    <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                  <View style={[styles.categoryCircle, { backgroundColor: cat.circleColor }]}>
+                    <Ionicons name={cat.icon} size={28} color={cat.iconColor} />
                   </View>
                   <Text style={styles.categoryLabel}>{cat.name}</Text>
                 </TouchableOpacity>
@@ -478,40 +560,71 @@ export default function HomeScreen() {
                 alwaysBounceHorizontal={true}
                 directionalLockEnabled={true}
               >
-                {popularProducts.map((product) => (
+                {popularForMain.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product}
                     variant="horizontal"
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
+                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                   />
                 ))}
               </ScrollView>
             )}
           </View>
 
-          {!loadingForYou && forYouProducts.length > 0 && (
+          {isAuthenticated && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                PARA <Text style={styles.sectionAccent}>VOS</Text>
-              </Text>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.recommendedList}
-              >
-                {forYouProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    variant="horizontal"
-                    isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
-                  />
-                ))}
-              </ScrollView>
+              {loadingForYou ? (
+                <View style={styles.sectionStatusCard}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.sectionStatusText}>
+                    Cargando recomendaciones...
+                  </Text>
+                </View>
+              ) : forYouProducts.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    RECOMENDACIONES <Text style={styles.sectionAccent}>PARA VOS</Text>
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.recommendedList}
+                  >
+                    {forYouProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        variant="horizontal"
+                        isWishlisted={wishlistIds.has(String(product.id))}
+                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              ) : trendingProducts.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    RECOMENDACIONES <Text style={styles.sectionAccent}>PARA VOS</Text>
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.recommendedList}
+                  >
+                    {trendingProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        variant="horizontal"
+                        isWishlisted={wishlistIds.has(String(product.id))}
+                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
             </View>
           )}
 
@@ -552,7 +665,7 @@ export default function HomeScreen() {
                     product={product}
                     variant="horizontal"
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}`)}
+                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                   />
                 ))}
               </ScrollView>

@@ -30,6 +30,7 @@ import {
 } from "../utils/authRedirect";
 import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 import { getProductReputation, formatAverageScore } from "../services/reviews";
+import { recordProductView } from "../services/browseHistory";
 
 import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
 
@@ -49,6 +50,7 @@ export default function ProductDetailScreen() {
   const params = useLocalSearchParams();
 
   const id = normalizeRouteParam(params.id);
+  const paramSellerId = normalizeRouteParam(params.sellerId);
   const pendingAction = normalizeRouteParam(params.pendingAction);
   const pendingQuantity = normalizeRouteParam(params.quantity);
 
@@ -87,6 +89,15 @@ export default function ProductDetailScreen() {
 
         if (!product) {
           if (!cancelled) {
+            // El catálogo no pudo devolver el producto (puede estar eliminado, o la API falló).
+            // Si tenemos el seller_id del producto (pasado como param desde la pantalla anterior),
+            // verificamos si el vendedor está bloqueado para mostrar el mensaje correcto.
+            if (paramSellerId) {
+              const sellerProfile = await getPublicProfile(Number(paramSellerId));
+              if (!sellerProfile) {
+                setSellerUnavailable(true);
+              }
+            }
             setCatalogProduct(null);
           }
           return;
@@ -121,10 +132,21 @@ export default function ProductDetailScreen() {
             seller: sellerProfile.fullName,
             status: product.status || "active",
           });
+          recordProductView(String(product.id)).catch(() => {});
         }
       } catch (error) {
         if (!cancelled) {
-          if (error?.reason === 'seller_blocked') setSellerUnavailable(true);
+          if (error?.reason === 'seller_blocked') {
+            // El catálogo confirmó explícitamente que el vendedor está bloqueado
+            setSellerUnavailable(true);
+          } else if (paramSellerId) {
+            // Fallback: el catálogo devolvió otro error (o el reason se perdió).
+            // Si tenemos el sellerId, verificamos directamente con users-api.
+            try {
+              const fallbackProfile = await getPublicProfile(Number(paramSellerId));
+              if (!fallbackProfile) setSellerUnavailable(true);
+            } catch { /* ignorar error secundario */ }
+          }
           setCatalogProduct(null);
         }
       } finally {
@@ -139,7 +161,7 @@ export default function ProductDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, paramSellerId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -527,6 +549,17 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <SafeAreaView style={sharedStyles.safeArea}>
+        <View style={headerStyles.topHeader}>
+          <View style={headerStyles.topHeaderContent}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={headerStyles.headerBack}>← Volver</Text>
+            </TouchableOpacity>
+            <View style={headerStyles.logoCenter}>
+              <Logo size={32} textSize={30} />
+            </View>
+            <View style={headerStyles.placeholder} />
+          </View>
+        </View>
         <View style={sharedStyles.notFoundContainer}>
           {sellerUnavailable ? (
             <>
@@ -842,7 +875,7 @@ const headerStyles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
-    pointerEvents: "none",
+    pointerEvents: "box-none",
   },
 
   headerBack: {

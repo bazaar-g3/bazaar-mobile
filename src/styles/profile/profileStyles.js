@@ -5,12 +5,12 @@ import { SPACING, FONT } from "../../constants/theme";
 export const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#DDEAEA',
+    backgroundColor: COLORS.background,
   },
 
   loaderContainer: {
     flex: 1,
-    backgroundColor: '#DDEAEA',
+    backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -57,7 +57,7 @@ export const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    pointerEvents: 'none',
+    pointerEvents: 'box-none',
   },
 
   homeButton: {
@@ -211,8 +211,8 @@ export const styles = StyleSheet.create({
     height: 86,
     borderRadius: 43,
     backgroundColor: '#D9F4F0',
-    borderWidth: 2,
-    borderColor: '#BDEAE4',
+    borderWidth: 3,
+    borderColor: COLORS.primaryLight,
   },
 
   changePhotoOverlay: {
@@ -268,12 +268,12 @@ export const styles = StyleSheet.create({
   },
 
   readonlyField: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: COLORS.primaryLight,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FCFC',
+    backgroundColor: '#F4FBFA',
   },
 
   valueText: {
@@ -399,9 +399,15 @@ export const styles = StyleSheet.create({
   },
 
   summaryMessageCard: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#F0F8F7',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+
+  summaryEmptyIcon: {
+    marginBottom: 12,
+    opacity: 0.6,
   },
 
   summaryEmptyTitle: {
@@ -409,20 +415,23 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 6,
+    textAlign: 'center',
   },
 
   summaryEmptyText: {
     color: COLORS.textSecondary,
     fontSize: FONT.regular,
-    marginBottom: 12,
+    marginBottom: 16,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 
   summaryPublishButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.secondary,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 10,
+    alignSelf: 'center',
+    backgroundColor: COLORS.primaryLight,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
 
   summaryPublishButtonText: {
@@ -430,6 +439,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     fontSize: 13,
+    letterSpacing: 0.5,
   },
 
   summaryErrorText: {

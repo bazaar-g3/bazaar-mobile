@@ -3,13 +3,15 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as ImagePicker from 'expo-image-picker'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 
 import api from '../api/api'
 import ProfileHeader from '../components/profile/ProfileHeader'
@@ -28,6 +30,15 @@ import {
 } from '../services/catalog'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
+import { isPinEnabledForAccount } from '../services/pin'
+import {
+  isBiometricHardwareAvailable,
+  isBiometricEnabledForAccount,
+  enableBiometricForAccount,
+  authenticateWithBiometrics,
+} from '../services/biometric'
+import DisablePinModal from '../components/DisablePinModal'
+import DisableBiometricModal from '../components/DisableBiometricModal'
 
 export default function ProfileScreen() {
   const router = useRouter()
@@ -57,6 +68,14 @@ export default function ProfileScreen() {
   const [activeProductsSummaryError, setActiveProductsSummaryError] =
     useState('')
   const [checkingSession, setCheckingSession] = useState(true)
+
+  // Estado de seguridad (PIN y biometría)
+  const [pinEnabled, setPinEnabled] = useState(false)
+  const [disablePinModalVisible, setDisablePinModalVisible] = useState(false)
+  const [biometricAvailable, setBiometricAvailable] = useState(false)
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [disableBiometricModalVisible, setDisableBiometricModalVisible] = useState(false)
+  const [biometricActivating, setBiometricActivating] = useState(false)
 
   const refreshCatalogKey = Array.isArray(refreshCatalog)
     ? refreshCatalog[0]
@@ -229,6 +248,29 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadActiveProductsSummary()
   }, [loadActiveProductsSummary, refreshCatalogKey])
+
+  // Verificar estado de seguridad al ganar foco (se actualiza al volver de pin-setup o al activar/desactivar)
+  useFocusEffect(
+    useCallback(() => {
+      async function checkSecurity() {
+        const email = profile?.email
+        if (!email) return
+        const [pinOn, bioAvailable] = await Promise.all([
+          isPinEnabledForAccount(email),
+          isBiometricHardwareAvailable(),
+        ])
+        setPinEnabled(pinOn)
+        setBiometricAvailable(bioAvailable)
+        if (bioAvailable) {
+          const bioOn = await isBiometricEnabledForAccount(email)
+          setBiometricEnabled(bioOn)
+        } else {
+          setBiometricEnabled(false)
+        }
+      }
+      checkSecurity()
+    }, [profile?.email])
+  )
 
   const handleOpenPublish = useCallback(async () => {
     const token = await AsyncStorage.getItem('token')
@@ -436,30 +478,179 @@ export default function ProfileScreen() {
     }
 
     return (
-      <ProfileInfoTab
-        profile={profile}
-        editing={editing}
-        setEditing={setEditing}
-        fullName={fullName}
-        setFullName={setFullName}
-        description={description}
-        setDescription={setDescription}
-        avatarUri={avatarUri}
-        saveSuccess={saveSuccess}
-        saveError={saveError}
-        fieldErrors={fieldErrors}
-        setFieldErrors={setFieldErrors}
-        saving={saving}
-        onPickImage={handlePickImage}
-        onSave={handleSave}
-        onCancel={handleCancel}
-        activeProductsSummary={activeProductsSummary}
-        loadingActiveProductsSummary={loadingActiveProductsSummary}
-        activeProductsSummaryError={activeProductsSummaryError}
-        onReloadActiveProductsSummary={loadActiveProductsSummary}
-        onOpenPublish={handleOpenPublish}
-        onGoToSalesTab={handleGoToSalesTab}
-      />
+      <>
+        <ProfileInfoTab
+          profile={profile}
+          editing={editing}
+          setEditing={setEditing}
+          fullName={fullName}
+          setFullName={setFullName}
+          description={description}
+          setDescription={setDescription}
+          avatarUri={avatarUri}
+          saveSuccess={saveSuccess}
+          saveError={saveError}
+          fieldErrors={fieldErrors}
+          setFieldErrors={setFieldErrors}
+          saving={saving}
+          onPickImage={handlePickImage}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          activeProductsSummary={activeProductsSummary}
+          loadingActiveProductsSummary={loadingActiveProductsSummary}
+          activeProductsSummaryError={activeProductsSummaryError}
+          onReloadActiveProductsSummary={loadActiveProductsSummary}
+          onOpenPublish={handleOpenPublish}
+          onGoToSalesTab={handleGoToSalesTab}
+        />
+
+        {/* Sección Seguridad */}
+        <View style={securityStyles.card}>
+          <Text style={securityStyles.sectionTitle}>Seguridad</Text>
+
+          {/* PIN de acceso */}
+          <View style={securityStyles.row}>
+            <View style={securityStyles.rowLeft}>
+              <Ionicons
+                name="keypad-outline"
+                size={22}
+                color={COLORS.primary}
+                style={securityStyles.rowIcon}
+              />
+              <View style={securityStyles.rowTextBlock}>
+                <View style={securityStyles.rowLabelRow}>
+                  <Text style={securityStyles.rowLabel}>PIN de acceso</Text>
+                  <View
+                    style={[
+                      securityStyles.badge,
+                      pinEnabled ? securityStyles.badgeActive : securityStyles.badgeInactive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        securityStyles.badgeText,
+                        pinEnabled ? securityStyles.badgeTextActive : securityStyles.badgeTextInactive,
+                      ]}
+                    >
+                      {pinEnabled ? 'Activo' : 'Inactivo'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={securityStyles.rowSubLabel}>
+                  Acceso rápido desde este dispositivo
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[
+                securityStyles.actionButton,
+                pinEnabled ? securityStyles.actionButtonDanger : securityStyles.actionButtonPrimary,
+              ]}
+              onPress={() => {
+                if (pinEnabled) {
+                  setDisablePinModalVisible(true)
+                } else {
+                  router.push({
+                    pathname: '/pin-setup',
+                    params: {
+                      email: profile?.email ?? '',
+                      name: profile?.fullName ?? profile?.email ?? '',
+                      avatarUrl: profile?.avatarUrl ?? '',
+                    },
+                  })
+                }
+              }}
+            >
+              <Text
+                style={[
+                  securityStyles.actionButtonText,
+                  pinEnabled ? securityStyles.actionButtonTextDanger : securityStyles.actionButtonTextPrimary,
+                ]}
+              >
+                {pinEnabled ? 'Desactivar' : 'Activar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Datos biométricos */}
+          {biometricAvailable && (
+            <View style={[securityStyles.row, securityStyles.rowSeparator]}>
+              <View style={securityStyles.rowLeft}>
+                <Ionicons
+                  name="finger-print"
+                  size={22}
+                  color={COLORS.primary}
+                  style={securityStyles.rowIcon}
+                />
+                <View style={securityStyles.rowTextBlock}>
+                  <View style={securityStyles.rowLabelRow}>
+                    <Text style={securityStyles.rowLabel}>Datos biométricos</Text>
+                    <View
+                      style={[
+                        securityStyles.badge,
+                        biometricEnabled ? securityStyles.badgeActive : securityStyles.badgeInactive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          securityStyles.badgeText,
+                          biometricEnabled ? securityStyles.badgeTextActive : securityStyles.badgeTextInactive,
+                        ]}
+                      >
+                        {biometricEnabled ? 'Activo' : 'Inactivo'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={securityStyles.rowSubLabel}>
+                    Huella o reconocimiento facial
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[
+                  securityStyles.actionButton,
+                  biometricEnabled ? securityStyles.actionButtonDanger : securityStyles.actionButtonPrimary,
+                  biometricActivating && securityStyles.actionButtonDisabled,
+                ]}
+                disabled={biometricActivating}
+                onPress={async () => {
+                  if (biometricEnabled) {
+                    setDisableBiometricModalVisible(true)
+                    return
+                  }
+                  setBiometricActivating(true)
+                  try {
+                    const result = await authenticateWithBiometrics()
+                    if (!result.success) return
+                    const refreshToken = await AsyncStorage.getItem('refreshToken')
+                    if (!refreshToken) return
+                    await enableBiometricForAccount(
+                      profile?.email ?? '',
+                      profile?.fullName ?? profile?.email ?? '',
+                      profile?.avatarUrl ?? null,
+                      refreshToken
+                    )
+                    setBiometricEnabled(true)
+                  } catch {
+                    // No mostramos error: el usuario puede volver a intentarlo
+                  } finally {
+                    setBiometricActivating(false)
+                  }
+                }}
+              >
+                <Text
+                  style={[
+                    securityStyles.actionButtonText,
+                    biometricEnabled ? securityStyles.actionButtonTextDanger : securityStyles.actionButtonTextPrimary,
+                  ]}
+                >
+                  {biometricActivating ? '...' : biometricEnabled ? 'Desactivar' : 'Activar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </>
     )
   }
 
@@ -476,6 +667,27 @@ export default function ProfileScreen() {
       <ProfileHeader
         onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
         onGoHome={() => router.replace('/')}
+      />
+
+      <DisablePinModal
+        visible={disablePinModalVisible}
+        userEmail={profile?.email ?? ''}
+        email={profile?.email ?? ''}
+        onSuccess={() => {
+          setPinEnabled(false)
+          setDisablePinModalVisible(false)
+        }}
+        onCancel={() => setDisablePinModalVisible(false)}
+      />
+      <DisableBiometricModal
+        visible={disableBiometricModalVisible}
+        email={profile?.email ?? ''}
+        userEmail={profile?.email ?? ''}
+        onSuccess={() => {
+          setBiometricEnabled(false)
+          setDisableBiometricModalVisible(false)
+        }}
+        onCancel={() => setDisableBiometricModalVisible(false)}
       />
 
       <View style={styles.mainWrapper}>
@@ -508,3 +720,114 @@ export default function ProfileScreen() {
     </View>
   )
 }
+
+const securityStyles = StyleSheet.create({
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  rowSeparator: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    marginRight: 8,
+  },
+  rowIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  rowTextBlock: {
+    flex: 1,
+  },
+  rowLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  rowLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  rowSubLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 3,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  badgeActive: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeInactive: {
+    backgroundColor: '#f3f4f6',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeTextActive: {
+    color: '#15803d',
+  },
+  badgeTextInactive: {
+    color: COLORS.textMuted,
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    marginTop: 2,
+  },
+  actionButtonPrimary: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'transparent',
+  },
+  actionButtonDanger: {
+    borderColor: COLORS.error,
+    backgroundColor: 'transparent',
+  },
+  actionButtonDisabled: {
+    opacity: 0.55,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  actionButtonTextPrimary: {
+    color: COLORS.primary,
+  },
+  actionButtonTextDanger: {
+    color: COLORS.error,
+  },
+})

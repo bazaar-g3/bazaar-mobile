@@ -13,6 +13,7 @@
     "android": {
       "package": "com.bazaar.app",
       "usesCleartextTraffic": true,
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -21,7 +22,10 @@
               "scheme": "com.bazaar.app"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -48,9 +52,11 @@
             "networkSecurityConfig": "./network-security-config.xml"
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "newArchEnabled": false,
+    "softwareKeyboardLayoutMode": "pan",
     "extra": {
       "router": {
         "origin": false
