@@ -2,6 +2,8 @@ import * as Notifications from 'expo-notifications'
 import * as Device from 'expo-device'
 import { Platform } from 'react-native'
 import Constants from 'expo-constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import api from '../api/api'
 
 // Configurar comportamiento de notificaciones cuando la app está abierta
 try {
@@ -16,10 +18,12 @@ try {
   // Ignorar si no está disponible (ej. simulador o error de inicialización)
 }
 
+const PUSH_TOKEN_KEY = 'push_token'
+
 /*
  Registra el dispositivo para recibir notificaciones push.
- Llama a notifications-api para guardar el FCM token en Supabase.
- Debe llamarse al iniciar sesión.
+ Obtiene el Expo Push Token y lo envía a notifications-api.
+ Debe llamarse al iniciar sesión (ya con el JWT en AsyncStorage).
 */
 export async function registerForPushNotifications() {
   try {
@@ -45,16 +49,44 @@ export async function registerForPushNotifications() {
       return null
     }
 
-    // Obtener el token FCM del dispositivo
+    // Obtener el Expo Push Token del dispositivo
     const projectId = Constants.expoConfig?.extra?.eas?.projectId
-    const { data: fcmToken } = await Notifications.getExpoPushTokenAsync(
+    const { data: expoPushToken } = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined
     )
 
-    // TODO: enviar el token al notifications-api para guardarlo en Supabase
-    return fcmToken
+    // Guardar el token localmente para poder darlo de baja al logout
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, expoPushToken)
+
+    // Registrar el token en notifications-api
+    await api.post('/notifications/register-device', {
+      token: expoPushToken,
+      platform: 'expo',
+    })
+
+    return expoPushToken
   } catch (error) {
     console.warn('No se pudo registrar el dispositivo para push notifications', error)
     return null
+  }
+}
+
+/*
+ Da de baja el token push del dispositivo actual en notifications-api.
+ Debe llamarse al cerrar sesión.
+*/
+export async function unregisterPushNotifications() {
+  try {
+    const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY)
+    if (!token) return
+
+    await api.delete('/notifications/unregister-device', {
+      data: { token },
+    })
+
+    await AsyncStorage.removeItem(PUSH_TOKEN_KEY)
+  } catch (error) {
+    // Fire & forget: si falla la baja, no bloqueamos el logout
+    console.warn('No se pudo dar de baja el dispositivo de push notifications', error)
   }
 }
