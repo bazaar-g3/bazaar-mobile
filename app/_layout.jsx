@@ -11,14 +11,16 @@ import BottomNavBar from '../src/components/BottomNavBar'
 
 WebBrowser.maybeCompleteAuthSession()
 
-// Mostrar notificaciones aunque la app esté en primer plano
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-})
+// Mostrar notificaciones aunque la app esté en primer plano (no aplica en web)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  })
+}
 
 // Canal Android con importancia HIGH → activa el banner emergente cuando la app está en background
 if (Platform.OS === 'android') {
@@ -54,11 +56,13 @@ export default function RootLayout() {
       }
     }
 
-    // Caso 2 y 3: app venía de background o estaba cerrada
-    Notifications.getLastNotificationResponseAsync().then(navigateToOrder)
+    if (Platform.OS !== 'web') {
+      // Caso 2 y 3: app venía de background o estaba cerrada
+      Notifications.getLastNotificationResponseAsync().then(navigateToOrder)
 
-    // Caso 1 y 2: listener activo mientras la app está corriendo
-    notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateToOrder)
+      // Caso 1 y 2: listener activo mientras la app está corriendo
+      notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateToOrder)
+    }
 
     return () => {
       if (notificationListener.current) {
