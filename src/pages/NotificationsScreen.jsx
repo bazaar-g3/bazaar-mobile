@@ -22,6 +22,7 @@ const TYPE_CONFIG = {
   ORDER_CANCELLED:      { icon: 'close-circle',        color: COLORS.error },
   PAYMENT_FAILED:       { icon: 'card',                color: COLORS.error },
   LOW_STOCK:            { icon: 'alert-circle',        color: '#F59E0B' },
+  OUT_OF_STOCK:         { icon: 'warning',             color: COLORS.error },
   NEW_COUPON:           { icon: 'pricetag',            color: COLORS.primaryLight },
 }
 const DEFAULT_CONFIG = { icon: 'notifications', color: COLORS.primaryLight }
@@ -109,7 +110,7 @@ export default function NotificationsScreen() {
           disabled={unreadCount === 0}
         >
           <Text style={[styles.markAllText, unreadCount === 0 && styles.markAllTextDisabled]}>
-            Leer todo
+            Marcar como leído
           </Text>
         </TouchableOpacity>
       </View>

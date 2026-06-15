@@ -11,14 +11,16 @@ import BottomNavBar from '../src/components/BottomNavBar'
 
 WebBrowser.maybeCompleteAuthSession()
 
-// Mostrar notificaciones aunque la app esté en primer plano
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-})
+// Mostrar notificaciones aunque la app esté en primer plano (no aplica en web)
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  })
+}
 
 // Canal Android con importancia HIGH → activa el banner emergente cuando la app está en background
 if (Platform.OS === 'android') {
@@ -41,16 +43,26 @@ export default function RootLayout() {
     ...MaterialCommunityIcons.font,
   })
 
-  // CA3: al tocar una notificación push, navegar al detalle de la orden
+  // Al tocar una notificación te lleva al detalle de la orden
   useEffect(() => {
-    notificationListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data
-        if (data?.order_id) {
+    const navigateToOrder = (response) => {
+      if (!response) return
+      const data = response.notification.request.content.data
+      if (data?.order_id) {
+        // Pequeño delay para asegurar que el router esté listo
+        setTimeout(() => {
           router.push(`/orders?orderId=${data.order_id}`)
-        }
+        }, 300)
       }
-    )
+    }
+
+    if (Platform.OS !== 'web') {
+      // Caso 2 y 3: app venía de background o estaba cerrada
+      Notifications.getLastNotificationResponseAsync().then(navigateToOrder)
+
+      // Caso 1 y 2: listener activo mientras la app está corriendo
+      notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateToOrder)
+    }
 
     return () => {
       if (notificationListener.current) {
