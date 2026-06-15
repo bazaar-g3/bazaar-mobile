@@ -41,16 +41,24 @@ export default function RootLayout() {
     ...MaterialCommunityIcons.font,
   })
 
-  // CA3: al tocar una notificación push, navegar al detalle de la orden
+  // Al tocar una notificación te lleva al detalle de la orden
   useEffect(() => {
-    notificationListener.current = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data
-        if (data?.order_id) {
+    const navigateToOrder = (response) => {
+      if (!response) return
+      const data = response.notification.request.content.data
+      if (data?.order_id) {
+        // Pequeño delay para asegurar que el router esté listo
+        setTimeout(() => {
           router.push(`/orders?orderId=${data.order_id}`)
-        }
+        }, 300)
       }
-    )
+    }
+
+    // Caso 2 y 3: app venía de background o estaba cerrada
+    Notifications.getLastNotificationResponseAsync().then(navigateToOrder)
+
+    // Caso 1 y 2: listener activo mientras la app está corriendo
+    notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateToOrder)
 
     return () => {
       if (notificationListener.current) {

@@ -109,7 +109,7 @@ export default function NotificationsScreen() {
           disabled={unreadCount === 0}
         >
           <Text style={[styles.markAllText, unreadCount === 0 && styles.markAllTextDisabled]}>
-            Leer todo
+            Marcar como leído
           </Text>
         </TouchableOpacity>
       </View>
