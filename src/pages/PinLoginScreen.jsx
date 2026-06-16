@@ -28,7 +28,6 @@ import PinPad from '../components/PinPad'
 import { buildPostAuthDestination, buildAuthScreenNavigation } from '../utils/authRedirect'
 import { useCartContext } from '../context/CartContext'
 
-const MAX_PIN_LENGTH = 8
 const MIN_PIN_LENGTH = 6
 
 export default function PinLoginScreen() {
@@ -77,7 +76,7 @@ export default function PinLoginScreen() {
   }, [lockedOut, remainingSeconds])
 
   function handleDigit(d) {
-    if (loading || pinRef.current.length >= MAX_PIN_LENGTH) return
+    if (loading || pinRef.current.length >= MIN_PIN_LENGTH) return
     const next = pinRef.current + d
     pinRef.current = next
     setPinEntry(next)

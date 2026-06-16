@@ -16,7 +16,7 @@ import PinPad from './PinPad'
 
 const MODE_PIN = 'pin'
 const MODE_PASSWORD = 'password'
-const MAX_PIN_LENGTH = 8
+const MIN_PIN_LENGTH = 6
 
 /**
  * Modal de confirmación para desactivar el PIN.
@@ -51,7 +51,7 @@ export default function DisablePinModal({ visible, userEmail, onSuccess, onCance
   }
 
   function handleDigit(d) {
-    if (pinEntry.length >= MAX_PIN_LENGTH) return
+    if (pinEntry.length >= MIN_PIN_LENGTH) return
     setPinEntry(prev => prev + d)
     setError('')
   }
