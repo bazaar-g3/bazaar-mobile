@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,7 @@ import { useRouter } from 'expo-router'
 
 import ProfileHeader from './ProfileHeader'
 import ProfileSidebar from './ProfileSidebar'
-import { COLORS } from '../../constants/colors'
-import { FONT, SPACING } from '../../constants/theme'
+import { useTheme } from '../../theme/ThemeContext'
 import { getCatalogProduct, PRODUCT_IMAGE_PLACEHOLDER } from '../../services/catalog'
 import { getSessionStatus } from '../../services/session'
 import { getWishlist, removeFromWishlist } from '../../services/wishlist'
@@ -23,6 +22,8 @@ import { buildLoginRedirect } from '../../utils/authRedirect'
 
 export default function WishlistScreen() {
   const router = useRouter()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [checkingSession, setCheckingSession] = useState(true)
   const [items, setItems] = useState([])
@@ -176,7 +177,7 @@ export default function WishlistScreen() {
   if (checkingSession) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <ActivityIndicator size="large" color={COLORS.primaryLight} style={styles.fullLoader} />
+        <ActivityIndicator size="large" color={theme.color.accent} style={styles.fullLoader} />
       </SafeAreaView>
     )
   }
@@ -211,7 +212,7 @@ export default function WishlistScreen() {
 
         {loading && (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={COLORS.primaryLight} />
+            <ActivityIndicator size="large" color={theme.color.accent} />
             <Text style={styles.loadingText}>Cargando tu wishlist...</Text>
           </View>
         )}
@@ -258,10 +259,10 @@ export default function WishlistScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   mainWrapper: {
     flex: 1,
@@ -278,110 +279,114 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  screenTitle: {
-    fontSize: FONT.large,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
+    paddingHorizontal: theme.space.md,
+    paddingTop: theme.space.md,
+    paddingBottom: theme.space.sm,
   },
   itemCount: {
-    fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    fontSize: theme.type.meta.size,
+    fontWeight: theme.type.meta.weight,
+    color: theme.color.textSecondary,
   },
   listContent: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl,
+    paddingHorizontal: theme.space.md,
+    paddingBottom: theme.space.xl,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: theme.space.xl,
   },
   loadingText: {
-    marginTop: SPACING.sm,
-    color: COLORS.textSecondary,
-    fontSize: FONT.regular,
+    marginTop: theme.space.sm,
+    color: theme.color.textSecondary,
+    fontSize: theme.type.body.size,
   },
   errorEmoji: {
     fontSize: 40,
-    marginBottom: SPACING.md,
+    marginBottom: theme.space.md,
   },
   errorText: {
-    fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    fontSize: theme.type.body.size,
+    color: theme.color.textSecondary,
     textAlign: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: theme.space.md,
   },
   retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: 10,
+    backgroundColor: theme.color.accent,
+    paddingVertical: theme.space.sm,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.md,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   retryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
-    fontSize: FONT.regular,
+    fontSize: theme.type.body.size,
   },
   emptyEmoji: {
     fontSize: 56,
-    marginBottom: SPACING.md,
+    marginBottom: theme.space.md,
   },
   emptyTitle: {
-    fontSize: FONT.large,
+    fontSize: theme.type.title.size,
     fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.sm,
+    color: theme.color.textPrimary,
+    marginBottom: theme.space.sm,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    fontSize: theme.type.body.size,
+    color: theme.color.textSecondary,
     textAlign: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: theme.space.lg,
   },
   exploreCatalogButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: 10,
+    backgroundColor: theme.color.accent,
+    paddingVertical: theme.space.sm,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.md,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   exploreCatalogButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
-    fontSize: FONT.regular,
+    fontSize: theme.type.body.size,
   },
+
+  // ── Card de item ─────────────────────────────────────────────────
   card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    marginBottom: SPACING.sm,
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.image,
+    marginBottom: theme.space.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.divider,
+    // sin border ni shadow — dirección Social/P2P
   },
   cardUnavailable: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   cardContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // overflow:hidden solo en el recorte de imagen, nunca en el card wrapper
   imageContainer: {
     position: 'relative',
     width: 90,
     height: 90,
+    borderTopLeftRadius: theme.radius.image,
+    borderBottomLeftRadius: theme.radius.image,
+    overflow: 'hidden',
   },
   productImage: {
     width: 90,
     height: 90,
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   overlayBadge: {
     position: 'absolute',
@@ -396,41 +401,42 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(198,40,40,0.75)',
   },
   overlayBadgeText: {
-    color: COLORS.white,
-    fontSize: 11,
+    color: theme.color.onAccent,
+    fontSize: theme.type.meta.size,
     fontWeight: '700',
   },
   productInfo: {
     flex: 1,
-    padding: SPACING.sm,
+    padding: theme.space.sm,
   },
   productName: {
-    fontSize: FONT.regular,
+    fontSize: theme.type.body.size,
     fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: 4,
+    color: theme.color.textPrimary,
+    marginBottom: theme.space.xs,
   },
   productPrice: {
-    fontSize: FONT.medium,
-    fontWeight: '700',
-    color: COLORS.primary,
+    fontSize: theme.type.price.size,
+    fontWeight: theme.type.price.weight,
+    color: theme.color.textPrimary,
   },
   priceUnavailable: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   statusLabel: {
-    fontSize: FONT.small,
-    color: COLORS.textMuted,
+    fontSize: theme.type.meta.size,
+    color: theme.color.textMuted,
     marginTop: 2,
   },
   removeButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: theme.space.md,
+    paddingVertical: theme.space.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: theme.button.minHeight,
   },
   removeButtonText: {
     fontSize: 24,
-    color: COLORS.error,
+    color: theme.color.like,
   },
 })

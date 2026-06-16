@@ -1,16 +1,15 @@
 import { StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
 import { FONT } from "../../constants/theme";
 
-export const styles = StyleSheet.create({
+export const makeStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
 
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   content: {
@@ -25,20 +24,16 @@ export const styles = StyleSheet.create({
   breadcrumbText: {
     fontSize: 12,
     fontWeight: "800",
-    color: COLORS.primaryLight,
+    color: theme.color.textMuted,
     letterSpacing: 0.5,
   },
 
   mainCard: {
     flexDirection: "column",
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 22,
     padding: 18,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 4,
+    // no shadow — Social/P2P direction
   },
 
   leftColumn: {
@@ -47,16 +42,14 @@ export const styles = StyleSheet.create({
   },
 
   imageWrapper: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    overflow: "hidden",
   },
 
   productImage: {
     width: "100%",
-    height: 260,
+    height: 300,
     resizeMode: "contain",
   },
 
@@ -71,14 +64,14 @@ export const styles = StyleSheet.create({
     height: 58,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
     padding: 5,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     flexShrink: 0,
   },
 
   activeThumbnail: {
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     borderWidth: 2,
   },
 
@@ -96,7 +89,7 @@ export const styles = StyleSheet.create({
     fontSize: 23,
     lineHeight: 29,
     fontWeight: "900",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 10,
   },
 
@@ -109,7 +102,7 @@ export const styles = StyleSheet.create({
   },
 
   promoBadge: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.color.like,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 7,
@@ -118,13 +111,13 @@ export const styles = StyleSheet.create({
   promoBadgeText: {
     fontSize: 10,
     fontWeight: "900",
-    color: COLORS.white,
+    color: theme.color.onAccent,
   },
 
   ratingText: {
     fontSize: 14,
     fontWeight: "700",
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
 
   priceContainer: {
@@ -134,13 +127,13 @@ export const styles = StyleSheet.create({
   currentPrice: {
     fontSize: 32,
     fontWeight: "900",
-    color: COLORS.secondary,
+    color: theme.color.textPrimary,
     marginBottom: 2,
   },
 
   sellerText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginBottom: 12,
   },
 
@@ -151,26 +144,26 @@ export const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 14,
   },
-  
+
   descriptionText: {
     fontSize: 14,
     lineHeight: 21,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 12,
   },
 
   featuresBox: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
     marginBottom: 18,
   },
 
   featureItem: {
     fontSize: 14,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontWeight: "600",
     marginBottom: 5,
   },
@@ -181,7 +174,7 @@ export const styles = StyleSheet.create({
 
   quantityLabel: {
     fontWeight: "800",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 8,
   },
 
@@ -189,31 +182,40 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     width: 118,
-    overflow: "hidden",
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
 
   qtyBtn: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 8,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
+  },
+
+  qtyBtnFirst: {
+    borderTopLeftRadius: 9,
+    borderBottomLeftRadius: 9,
+  },
+
+  qtyBtnLast: {
+    borderTopRightRadius: 9,
+    borderBottomRightRadius: 9,
   },
 
   qtyBtnText: {
     fontSize: 18,
     fontWeight: "900",
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
 
   qtyValue: {
     flex: 1,
     textAlign: "center",
     fontWeight: "800",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   actions: {
@@ -221,31 +223,35 @@ export const styles = StyleSheet.create({
   },
 
   cartButton: {
-    backgroundColor: COLORS.dark,
+    backgroundColor: theme.color.accent,
     paddingVertical: 15,
     borderRadius: 14,
     alignItems: "center",
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   cartButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: "900",
     fontSize: 15,
   },
 
   manageButton: {
-    backgroundColor: COLORS.logoA2,
+    backgroundColor: theme.color.accent,
     paddingVertical: 15,
     paddingHorizontal: 22,
     borderRadius: 14,
     alignSelf: "flex-start",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.lightPurple,
+    borderColor: theme.color.accentBorder,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   manageButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: "900",
     fontSize: 15,
   },
@@ -261,7 +267,7 @@ export const styles = StyleSheet.create({
   shippingText: {
     fontSize: 12,
     fontWeight: "800",
-    color: COLORS.dark,
+    color: theme.color.accent,
   },
 
   notFoundContainer: {
@@ -269,7 +275,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   notFoundEmoji: {
@@ -280,27 +286,29 @@ export const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 8,
   },
 
   notFoundText: {
     fontSize: 15,
     lineHeight: 22,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
 
   backHomeButton: {
-    backgroundColor: COLORS.dark,
+    backgroundColor: theme.color.accent,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 16,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   backHomeButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: "800",
     fontSize: 15,
   },
@@ -334,13 +342,13 @@ export const styles = StyleSheet.create({
   loginPromptBox: {
     width: 320,
     maxWidth: "92%",
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
-    shadowColor: COLORS.shadow,
+    borderColor: theme.color.accentBorder,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 18,
@@ -349,7 +357,7 @@ export const styles = StyleSheet.create({
   },
 
   loginPromptTitle: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 22,
     fontWeight: "900",
     textAlign: "center",
@@ -359,7 +367,7 @@ export const styles = StyleSheet.create({
   },
 
   loginPromptText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 16,
     textAlign: "center",
     lineHeight: 22,
@@ -372,29 +380,33 @@ export const styles = StyleSheet.create({
   },
 
   loginPromptLoginButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.color.like,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   loginPromptLoginButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 15,
     fontWeight: "900",
   },
 
   loginPromptCancelButton: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accentBorder,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   loginPromptCancelButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -404,18 +416,18 @@ export const styles = StyleSheet.create({
     bottom: -12,
     width: 22,
     height: 22,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     transform: [{ rotate: "45deg" }],
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accentBorder,
   },
 
   topHeader: {
     width: "100%",
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: 15,
     paddingTop: 15,
     paddingBottom: 15,
@@ -436,21 +448,23 @@ export const styles = StyleSheet.create({
   headerBack: {
     fontSize: FONT.medium,
     fontWeight: "700",
-    color: COLORS.primary,
+    color: theme.color.accent,
     zIndex: 2,
   },
 
   shareButton: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     paddingVertical: 15,
     borderRadius: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   shareButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "900",
     fontSize: 15,
   },
@@ -459,19 +473,26 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 14,
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: theme.color.accentBorder,
+    borderRadius: 10,
+    backgroundColor: theme.color.accentSubtle,
   },
 
   shareIcon: {
     fontSize: 20,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
 
   shareInlineText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.textMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.color.accent,
   },
 
   shareModalOverlay: {
@@ -485,7 +506,7 @@ export const styles = StyleSheet.create({
   },
 
   shareModalContainer: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -497,7 +518,7 @@ export const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     alignSelf: "center",
     marginBottom: 16,
   },
@@ -505,57 +526,63 @@ export const styles = StyleSheet.create({
   shareModalTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: "center",
     marginBottom: 6,
   },
 
   shareModalPrimaryAction: {
-    backgroundColor: COLORS.logoR,
+    backgroundColor: theme.color.accent,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 10,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   shareModalPrimaryActionText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 15,
     fontWeight: "800",
   },
 
   shareModalSecondaryAction: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderWidth: 1,
-    borderColor: COLORS.logoB,
+    borderColor: theme.color.accentBorder,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: 10,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   shareModalSecondaryActionText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 15,
     fontWeight: "800",
   },
 
   shareModalCancelAction: {
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
 
   shareModalCancelActionText: {
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 15,
     fontWeight: "700",
   },
 
   headerHomeIcon: {
     fontSize: 24,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   iconButton: {
@@ -566,5 +593,85 @@ export const styles = StyleSheet.create({
     padding: 6,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  // ── Seller chip ──────────────────────────────────────────────────
+  sellerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  sellerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.color.accentTint,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  sellerAvatarText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.color.accent,
+  },
+  sellerInfo: {
+    flex: 1,
+  },
+  sellerLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.color.textMuted,
+  },
+  sellerName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.color.textPrimary,
+  },
+  sellerRating: {
+    fontSize: 12,
+    color: theme.color.textSecondary,
+    marginTop: 2,
+  },
+
+  // ── Description block ────────────────────────────────────────────
+  descriptionBlock: {
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  descriptionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.color.textMuted,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+
+  // ── CTA row (heart + cart) ───────────────────────────────────────
+  ctaRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  cartButtonFlex: {
+    flex: 1,
+  },
+  wishlistBtn: {
+    width: theme.button.minHeight,
+    height: theme.button.minHeight,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.color.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.color.surfaceSubtle,
+    flexShrink: 0,
   },
 });

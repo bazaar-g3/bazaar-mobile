@@ -35,7 +35,7 @@ export function mapProductToListItem(product, { recommended = false } = {}) {
     createdAt: product.createdAt || product.created_at || null,
     stock: Number(product.stock) || 0,
     sellerId: product.sellerId,
-    seller: product.sellerName || `Vendedor #${product.sellerId ?? "-"}`,
+    seller: product.sellerName || "Vendedor",
     tag: recommended ? "RECOMENDADO" : null,
   };
 }

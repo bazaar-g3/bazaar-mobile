@@ -7,6 +7,7 @@ import * as WebBrowser from 'expo-web-browser'
 import * as Notifications from 'expo-notifications'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { CartProvider } from '../src/context/CartContext'
+import { ThemeProvider } from '../src/theme/ThemeContext'
 import BottomNavBar from '../src/components/BottomNavBar'
 
 WebBrowser.maybeCompleteAuthSession()
@@ -75,12 +76,14 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <CartProvider>
-        <View style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }} />
-          <BottomNavBar />
-        </View>
-      </CartProvider>
+      <ThemeProvider>
+        <CartProvider>
+          <View style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false }} />
+            <BottomNavBar />
+          </View>
+        </CartProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   )
 }

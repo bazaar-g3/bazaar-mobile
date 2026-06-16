@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -8,8 +8,8 @@ import {
   View,
 } from 'react-native'
 
-import { COLORS } from '../../constants/colors'
-import { styles } from '../../styles/profile/profileStyles'
+import { useTheme } from '../../theme/ThemeContext'
+import { makeStyles } from '../../styles/profile/profileStyles'
 import ActiveProductsSummary from './ActiveProductsSummary'
 
 const PLACEHOLDER_AVATAR =
@@ -39,6 +39,9 @@ export default function ProfileInfoTab({
   onOpenPublish,
   onGoToSalesTab,
 }) {
+  const { theme, mode, toggle } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -102,7 +105,7 @@ export default function ProfileInfoTab({
               }}
               maxLength={50}
               placeholder="Ingresá tu nombre"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
             />
 
             {fieldErrors.fullName ? (
@@ -138,7 +141,7 @@ export default function ProfileInfoTab({
               multiline
               maxLength={500}
               placeholder="Contanos algo sobre vos"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
             />
 
             <Text style={styles.charCount}>{description.length}/500</Text>
@@ -164,7 +167,7 @@ export default function ProfileInfoTab({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
+              <ActivityIndicator color={theme.color.onAccent} size="small" />
             ) : (
               <Text style={styles.btnTextWhite}>Guardar cambios</Text>
             )}
@@ -179,6 +182,67 @@ export default function ProfileInfoTab({
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.separator} />
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Tema</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => mode !== 'light' && toggle()}
+            style={{
+              flex: 1,
+              minHeight: theme.button?.minHeight ?? 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+              backgroundColor:
+                mode === 'light'
+                  ? theme.color.accent
+                  : theme.color.surfaceSubtle,
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  mode === 'light'
+                    ? theme.color.onAccent
+                    : theme.color.textSecondary,
+                fontWeight: mode === 'light' ? '600' : '400',
+              }}
+            >
+              Claro
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => mode !== 'dark' && toggle()}
+            style={{
+              flex: 1,
+              minHeight: theme.button?.minHeight ?? 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+              backgroundColor:
+                mode === 'dark'
+                  ? theme.color.accent
+                  : theme.color.surfaceSubtle,
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  mode === 'dark'
+                    ? theme.color.onAccent
+                    : theme.color.textSecondary,
+                fontWeight: mode === 'dark' ? '600' : '400',
+              }}
+            >
+              Oscuro
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <View style={styles.summarySeparator} />
 

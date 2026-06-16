@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import api from '../api/api'
 import { registerForPushNotifications } from '../services/notifications'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import Logo from '../components/Logo'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 import OAuthButtons from '../components/OAuthButtons'
@@ -33,6 +33,7 @@ import { getPinAccounts, isPinSetOnDevice } from '../services/pin'
 import AccountSelectorSheet from '../components/AccountSelectorSheet'
 
 export default function LoginScreen() {
+  const { theme } = useTheme()
   const router = useRouter()
   const { refresh: refreshCart } = useCartContext()
   const params = useLocalSearchParams()
@@ -323,6 +324,8 @@ export default function LoginScreen() {
     }
   }
 
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <>
       <AccountBlockedModal
@@ -366,11 +369,11 @@ export default function LoginScreen() {
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <View style={styles.inputWrapper}>
-            <Ionicons name="mail-outline" size={20} color={COLORS.textMuted} style={styles.leftIcon} />
+            <Ionicons name="mail-outline" size={20} color={theme.color.textMuted} style={styles.leftIcon} />
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -379,11 +382,11 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} style={styles.leftIcon} />
+            <Ionicons name="lock-closed-outline" size={20} color={theme.color.textMuted} style={styles.leftIcon} />
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -395,7 +398,7 @@ export default function LoginScreen() {
               <Ionicons
                 name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color={COLORS.textMuted}
+                color={theme.color.textMuted}
               />
             </TouchableOpacity>
           </View>
@@ -410,11 +413,11 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={theme.color.onAccent} />
             ) : (
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>INICIAR SESIÓN</Text>
-                <Ionicons name="person" size={18} color={COLORS.white} />
+                <Ionicons name="person" size={18} color={theme.color.onAccent} />
               </View>
             )}
           </TouchableOpacity>
@@ -426,10 +429,10 @@ export default function LoginScreen() {
               disabled={biometricLoading}
             >
               {biometricLoading ? (
-                <ActivityIndicator color={COLORS.primary} />
+                <ActivityIndicator color={theme.color.accent} />
               ) : (
                 <View style={styles.buttonContent}>
-                  <Ionicons name="finger-print" size={22} color={COLORS.primary} />
+                  <Ionicons name="finger-print" size={22} color={theme.color.accent} />
                   <Text style={styles.biometricButtonText}>Ingresar con biométrica</Text>
                 </View>
               )}
@@ -442,7 +445,7 @@ export default function LoginScreen() {
               onPress={() => router.push(buildAuthScreenNavigation('/pin-login', params))}
             >
               <View style={styles.buttonContent}>
-                <Ionicons name="keypad-outline" size={22} color={COLORS.primary} />
+                <Ionicons name="keypad-outline" size={22} color={theme.color.accent} />
                 <Text style={styles.pinButtonText}>Ingresar con PIN</Text>
               </View>
             </TouchableOpacity>
@@ -454,7 +457,7 @@ export default function LoginScreen() {
           >
             <View style={styles.buttonContent}>
               <Text style={styles.guestButtonText}>Continuar como invitado</Text>
-              <Ionicons name="arrow-forward" size={18} color={COLORS.primary} />
+              <Ionicons name="arrow-forward" size={18} color={theme.color.accent} />
             </View>
           </TouchableOpacity>
 
@@ -477,13 +480,13 @@ export default function LoginScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -500,39 +503,34 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     letterSpacing: 0.5,
   },
-  logoB: { color: COLORS.logoB },
-  logoA: { color: COLORS.logoA },
-  logoZ: { color: COLORS.logoZ },
-  logoA2: { color: COLORS.logoA2 },
-  logoA3: { color: COLORS.logoA3 },
-  logoR: { color: COLORS.logoR },
+  logoB: { color: '#2A8C84' },
+  logoA: { color: '#E8902E' },
+  logoZ: { color: '#EB6A2C' },
+  logoA2: { color: '#D14B79' },
+  logoA3: { color: '#7C5ACB' },
+  logoR: { color: '#49A89D' },
 
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 24,
   },
   inputWrapper: {
     height: 52,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
@@ -543,7 +541,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 15,
     paddingVertical: 0,
   },
@@ -552,7 +550,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
@@ -569,14 +567,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   biometricButton: {
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
@@ -585,14 +583,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   biometricButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   pinButton: {
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
@@ -601,14 +599,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   pinButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   secondaryLink: {
     textAlign: 'center',
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 13,
     textDecorationLine: 'underline',
     marginTop: 2,
@@ -619,25 +617,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   registerLink: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,
   },
   success: {
-    color: COLORS.success,
+    color: theme.color.success,
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,
   },
   guestButton: {
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
@@ -646,7 +644,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   guestButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.4,

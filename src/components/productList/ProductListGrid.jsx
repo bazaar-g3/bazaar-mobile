@@ -1,36 +1,28 @@
-import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, useWindowDimensions } from "react-native";
-import { COLORS } from "../../constants/colors";
-import { styles } from "../../styles/productList/productListStyles";
+import React, { useMemo } from "react";
+import { View, ScrollView, ActivityIndicator, useWindowDimensions } from "react-native";
+import { lightTheme } from "../../theme";
+import { makeStyles } from "../../styles/productList/productListStyles";
+import { useTheme } from "../../theme/ThemeContext";
 import ProductCard from "./ProductCard";
 import ProductListEmptyState from "./ProductListEmptyState";
 
-const GRID_H_PADDING = 32; // 16px de padding a cada lado del gridContainer
-const GRID_GAP = 12;       // gap entre columnas (debe coincidir con styles.grid.gap)
+const GRID_H_PADDING = lightTheme.space.lg * 2;
+const GRID_GAP = lightTheme.space.lg;
 const MAX_GRID_WIDTH = 1200;
 const MAX_CARD_WIDTH = 300;
+const LOAD_MORE_THRESHOLD = 400;
 
-/* Calcula el ancho exacto de cada card para que N columnas + N-1 gaps
-   quepan exactamente en el contenedor, sin overflow ni espacios extraños. */
-function useGridLayout() {
+function useCardWidth() {
   const { width } = useWindowDimensions();
-
   const numCols = width >= 1024 ? 4 : width >= 640 ? 3 : 2;
-
   const containerWidth = Math.min(width, MAX_GRID_WIDTH) - GRID_H_PADDING;
-  const cardWidth = Math.min(
+  return Math.min(
     Math.floor((containerWidth - GRID_GAP * (numCols - 1)) / numCols),
     MAX_CARD_WIDTH
   );
-
-  const imageHeight = Math.round(cardWidth * (numCols <= 2 ? 0.9 : 0.85));
-
-  return { cardWidth, imageHeight, numCols };
 }
 
 export default function ProductListGrid({
-  screenTitle,
-  screenSubtitle,
   loadingProducts,
   productsError,
   products,
@@ -40,14 +32,27 @@ export default function ProductListGrid({
   onLoadMore,
   onOpenProduct,
   onAddToCart,
+  onWishlistToggle,
+  wishlistedIds,
 }) {
-  const { cardWidth, imageHeight } = useGridLayout();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const cardWidth = useCardWidth();
+
+  const handleScroll = ({ nativeEvent }) => {
+    if (loadingMore || !hasMore) return;
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    if (contentSize.height - contentOffset.y - layoutMeasurement.height < LOAD_MORE_THRESHOLD) {
+      onLoadMore();
+    }
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.gridContainer}>
-      <Text style={styles.sectionHeading}>{screenTitle}</Text>
-      <Text style={styles.sectionSubheading}>{screenSubtitle}</Text>
-
+    <ScrollView
+      contentContainerStyle={styles.gridContainer}
+      onScroll={handleScroll}
+      scrollEventThrottle={200}
+    >
       {loadingProducts ? (
         <ProductListEmptyState loading text="Cargando productos..." />
       ) : productsError ? (
@@ -73,22 +78,19 @@ export default function ProductListGrid({
                 item={item}
                 onOpenProduct={onOpenProduct}
                 onAddToCart={onAddToCart}
+                onWishlistToggle={onWishlistToggle}
+                isWishlisted={wishlistedIds ? wishlistedIds.has(String(item.id)) : false}
                 cardStyle={{ width: cardWidth }}
-                imageStyle={{ height: imageHeight }}
               />
             ))}
           </View>
-        </View>
-      )}
 
-      {hasMore && !loadingProducts && (
-        <TouchableOpacity style={styles.loadMoreButton} onPress={onLoadMore}>
-          {loadingMore ? (
-            <ActivityIndicator color={COLORS.white} />
-          ) : (
-            <Text style={styles.loadMoreText}>Cargar más productos</Text>
+          {loadingMore && (
+            <View style={{ paddingTop: 24, alignItems: "center" }}>
+              <ActivityIndicator color={theme.color.accent} />
+            </View>
           )}
-        </TouchableOpacity>
+        </View>
       )}
     </ScrollView>
   );

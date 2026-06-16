@@ -1,12 +1,11 @@
 import { StyleSheet } from 'react-native'
 
-import { COLORS } from '../../constants/colors'
 import { FONT, SPACING } from '../../constants/theme'
 
-export const styles = StyleSheet.create({
+export const makeStyles = (theme) => StyleSheet.create({
     couponsContainer: {
         width: '100%',
-        backgroundColor: COLORS.white,
+        backgroundColor: theme.color.surface,
         borderRadius: 22,
         padding: 32,
         gap: SPACING.lg,
@@ -29,21 +28,21 @@ export const styles = StyleSheet.create({
     cardTitle: {
         fontSize: FONT.xlarge ?? 26,
         fontWeight: '900',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
         letterSpacing: -0.3,
         flexShrink: 1,
     },
 
     couponsSubtitle: {
         marginTop: 6,
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: FONT.medium ?? 16,
         lineHeight: 22,
         flexShrink: 1,
     },
 
     couponCreateButton: {
-        backgroundColor: COLORS.secondary,
+        backgroundColor: theme.color.accent,
         paddingVertical: 14,
         paddingHorizontal: 24,
         borderRadius: 14,
@@ -51,7 +50,7 @@ export const styles = StyleSheet.create({
     },
 
     couponCreateButtonText: {
-        color: COLORS.white,
+        color: theme.color.onAccent,
         fontWeight: '800',
         fontSize: FONT.medium ?? 16,
     },
@@ -62,10 +61,10 @@ export const styles = StyleSheet.create({
 
     couponCard: {
         borderWidth: 1,
-        borderColor: COLORS.primaryLight,
+        borderColor: theme.color.accent,
         borderRadius: 18,
         padding: SPACING.lg,
-        backgroundColor: COLORS.background,
+        backgroundColor: theme.color.surfaceSubtle,
         gap: SPACING.sm,
     },
 
@@ -93,7 +92,7 @@ export const styles = StyleSheet.create({
     couponCode: {
         fontSize: 26,
         fontWeight: '900',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
         letterSpacing: 0.3,
         flexShrink: 1,
     },
@@ -102,11 +101,11 @@ export const styles = StyleSheet.create({
         marginTop: 4,
         fontSize: FONT.medium ?? 16,
         fontWeight: '800',
-        color: COLORS.secondary,
+        color: theme.color.accent,
     },
 
     couponMeta: {
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: FONT.small,
         fontWeight: '600',
     },
@@ -115,7 +114,7 @@ export const styles = StyleSheet.create({
         borderRadius: 999,
         paddingVertical: 8,
         paddingHorizontal: 14,
-        backgroundColor: COLORS.border,
+        backgroundColor: theme.color.border,
     },
 
     couponStatusBadgeMobile: {
@@ -123,21 +122,21 @@ export const styles = StyleSheet.create({
     },
 
     couponStatusActive: {
-        backgroundColor: '#DCFCE7',
+        backgroundColor: theme.color.successLight,
     },
 
     couponStatusInactive: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: theme.color.surfaceSubtle,
     },
 
     couponStatusExpired: {
-        backgroundColor: '#FEE2E2',
+        backgroundColor: theme.color.errorLight,
     },
 
     couponStatusText: {
         fontSize: FONT.small ?? 14,
         fontWeight: '800',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
     },
 
     couponActions: {
@@ -156,18 +155,18 @@ export const styles = StyleSheet.create({
     },
 
     couponDisableButton: {
-        backgroundColor: '#FFF1F2',
-        borderColor: '#FDA4AF',
+        backgroundColor: theme.color.errorLight,
+        borderColor: theme.color.errorBorder,
     },
 
     couponEnableButton: {
-        backgroundColor: '#ECFDF5',
-        borderColor: '#86EFAC',
+        backgroundColor: theme.color.successLight,
+        borderColor: theme.color.successBorder,
     },
 
     couponActionText: {
         fontWeight: '800',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
         fontSize: 13,
     },
 
@@ -187,7 +186,7 @@ export const styles = StyleSheet.create({
     couponModalCard: {
         width: '100%',
         maxWidth: 460,
-        backgroundColor: COLORS.white,
+        backgroundColor: theme.color.surface,
         borderRadius: 22,
         padding: 28,
         gap: SPACING.md,
@@ -196,12 +195,12 @@ export const styles = StyleSheet.create({
     couponModalTitle: {
         fontSize: FONT.xlarge ?? 26,
         fontWeight: '900',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
         marginBottom: SPACING.xs,
     },
 
     couponModalSubtitle: {
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: FONT.small,
         lineHeight: 20,
     },
@@ -213,18 +212,18 @@ export const styles = StyleSheet.create({
     couponInputLabel: {
         fontSize: FONT.small,
         fontWeight: '700',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
     },
 
     couponInput: {
         borderWidth: 1,
-        borderColor: COLORS.primaryLight,
+        borderColor: theme.color.accent,
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 14,
         fontSize: FONT.medium ?? 16,
-        color: COLORS.textPrimary,
-        backgroundColor: COLORS.background,
+        color: theme.color.textPrimary,
+        backgroundColor: theme.color.surfaceSubtle,
     },
 
     couponModalActions: {
@@ -238,11 +237,11 @@ export const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 18,
         borderRadius: 12,
-        backgroundColor: COLORS.background,
+        backgroundColor: theme.color.surfaceSubtle,
     },
 
     couponModalCancelText: {
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
         fontWeight: '700',
         fontSize: FONT.medium ?? 16,
     },
@@ -251,11 +250,11 @@ export const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 12,
-        backgroundColor: COLORS.secondary,
+        backgroundColor: theme.color.accent,
     },
 
     couponModalSubmitText: {
-        color: COLORS.white,
+        color: theme.color.onAccent,
         fontWeight: '800',
         fontSize: FONT.medium ?? 16,
     },
@@ -272,12 +271,12 @@ export const styles = StyleSheet.create({
     },
 
     summaryStatusText: {
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: FONT.small,
     },
 
     summaryMessageCard: {
-        backgroundColor: COLORS.background,
+        backgroundColor: theme.color.surfaceSubtle,
         borderRadius: 16,
         padding: SPACING.lg,
         gap: SPACING.xs,
@@ -286,22 +285,22 @@ export const styles = StyleSheet.create({
     summaryEmptyTitle: {
         fontSize: FONT.medium,
         fontWeight: '800',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
     },
 
     summaryEmptyText: {
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: FONT.small,
         lineHeight: 20,
     },
 
     summaryErrorText: {
-        color: COLORS.error ?? '#B91C1C',
+        color: theme.color.error,
         fontWeight: '700',
     },
 
     summaryRetryText: {
-        color: COLORS.secondary,
+        color: theme.color.accent,
         fontWeight: '800',
     },
 

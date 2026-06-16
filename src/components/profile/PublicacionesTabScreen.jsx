@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTheme } from '../../theme/ThemeContext'
 import {
   ActivityIndicator,
   ScrollView,
@@ -20,8 +21,7 @@ import {
   updateSellerProductStock,
   updateSellerProduct,
 } from '../../services/catalog'
-import { COLORS } from '../../constants/colors'
-import { styles } from '../../styles/PublicacionesTabStyles'
+import { makeStyles } from '../../styles/PublicacionesTabStyles'
 import EditProductModal from '../EditProductModal'
 import EditableStockStepper from '../EditableStockStepper'
 
@@ -55,6 +55,9 @@ export default function VentasTab({
   initialProductId = null,
   initialOpenEdit = false,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const { width } = useWindowDimensions()
   const isMobile = width < MOBILE_BREAKPOINT
 
@@ -517,7 +520,7 @@ export default function VentasTab({
             placeholder="Buscar por título..."
             value={busqueda}
             onChangeText={setBusqueda}
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={theme.color.textMuted}
           />
 
           {busqueda.length > 0 && (
@@ -568,7 +571,7 @@ export default function VentasTab({
 
       {loadingPublicaciones ? (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={COLORS.primaryLight} />
+          <ActivityIndicator size="large" color={theme.color.accent} />
           <Text style={styles.emptyTitulo}>Cargando tus publicaciones...</Text>
         </View>
       ) : publicacionesFiltradas.length === 0 ? (

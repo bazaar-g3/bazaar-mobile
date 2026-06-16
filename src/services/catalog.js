@@ -155,6 +155,8 @@ export function mapCatalogProductToCard(product, overrides = {}) {
     tag: overrides.tag || product.tag,
     categoryId: product.category?.id ? String(product.category.id) : undefined,
     categoryName: product.category?.label || '',
+    sellerId: product.sellerId,
+    seller: product.sellerName || undefined,
   }
 }
 

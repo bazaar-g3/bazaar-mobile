@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   View,
   Text,
@@ -14,12 +14,14 @@ import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { buildAuthScreenNavigation, buildPostAuthDestination } from '../utils/authRedirect'
 
 export default function RegisterScreen() {
   const router = useRouter()
   const params = useLocalSearchParams()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -85,13 +87,13 @@ export default function RegisterScreen() {
             <Ionicons
               name="person-outline"
               size={20}
-              color={COLORS.textMuted}
+              color={theme.color.textMuted}
               style={styles.leftIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Nombre completo"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
@@ -102,13 +104,13 @@ export default function RegisterScreen() {
             <Ionicons
               name="mail-outline"
               size={20}
-              color={COLORS.textMuted}
+              color={theme.color.textMuted}
               style={styles.leftIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -120,13 +122,13 @@ export default function RegisterScreen() {
             <Ionicons
               name="lock-closed-outline"
               size={20}
-              color={COLORS.textMuted}
+              color={theme.color.textMuted}
               style={styles.leftIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Contraseña"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -138,7 +140,7 @@ export default function RegisterScreen() {
               <Ionicons
                 name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                 size={20}
-                color={COLORS.textMuted}
+                color={theme.color.textMuted}
               />
             </TouchableOpacity>
           </View>
@@ -151,11 +153,11 @@ export default function RegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={theme.color.onAccent} />
             ) : (
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>REGISTRARME</Text>
-                <Ionicons name="person-add" size={18} color={COLORS.white} />
+                <Ionicons name="person-add" size={18} color={theme.color.onAccent} />
               </View>
             )}
           </TouchableOpacity>
@@ -173,13 +175,13 @@ export default function RegisterScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -188,29 +190,24 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 24,
   },
   inputWrapper: {
     height: 52,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
@@ -221,7 +218,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 15,
     paddingVertical: 0,
   },
@@ -230,18 +227,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 18,
     marginBottom: 20,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
   },
   buttonDisabled: {
     opacity: 0.75,
@@ -252,23 +244,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   registerText: {
     textAlign: 'center',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 14,
   },
   registerLink: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,

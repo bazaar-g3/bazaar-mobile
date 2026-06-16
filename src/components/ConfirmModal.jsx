@@ -1,5 +1,6 @@
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { COLORS } from '../constants/colors'
+import { useMemo } from 'react'
+import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 import { useResponsive } from '../utils/responsive'
 
@@ -13,6 +14,8 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const { isSmall } = useResponsive()
 
   return (
@@ -58,7 +61,7 @@ export default function ConfirmModal({
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
@@ -69,23 +72,18 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 10,
   },
   title: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: SPACING.sm,
   },
   message: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     lineHeight: 22,
     marginBottom: SPACING.lg,
   },
@@ -104,21 +102,21 @@ const styles = StyleSheet.create({
   buttonCancel: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
   },
   buttonCancelText: {
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: FONT.regular,
     fontWeight: '700',
   },
   buttonConfirm: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
   },
   buttonDestructive: {
-    backgroundColor: COLORS.error,
+    backgroundColor: theme.color.error,
   },
   buttonConfirmText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: FONT.regular,
     fontWeight: '800',
     letterSpacing: 0.3,

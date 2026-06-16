@@ -1,13 +1,16 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import Logo from "../Logo";
-import { styles } from "../../styles/productDetail/productDetailStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 
 export default function ProductDetailHeader() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.topHeader}>
       <View style={styles.topHeaderContent}>

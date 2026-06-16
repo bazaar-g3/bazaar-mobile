@@ -4,6 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getSessionStatus } from "../services/session";
+import { getWishlist, addToWishlist, removeFromWishlist } from "../services/wishlist";
+import { getPublicProfile } from "../services/user";
+import { getCartErrorMessage } from "../services/cart";
+import { useCartContext } from "../context/CartContext";
 import { buildLoginRedirect, normalizeRouteParam } from "../utils/authRedirect";
 import {
   getCatalogErrorMessage,
@@ -16,21 +20,25 @@ import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import ProductListGrid from "../components/productList/ProductListGrid";
 
 import { mapProductToListItem } from "../utils/productList/productListHelpers";
-import { styles } from "../styles/productList/productListStyles";
+import { makeStyles } from "../styles/productList/productListStyles";
+import { useTheme } from "../theme/ThemeContext";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 
 const LIMIT = 20;
 
 const SORT_TITLE = {
-  newest:     "PRODUCTOS RECIENTES",
-  price_asc:  "MENOR PRECIO PRIMERO",
-  price_desc: "MAYOR PRECIO PRIMERO",
-  relevance:  "POR RELEVANCIA",
+  newest:     "Productos recientes",
+  price_asc:  "Menor precio primero",
+  price_desc: "Mayor precio primero",
+  relevance:  "Por relevancia",
 };
 
 export default function ProductListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { addItem } = useCartContext();
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // Parámetros de URL (solo para inicializar el estado)
   const search = normalizeRouteParam(params.search);
@@ -44,6 +52,7 @@ export default function ProductListScreen() {
   const [searchText, setSearchText] = useState(search ? String(search) : "");
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [wishlistedIds, setWishlistedIds] = useState(new Set());
 
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -130,7 +139,23 @@ export default function ProductListScreen() {
         const response = await listCatalogProducts(requestParams);
         const mappedProducts = response.map((product) => mapProductToListItem(product));
 
-        setProducts((prev) => (replace ? mappedProducts : [...prev, ...mappedProducts]));
+        // Enriquecer con nombre real del vendedor (user-api GET /users/:id/profile)
+        const uniqueSellerIds = [...new Set(
+          mappedProducts
+            .filter((p) => p.sellerId != null)
+            .map((p) => Number(p.sellerId))
+        )];
+        const profiles = await Promise.all(uniqueSellerIds.map((id) => getPublicProfile(id)));
+        const sellerMap = {};
+        uniqueSellerIds.forEach((id, i) => {
+          if (profiles[i]?.fullName) sellerMap[id] = profiles[i].fullName;
+        });
+        const enrichedProducts = mappedProducts.map((p) => ({
+          ...p,
+          seller: sellerMap[Number(p.sellerId)] || p.seller,
+        }));
+
+        setProducts((prev) => (replace ? enrichedProducts : [...prev, ...enrichedProducts]));
         setHasMore(response.length === LIMIT);
         setOffset(currentOffset);
       } catch (error) {
@@ -166,10 +191,10 @@ export default function ProductListScreen() {
 
   // ── Títulos dinámicos ──
   const screenTitle = useMemo(() => {
-    if (search) return `RESULTADOS PARA "${String(search).toUpperCase()}"`;
-    if (activeCategory?.label) return `CATEGORÍA: ${String(activeCategory.label).toUpperCase()}`;
+    if (search) return `Resultados para "${String(search)}"`;
+    if (activeCategory?.label) return `Categoría: ${String(activeCategory.label)}`;
     if (activeSortBy && SORT_TITLE[activeSortBy]) return SORT_TITLE[activeSortBy];
-    return "TODOS LOS PRODUCTOS";
+    return "Todos los productos";
   }, [search, activeCategory, activeSortBy]);
 
   const screenSubtitle = useMemo(() => {
@@ -179,6 +204,46 @@ export default function ProductListScreen() {
     if (products.length === 1) return "1 producto encontrado";
     return `${products.length} productos encontrados`;
   }, [loadingProducts, productsError, products.length]);
+
+  // ── Wishlist ──
+  useEffect(() => {
+    async function loadWishlist() {
+      const session = await getSessionStatus();
+      if (!session.isAuthenticated) return;
+      try {
+        const items = await getWishlist();
+        setWishlistedIds(new Set(items.map((i) => String(i.productId))));
+      } catch {
+        // ignore — hearts just show as empty
+      }
+    }
+    loadWishlist();
+  }, []);
+
+  const handleWishlistToggle = async (productId, newLiked) => {
+    const session = await getSessionStatus();
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({ redirectPath: `/product/${productId}`, pendingAction: "wishlist" })
+      );
+      return;
+    }
+    try {
+      if (newLiked) {
+        await addToWishlist(productId);
+        setWishlistedIds((prev) => new Set([...prev, String(productId)]));
+      } else {
+        await removeFromWishlist(productId);
+        setWishlistedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(String(productId));
+          return next;
+        });
+      }
+    } catch {
+      // API failed — card's optimistic state is already toggled; a future reload will correct it
+    }
+  };
 
   // ── Handlers ──
   const handleSearch = () => {
@@ -215,7 +280,12 @@ export default function ProductListScreen() {
       );
       return;
     }
-    Alert.alert("Añadido", "1 unidad agregada al carrito.");
+    try {
+      await addItem(productId);
+      Alert.alert("Añadido al carrito", "El producto fue agregado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
+    }
   };
 
   // CA2: Cambio de precio desde el slider
@@ -233,8 +303,10 @@ export default function ProductListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
       <ProductListHeader
+        screenTitle={screenTitle}
+        screenSubtitle={screenSubtitle}
         searchText={searchText}
         setSearchText={setSearchText}
         onSearch={handleSearch}
@@ -246,8 +318,6 @@ export default function ProductListScreen() {
 
       <View style={styles.mainContainer}>
         <ProductListGrid
-          screenTitle={screenTitle}
-          screenSubtitle={screenSubtitle}
           loadingProducts={loadingProducts}
           productsError={productsError}
           products={products}
@@ -257,6 +327,8 @@ export default function ProductListScreen() {
           onLoadMore={loadMore}
           onOpenProduct={handleOpenProduct}
           onAddToCart={handleAddToCart}
+          onWishlistToggle={handleWishlistToggle}
+          wishlistedIds={wishlistedIds}
         />
       </View>
 

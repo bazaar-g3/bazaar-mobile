@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -20,20 +20,20 @@ import { getPublicProfile } from '../services/user'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 import Logo from '../components/Logo'
 
 const STATUS_CONFIG = {
-  pending_payment:    { label: 'Pago pendiente',      color: COLORS.secondary,    icon: 'time-outline' },
-  confirmed:          { label: 'Confirmada',           color: COLORS.primary,      icon: 'checkmark-circle-outline' },
-  in_preparation:     { label: 'En preparación',       color: COLORS.primaryLight, icon: 'construct-outline' },
-  shipped:            { label: 'Enviada',              color: COLORS.logoB,        icon: 'bicycle-outline' },
-  delivered:          { label: 'Entregada',            color: COLORS.success,      icon: 'home-outline' },
-  payment_rejected:   { label: 'Pago rechazado',       color: COLORS.error,        icon: 'close-circle-outline' },
-  cancelled:          { label: 'Cancelada',            color: COLORS.textMuted,    icon: 'ban-outline' },
-  refund_in_progress: { label: 'Reembolso en proceso', color: COLORS.secondary,    icon: 'refresh-outline' },
-  refund_processed:   { label: 'Reembolso procesado',  color: COLORS.success,      icon: 'wallet-outline' },
+  pending_payment:    { label: 'Pago pendiente',      icon: 'time-outline' },
+  confirmed:          { label: 'Confirmada',           icon: 'checkmark-circle-outline' },
+  in_preparation:     { label: 'En preparación',       icon: 'construct-outline' },
+  shipped:            { label: 'Enviada',              icon: 'bicycle-outline' },
+  delivered:          { label: 'Entregada',            icon: 'home-outline' },
+  payment_rejected:   { label: 'Pago rechazado',       icon: 'close-circle-outline' },
+  cancelled:          { label: 'Cancelada',            icon: 'ban-outline' },
+  refund_in_progress: { label: 'Reembolso en proceso', icon: 'refresh-outline' },
+  refund_processed:   { label: 'Reembolso procesado',  icon: 'wallet-outline' },
 }
 
 const FILTERS = [
@@ -73,17 +73,18 @@ function formatDeliveryAddress(addr) {
   return line
 }
 
-function StatusBadge({ status, small = false }) {
-  const config = STATUS_CONFIG[status] ?? { label: status, color: COLORS.textMuted, icon: 'ellipse-outline' }
+function StatusBadge({ status, small = false, theme, styles }) {
+  const config = STATUS_CONFIG[status] ?? { label: status }
+  const palette = theme.orderStatusColor[status] ?? { bg: theme.color.surfaceSubtle, dot: theme.color.textMuted }
   return (
-    <View style={[styles.badge, { backgroundColor: config.color }, small && styles.badgeSmall]}>
-      <Ionicons name={config.icon} size={small ? 11 : 12} color={COLORS.white} />
+    <View style={[styles.badge, { backgroundColor: palette.bg }, small && styles.badgeSmall]}>
+      <View style={[styles.badgeDot, { backgroundColor: palette.dot }]} />
       <Text style={[styles.badgeText, small && styles.badgeTextSmall]}>{config.label}</Text>
     </View>
   )
 }
 
-function StarPicker({ score, onSelect, disabled }) {
+function StarPicker({ score, onSelect, disabled, theme, styles }) {
   return (
     <View style={styles.starRow}>
       {[1, 2, 3, 4, 5].map((star) => (
@@ -93,7 +94,7 @@ function StarPicker({ score, onSelect, disabled }) {
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Text style={[styles.starPickerItem, { color: star <= (score ?? 0) ? COLORS.secondary : COLORS.divider }]}>
+          <Text style={[styles.starPickerItem, { color: star <= (score ?? 0) ? theme.color.like : theme.color.border }]}>
             ★
           </Text>
         </TouchableOpacity>
@@ -110,6 +111,8 @@ export default function OrdersScreen() {
   const router = useRouter()
   const { orderId } = useLocalSearchParams()
   const { isSmall, isTablet } = useResponsive()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const [checkingSession, setCheckingSession] = useState(true)
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
@@ -323,7 +326,7 @@ export default function OrdersScreen() {
   if (checkingSession) {
     return (
       <SafeAreaView style={styles.fullCenter}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.color.accent} />
       </SafeAreaView>
     )
   }
@@ -339,7 +342,7 @@ export default function OrdersScreen() {
         activeOpacity={0.75}
       >
         <View style={styles.orderCardTop}>
-          <StatusBadge status={item.status} small />
+          <StatusBadge status={item.status} small theme={theme} styles={styles} />
           <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
         </View>
         <Text style={styles.orderId} numberOfLines={1}>
@@ -347,12 +350,12 @@ export default function OrdersScreen() {
         </Text>
         <View style={styles.orderCardBottom}>
           <Text style={styles.orderTotal}>${Number(item.total).toFixed(2)}</Text>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={theme.color.textMuted} />
         </View>
 
         {isRejected && (
           <View style={styles.orderCardRejectedHint}>
-            <Ionicons name="alert-circle-outline" size={13} color={COLORS.error} />
+            <Ionicons name="alert-circle-outline" size={13} color={theme.color.error} />
             <Text style={styles.orderCardRejectedHintText}>
               Tocá para reintentar la compra
             </Text>
@@ -372,7 +375,7 @@ export default function OrdersScreen() {
           Mis órdenes
         </Text>
         {loading && orders.length > 0 && (
-          <ActivityIndicator size="small" color={COLORS.primary} />
+          <ActivityIndicator size="small" color={theme.color.accent} />
         )}
       </View>
 
@@ -391,7 +394,7 @@ export default function OrdersScreen() {
               key={String(f.key)}
               style={[
                 styles.filterChip,
-                isActive && { backgroundColor: cfg?.color ?? COLORS.primary, borderColor: cfg?.color ?? COLORS.primary },
+                isActive && { backgroundColor: theme.color.surfaceInverse, borderColor: theme.color.surfaceInverse },
               ]}
               onPress={() => setActiveFilter(f.key)}
               activeOpacity={0.75}
@@ -407,11 +410,11 @@ export default function OrdersScreen() {
       <View style={[styles.listContainer, isTablet && styles.listContainerTablet]}>
         {loading && orders.length === 0 ? (
           <View style={styles.fullCenter}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <ActivityIndicator size="large" color={theme.color.accent} />
           </View>
         ) : error && orders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="cloud-offline-outline" size={52} color={COLORS.textMuted} />
+            <Ionicons name="cloud-offline-outline" size={52} color={theme.color.textMuted} />
             <Text style={styles.emptyTitle}>Sin conexión</Text>
             <Text style={styles.emptyText}>No pudimos cargar tus órdenes.</Text>
             <TouchableOpacity style={styles.actionButton} onPress={() => loadOrders(activeFilter)}>
@@ -420,7 +423,7 @@ export default function OrdersScreen() {
           </View>
         ) : orders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={52} color={COLORS.textMuted} />
+            <Ionicons name="receipt-outline" size={52} color={theme.color.textMuted} />
             <Text style={styles.emptyTitle}>
               {activeFilter ? 'Sin resultados' : 'Sin órdenes'}
             </Text>
@@ -461,7 +464,7 @@ export default function OrdersScreen() {
               style={styles.modalCloseBtn}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={22} color={COLORS.textPrimary} />
+              <Ionicons name="close" size={22} color={theme.color.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Detalle de orden</Text>
             <View style={{ width: 44 }} />
@@ -469,11 +472,11 @@ export default function OrdersScreen() {
 
           {detailLoading ? (
             <View style={styles.fullCenter}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
+              <ActivityIndicator size="large" color={theme.color.accent} />
             </View>
           ) : detailError ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
+              <Ionicons name="cloud-offline-outline" size={48} color={theme.color.textMuted} />
               <Text style={styles.emptyText}>No se pudo cargar el detalle.</Text>
               <TouchableOpacity
                 style={styles.actionButton}
@@ -492,14 +495,14 @@ export default function OrdersScreen() {
                   Orden #{String(selectedOrder.id).slice(0, 8).toUpperCase()}
                 </Text>
                 {/* ESTADO GLOBAL */}
-                <StatusBadge status={selectedOrder.status} />
+                <StatusBadge status={selectedOrder.status} theme={theme} styles={styles} />
                 <Text style={styles.detailMeta}>{formatDate(selectedOrder.created_at)}</Text>
               </View>
 
               {selectedOrder.status === 'payment_rejected' && (
                 <View style={styles.rejectedBanner}>
                   <View style={styles.rejectedBannerTop}>
-                    <Ionicons name="close-circle" size={22} color={COLORS.error} />
+                    <Ionicons name="close-circle" size={22} color={theme.color.error} />
                     <Text style={styles.rejectedBannerTitle}>Tu pago fue rechazado</Text>
                   </View>
                   <Text style={styles.rejectedBannerText}>
@@ -510,7 +513,7 @@ export default function OrdersScreen() {
                     onPress={() => { closeDetail(); router.push('/cart') }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="cart-outline" size={16} color={COLORS.error} />
+                    <Ionicons name="cart-outline" size={16} color={theme.color.error} />
                     <Text style={styles.rejectedBannerBtnText}>Volver al carrito</Text>
                   </TouchableOpacity>
                 </View>
@@ -520,7 +523,7 @@ export default function OrdersScreen() {
                 <View style={styles.detailSection}>
                   <Text style={styles.sectionLabel}>Dirección de entrega</Text>
                   <View style={styles.detailSectionCard}>
-                    <Ionicons name="location-outline" size={16} color={COLORS.textSecondary} />
+                    <Ionicons name="location-outline" size={16} color={theme.color.textSecondary} />
                     <Text style={styles.detailText}>
                       {formatDeliveryAddress(selectedOrder.delivery_address)}
                     </Text>
@@ -548,7 +551,7 @@ export default function OrdersScreen() {
                           <Text style={styles.detailItemName} numberOfLines={2}>
                             {displayName}
                           </Text>
-                          <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                          <Ionicons name="chevron-forward" size={14} color={theme.color.accent} />
                         </TouchableOpacity>
                         <View style={styles.detailItemRow}>
                           <Text style={styles.detailItemMeta}>
@@ -573,12 +576,12 @@ export default function OrdersScreen() {
                     <View key={`f-${fulfillment.seller_id}`} style={styles.packageCard}>
                       <View style={styles.packageHeader}>
                         <Text style={styles.packageTitle}>Paquete de {sellerNames[fulfillment.seller_id] || `Vendedor`}</Text>
-                        <StatusBadge status={fulfillment.status} small />
+                        <StatusBadge status={fulfillment.status} small theme={theme} styles={styles} />
                       </View>
 
                       {fulfillment.tracking_code && (
                         <View style={[styles.detailSectionCard, { marginTop: 0, marginBottom: 10 }]}>
-                          <Ionicons name="barcode-outline" size={16} color={COLORS.textSecondary} />
+                          <Ionicons name="barcode-outline" size={16} color={theme.color.textSecondary} />
                           <Text style={[styles.detailText, styles.trackingCode]}>
                             {fulfillment.tracking_code}
                           </Text>
@@ -593,7 +596,7 @@ export default function OrdersScreen() {
                           activeOpacity={0.85}
                         >
                           {confirmingDelivery ? (
-                            <ActivityIndicator color={COLORS.white} size="small" />
+                            <ActivityIndicator color={theme.color.onAccent} size="small" />
                           ) : (
                             <Text style={styles.confirmDeliveryBtnText}>Confirmar que recibí este paquete</Text>
                           )}
@@ -624,7 +627,7 @@ export default function OrdersScreen() {
                     <View key={`global-${i}`} style={styles.historyRow}>
                       <View style={[
                         styles.historyDot,
-                        { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                        { backgroundColor: theme.orderStatusColor[h.status]?.dot ?? theme.color.textMuted }
                       ]} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.historyStatus}>
@@ -653,7 +656,7 @@ export default function OrdersScreen() {
                     return (
                       <View key={`seller-history-${sellerId}`} style={{ marginTop: 15 }}>
                         
-                        <Text style={[styles.sectionLabel, { color: COLORS.primary }]}>
+                        <Text style={[styles.sectionLabel, { color: theme.color.accent }]}>
                           Historial de Vendedor {sellerName}
                         </Text>
                         
@@ -661,7 +664,7 @@ export default function OrdersScreen() {
                           <View key={`sh-${i}`} style={styles.historyRow}>
                             <View style={[
                               styles.historyDot,
-                              { backgroundColor: STATUS_CONFIG[h.status]?.color ?? COLORS.primary }
+                              { backgroundColor: theme.orderStatusColor[h.status]?.dot ?? theme.color.textMuted }
                             ]} />
                             <View style={{ flex: 1 }}>
                               <Text style={styles.historyStatus}>
@@ -684,7 +687,7 @@ export default function OrdersScreen() {
               {selectedOrder.status === 'delivered' && Object.keys(sellerReviews).length > 0 && (
                 <View style={styles.reviewSection}>
                   <View style={styles.reviewSectionHeader}>
-                    <Ionicons name="star-outline" size={16} color={COLORS.secondary} />
+                    <Ionicons name="star-outline" size={16} color={theme.color.like} />
                     <Text style={styles.reviewSectionTitle}>Calificá tu compra</Text>
                   </View>
 
@@ -699,12 +702,12 @@ export default function OrdersScreen() {
                         </Text>
                         {entry.done ? (
                           <View style={styles.reviewDoneRow}>
-                            <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                            <Ionicons name="checkmark-circle" size={18} color={theme.color.success} />
                             <Text style={styles.reviewDoneText}>¡Calificación enviada!</Text>
                           </View>
                         ) : entry.alreadyReviewed ? (
                           <View style={styles.reviewDoneRow}>
-                            <Ionicons name="information-circle-outline" size={18} color={COLORS.textMuted} />
+                            <Ionicons name="information-circle-outline" size={18} color={theme.color.textMuted} />
                             <Text style={styles.reviewAlreadyText}>Ya calificaste a este vendedor</Text>
                           </View>
                         ) : (
@@ -713,11 +716,13 @@ export default function OrdersScreen() {
                               score={entry.score}
                               onSelect={(s) => setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], score: s } }))}
                               disabled={entry.submitting}
+                              theme={theme}
+                              styles={styles}
                             />
                             <TextInput
                               style={styles.reviewInput}
                               placeholder="Comentario opcional..."
-                              placeholderTextColor={COLORS.textMuted}
+                              placeholderTextColor={theme.color.textMuted}
                               value={entry.comment}
                               onChangeText={(t) => setSellerReviews((prev) => ({ ...prev, [sellerId]: { ...prev[sellerId], comment: t } }))}
                               editable={!entry.submitting}
@@ -737,7 +742,7 @@ export default function OrdersScreen() {
                               activeOpacity={0.8}
                             >
                               {entry.submitting ? (
-                                <ActivityIndicator color={COLORS.white} size="small" />
+                                <ActivityIndicator color={theme.color.onAccent} size="small" />
                               ) : (
                                 <Text style={styles.reviewSubmitBtnText}>Enviar calificación</Text>
                               )}
@@ -764,12 +769,12 @@ export default function OrdersScreen() {
                             <Text style={styles.reviewEntityName} numberOfLines={2}>{displayName}</Text>
                             {entry.done ? (
                               <View style={styles.reviewDoneRow}>
-                                <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+                                <Ionicons name="checkmark-circle" size={18} color={theme.color.success} />
                                 <Text style={styles.reviewDoneText}>¡Calificación enviada!</Text>
                               </View>
                             ) : entry.alreadyReviewed ? (
                               <View style={styles.reviewDoneRow}>
-                                <Ionicons name="information-circle-outline" size={18} color={COLORS.textMuted} />
+                                <Ionicons name="information-circle-outline" size={18} color={theme.color.textMuted} />
                                 <Text style={styles.reviewAlreadyText}>Ya calificaste este producto</Text>
                               </View>
                             ) : (
@@ -778,11 +783,13 @@ export default function OrdersScreen() {
                                   score={entry.score}
                                   onSelect={(s) => setProductReviews((prev) => ({ ...prev, [pid]: { ...prev[pid], score: s } }))}
                                   disabled={entry.submitting}
+                                  theme={theme}
+                                  styles={styles}
                                 />
                                 <TextInput
                                   style={styles.reviewInput}
                                   placeholder="Comentario opcional..."
-                                  placeholderTextColor={COLORS.textMuted}
+                                  placeholderTextColor={theme.color.textMuted}
                                   value={entry.comment}
                                   onChangeText={(t) => setProductReviews((prev) => ({ ...prev, [pid]: { ...prev[pid], comment: t } }))}
                                   editable={!entry.submitting}
@@ -802,7 +809,7 @@ export default function OrdersScreen() {
                                   activeOpacity={0.8}
                                 >
                                   {entry.submitting ? (
-                                    <ActivityIndicator color={COLORS.white} size="small" />
+                                    <ActivityIndicator color={theme.color.onAccent} size="small" />
                                   ) : (
                                     <Text style={styles.reviewSubmitBtnText}>Enviar calificación</Text>
                                   )}
@@ -825,15 +832,15 @@ export default function OrdersScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   topBar: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: SPACING.lg,
     paddingVertical: 12,
     alignItems: 'center',
@@ -842,7 +849,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     gap: SPACING.md,
   },
 
@@ -856,7 +863,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   // Filtros — full width, padding dentro del contentContainer
@@ -874,16 +881,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.white,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surface,
   },
   filterChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
   filterChipTextActive: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
   },
 
@@ -903,8 +910,8 @@ const styles = StyleSheet.create({
 
   // Tarjetas de orden
   orderCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 16,
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.image,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     gap: 4,
@@ -922,26 +929,26 @@ const styles = StyleSheet.create({
   },
   orderId: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
   orderDate: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontWeight: '500',
   },
   orderTotal: {
     fontSize: FONT.medium,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
-  // Badge de estado
+  // Badge de estado (pastel bg + dot + textPrimary — contraste WCAG garantizado)
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -950,8 +957,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  badgeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    flexShrink: 0,
+  },
   badgeText: {
-    color: COLORS.white,
+    color: theme.color.textPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -970,23 +983,26 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   emptyText: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   actionButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     marginTop: SPACING.xs,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: FONT.regular,
   },
@@ -999,20 +1015,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   modalCloseBtn: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
-    backgroundColor: COLORS.background,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   modalTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   modalBody: {
     padding: SPACING.lg,
@@ -1026,17 +1042,17 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   detailOrderId: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     letterSpacing: 0.5,
   },
   detailMeta: {
     fontSize: FONT.small,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontWeight: '500',
   },
   detailSection: {
@@ -1045,7 +1061,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 2,
@@ -1054,18 +1070,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.xs,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 10,
     padding: SPACING.sm,
   },
   detailText: {
     flex: 1,
     fontSize: FONT.regular,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     lineHeight: 20,
   },
   detailItem: {
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 12,
     padding: SPACING.sm,
     gap: 6,
@@ -1080,10 +1096,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.primary,        // azul = indica que es tappable
+    color: theme.color.accent,        // azul = indica que es tappable
     textDecorationLine: 'underline',
     textDecorationStyle: 'solid',
-    textDecorationColor: COLORS.primary,
+    textDecorationColor: theme.color.accent,
   },
   detailItemRow: {
     flexDirection: 'row',
@@ -1092,32 +1108,32 @@ const styles = StyleSheet.create({
   },
   detailItemMeta: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
   detailItemSubtotal: {
     fontSize: FONT.regular,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingVertical: SPACING.md,
   },
   totalLabel: {
     fontSize: FONT.medium,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '600',
   },
   totalAmount: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   // Historial
@@ -1137,11 +1153,11 @@ const styles = StyleSheet.create({
   historyStatus: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   historyDate: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     marginTop: 2,
   },
 
@@ -1162,7 +1178,7 @@ const styles = StyleSheet.create({
   },
   orderCardRejectedHintText: {
     fontSize: 12,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
   },
 
@@ -1183,7 +1199,7 @@ const styles = StyleSheet.create({
   rejectedBannerTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.error,
+    color: theme.color.error,
   },
   rejectedBannerText: {
     fontSize: FONT.small,
@@ -1196,16 +1212,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.xs,
     borderWidth: 1.5,
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   rejectedBannerBtnText: {
     fontSize: FONT.small,
     fontWeight: '800',
-    color: COLORS.error,
+    color: theme.color.error,
   },
 
   // Código de seguimiento
@@ -1228,7 +1244,7 @@ const styles = StyleSheet.create({
   confirmDeliveryTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.success,
+    color: theme.color.success,
   },
   confirmDeliveryText: {
     fontSize: FONT.small,
@@ -1237,11 +1253,11 @@ const styles = StyleSheet.create({
   },
   confirmDeliveryError: {
     fontSize: FONT.small,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
   },
   confirmDeliveryBtn: {
-    backgroundColor: COLORS.success,
+    backgroundColor: theme.color.success,
     paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
     borderRadius: 10,
@@ -1255,7 +1271,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   confirmDeliveryBtnText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: FONT.regular,
     fontWeight: '800',
   },
@@ -1263,7 +1279,7 @@ const styles = StyleSheet.create({
   // Sección de calificaciones
   reviewSection: {
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
     paddingTop: SPACING.md,
     gap: SPACING.sm,
   },
@@ -1276,10 +1292,10 @@ const styles = StyleSheet.create({
   reviewSectionTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   reviewCard: {
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 12,
     padding: SPACING.sm,
     gap: SPACING.xs,
@@ -1287,7 +1303,7 @@ const styles = StyleSheet.create({
   reviewEntityName: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 2,
   },
   starRow: {
@@ -1299,22 +1315,22 @@ const styles = StyleSheet.create({
   },
   reviewInput: {
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    borderRadius: 8,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.md,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     fontSize: FONT.regular,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     minHeight: 60,
     textAlignVertical: 'top',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   reviewSubmitBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 11,
-    borderRadius: 10,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
-    minHeight: 44,
+    minHeight: theme.button.minHeight,
     justifyContent: 'center',
     marginTop: 2,
   },
@@ -1322,7 +1338,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   reviewSubmitBtnText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: FONT.regular,
   },
@@ -1335,27 +1351,25 @@ const styles = StyleSheet.create({
   reviewDoneText: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.success,
+    color: theme.color.success,
   },
   reviewAlreadyText: {
     fontSize: FONT.regular,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontWeight: '500',
   },
   reviewError: {
     fontSize: FONT.small,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
   },
 
   // Estilos de los paquetes
   packageCard: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.divider,
+    marginBottom: SPACING.md,
+    padding: SPACING.md,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
   },
   packageHeader: {
     flexDirection: 'row',
@@ -1366,7 +1380,7 @@ const styles = StyleSheet.create({
   packageTitle: {
     fontWeight: 'bold',
     fontSize: FONT.medium,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
 })

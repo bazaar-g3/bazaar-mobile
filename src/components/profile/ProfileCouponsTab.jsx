@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native'
 
-import { COLORS } from '../../constants/colors'
+import { useTheme } from '../../theme/ThemeContext'
 import { Feather } from '@expo/vector-icons'
 import {
   createCoupon,
@@ -23,7 +23,7 @@ import {
   updateCouponExpiration,
   updateCouponStatus,
 } from '../../services/coupons'
-import { styles } from '../../styles/profile/couponsTabStyles'
+import { makeStyles } from '../../styles/profile/couponsTabStyles'
 
 function formatDate(value) {
   if (!value) return 'Sin fecha'
@@ -59,6 +59,9 @@ function CouponModal({
   onClose,
   onSubmit,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const [code, setCode] = useState(initialCode)
   const [discountPercent, setDiscountPercent] = useState(initialDiscount)
   const [expiresAt, setExpiresAt] = useState(initialExpiration)
@@ -109,7 +112,7 @@ function CouponModal({
                   onChangeText={setCode}
                   autoCapitalize="characters"
                   placeholder="Ej: VERANO20"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={theme.color.textMuted}
                   style={styles.couponInput}
                 />
               </View>
@@ -124,7 +127,7 @@ function CouponModal({
                   onChangeText={setDiscountPercent}
                   keyboardType="numeric"
                   placeholder="Ej: 20"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={theme.color.textMuted}
                   style={styles.couponInput}
                 />
               </View>
@@ -139,7 +142,7 @@ function CouponModal({
                 value={expiresAt}
                 onChangeText={setExpiresAt}
                 placeholder="Ej: 2026-12-31"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={theme.color.textMuted}
                 style={styles.couponInput}
               />
             </View>
@@ -162,7 +165,7 @@ function CouponModal({
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={COLORS.white} size="small" />
+                  <ActivityIndicator color={theme.color.onAccent} size="small" />
                 ) : (
                   <Text style={styles.couponModalSubmitText}>{submitLabel}</Text>
                 )}
@@ -176,6 +179,9 @@ function CouponModal({
 }
 
 function CouponCard({ coupon, compact, onToggleStatus, onEditExpiration }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const isActive = coupon.status === 'active'
   const isExpired = coupon.status === 'expired'
 
@@ -221,7 +227,7 @@ function CouponCard({ coupon, compact, onToggleStatus, onEditExpiration }) {
           <Feather
             name="edit-2"
             size={15}
-            color={COLORS.textMuted}
+            color={theme.color.textMuted}
           />
         </TouchableOpacity>
       </View>
@@ -246,6 +252,9 @@ function CouponCard({ coupon, compact, onToggleStatus, onEditExpiration }) {
 }
 
 export default function ProfileCouponsTab() {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const { width } = useWindowDimensions()
   const compact = width < 720
 
@@ -364,7 +373,7 @@ export default function ProfileCouponsTab() {
 
       {loading ? (
         <View style={styles.summaryStatus}>
-          <ActivityIndicator color={COLORS.primaryLight} />
+          <ActivityIndicator color={theme.color.accent} />
           <Text style={styles.summaryStatusText}>Cargando cupones...</Text>
         </View>
       ) : error ? (

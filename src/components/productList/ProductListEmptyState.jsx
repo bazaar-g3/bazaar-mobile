@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
-import { COLORS } from "../../constants/colors";
-import { styles } from "../../styles/productList/productListStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productList/productListStyles";
 
 export default function ProductListEmptyState({
   loading = false,
@@ -11,11 +11,13 @@ export default function ProductListEmptyState({
   buttonText,
   onPress,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.emptyState}>
       {loading ? (
         <>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={theme.color.accent} />
           <Text style={styles.emptyText}>{text}</Text>
         </>
       ) : (

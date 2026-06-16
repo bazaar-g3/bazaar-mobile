@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
-import { COLORS } from "../../constants/colors";
-import { styles } from "../../styles/productList/productListStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productList/productListStyles";
 import PriceRangeSlider from "./PriceRangeSlider";
 
 const PRICE_MIN_LIMIT = 0;
@@ -20,6 +20,9 @@ export default function ProductListSidebar({
   maxPrice,
   onPriceChange,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <View style={styles.sidebar}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -32,7 +35,7 @@ export default function ProductListSidebar({
 
         {loadingCategories ? (
           <View style={styles.sidebarStatus}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={theme.color.accent} />
             <Text style={styles.sidebarStatusText}>Cargando...</Text>
           </View>
         ) : categoriesError ? (

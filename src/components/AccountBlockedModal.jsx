@@ -1,6 +1,7 @@
+import { useMemo } from 'react'
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 /**
  * Modal de cuenta suspendida que se muestra cuando un usuario bloqueado
@@ -16,6 +17,9 @@ import { COLORS } from '../constants/colors'
  * @returns {JSX.Element} Modal de cuenta suspendida.
  */
 export default function AccountBlockedModal({ visible, onClose }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <Modal
       visible={visible}
@@ -27,7 +31,7 @@ export default function AccountBlockedModal({ visible, onClose }) {
         <View style={styles.card}>
           {/* Ícono */}
           <View style={styles.iconContainer}>
-            <Ionicons name="ban" size={48} color={COLORS.error} />
+            <Ionicons name="ban" size={48} color={theme.color.error} />
           </View>
 
           {/* Título */}
@@ -51,7 +55,7 @@ export default function AccountBlockedModal({ visible, onClose }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -62,16 +66,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#fff',
+    backgroundColor: theme.color.surface,
     borderRadius: 20,
     paddingHorizontal: 28,
     paddingVertical: 36,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 12,
   },
   iconContainer: {
     width: 80,
@@ -85,20 +84,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111',
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 14,
   },
   body: {
     fontSize: 15,
-    color: '#444',
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 10,
   },
   bodySecondary: {
     fontSize: 13,
-    color: '#888',
+    color: theme.color.textMuted,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 28,
@@ -106,13 +105,13 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 50,
-    backgroundColor: COLORS.error ?? '#ef4444',
+    backgroundColor: theme.color.error,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
+    color: theme.color.onAccent,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.3,

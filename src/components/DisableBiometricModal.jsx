@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Modal,
   View,
@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import { authenticateWithBiometrics, disableBiometricForAccount } from '../services/biometric'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 const MODE_BIOMETRIC = 'biometric'
 const MODE_PASSWORD = 'password'
@@ -32,6 +32,9 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   function resetState() {
     setMode(MODE_BIOMETRIC)
@@ -100,7 +103,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
 
           <View style={styles.tabBar}>
             <TouchableOpacity
-              style={[styles.tab, mode === MODE_BIOMETRIC && styles.tabActive]}
+              style={[styles.tab, styles.tabFirst, mode === MODE_BIOMETRIC && styles.tabActive]}
               onPress={() => { setMode(MODE_BIOMETRIC); setError('') }}
             >
               <Text style={[styles.tabText, mode === MODE_BIOMETRIC && styles.tabTextActive]}>
@@ -108,7 +111,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tab, mode === MODE_PASSWORD && styles.tabActive]}
+              style={[styles.tab, styles.tabLast, mode === MODE_PASSWORD && styles.tabActive]}
               onPress={() => { setMode(MODE_PASSWORD); setError(''); setPassword('') }}
             >
               <Text style={[styles.tabText, mode === MODE_PASSWORD && styles.tabTextActive]}>
@@ -121,7 +124,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
 
           {mode === MODE_BIOMETRIC ? (
             <>
-              <Ionicons name="finger-print" size={52} color={COLORS.primary} style={styles.biometricIcon} />
+              <Ionicons name="finger-print" size={52} color={theme.color.accent} style={styles.biometricIcon} />
               <Text style={styles.biometricHint}>
                 Usá tu huella dactilar o reconocimiento facial para confirmar
               </Text>
@@ -131,7 +134,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
                 disabled={loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={COLORS.white} />
+                  <ActivityIndicator color={theme.color.onAccent} />
                 ) : (
                   <Text style={styles.confirmButtonText}>Verificar con biometría</Text>
                 )}
@@ -140,11 +143,11 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
           ) : (
             <>
               <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+                <Ionicons name="lock-closed-outline" size={20} color={theme.color.textMuted} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Contraseña"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={theme.color.textMuted}
                   value={password}
                   onChangeText={v => { setPassword(v); setError('') }}
                   secureTextEntry={!showPassword}
@@ -154,7 +157,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
                   <Ionicons
                     name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                     size={20}
-                    color={COLORS.textMuted}
+                    color={theme.color.textMuted}
                   />
                 </TouchableOpacity>
               </View>
@@ -164,7 +167,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
                 disabled={!password || loading}
               >
                 {loading ? (
-                  <ActivityIndicator color={COLORS.white} />
+                  <ActivityIndicator color={theme.color.onAccent} />
                 ) : (
                   <Text style={styles.confirmButtonText}>Confirmar</Text>
                 )}
@@ -181,7 +184,7 @@ export default function DisableBiometricModal({ visible, email, userEmail, onSuc
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -192,36 +195,30 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 8,
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginBottom: 16,
   },
   tabBar: {
     flexDirection: 'row',
     width: '100%',
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     marginBottom: 16,
-    overflow: 'hidden',
   },
   tab: {
     flex: 1,
@@ -229,19 +226,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
+  tabFirst: {
+    borderTopLeftRadius: 9,
+    borderBottomLeftRadius: 9,
+  },
+  tabLast: {
+    borderTopRightRadius: 9,
+    borderBottomRightRadius: 9,
+  },
   tabActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   tabTextActive: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 10,
@@ -252,14 +257,14 @@ const styles = StyleSheet.create({
   },
   biometricHint: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 20,
   },
   confirmButton: {
     width: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 48,
     justifyContent: 'center',
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   confirmButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -282,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -290,7 +295,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 52,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
@@ -301,7 +306,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 15,
     paddingVertical: 0,
   },

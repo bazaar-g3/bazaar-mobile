@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import {
 } from '../services/pin'
 import AccountSelectorSheet from '../components/AccountSelectorSheet'
 import { registerForPushNotifications } from '../services/notifications'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import Logo from '../components/Logo'
 import PinPad from '../components/PinPad'
 import { buildPostAuthDestination, buildAuthScreenNavigation } from '../utils/authRedirect'
@@ -35,6 +35,8 @@ export default function PinLoginScreen() {
   const router = useRouter()
   const params = useLocalSearchParams()
   const { refresh: refreshCart } = useCartContext()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [pinEntry, setPinEntry] = useState('')
   const pinRef = useRef('')
@@ -222,7 +224,7 @@ export default function PinLoginScreen() {
 
         {lockedOut ? (
           <View style={styles.lockoutContainer}>
-            <Ionicons name="lock-closed" size={48} color={COLORS.error} style={styles.lockIcon} />
+            <Ionicons name="lock-closed" size={48} color={theme.color.error} style={styles.lockIcon} />
             <Text style={styles.lockoutTitle}>Acceso bloqueado</Text>
             <Text style={styles.lockoutText}>
               Superaste el límite de intentos. Podés intentar de nuevo en:
@@ -244,14 +246,14 @@ export default function PinLoginScreen() {
             <PinPad onDigit={handleDigit} onDelete={handleDelete} disabled={loading} />
 
             {loading && (
-              <ActivityIndicator color={COLORS.primary} style={styles.loader} />
+              <ActivityIndicator color={theme.color.accent} style={styles.loader} />
             )}
           </>
         )}
 
         <TouchableOpacity style={styles.emailButton} onPress={handleUseEmailPassword}>
           <View style={styles.emailButtonContent}>
-            <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
+            <Ionicons name="mail-outline" size={16} color={theme.color.accent} />
             <Text style={styles.emailButtonText}>Usar email y contraseña</Text>
           </View>
         </TouchableOpacity>
@@ -260,10 +262,10 @@ export default function PinLoginScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -272,32 +274,27 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 12,
@@ -313,11 +310,11 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
   },
   loader: {
     marginTop: 16,
@@ -332,12 +329,12 @@ const styles = StyleSheet.create({
   lockoutTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.error,
+    color: theme.color.error,
     marginBottom: 8,
   },
   lockoutText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 12,
@@ -345,7 +342,7 @@ const styles = StyleSheet.create({
   lockoutTimer: {
     fontSize: 36,
     fontWeight: '900',
-    color: COLORS.primary,
+    color: theme.color.accent,
     marginBottom: 8,
   },
   emailButton: {
@@ -358,7 +355,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emailButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'underline',

@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, TouchableOpacity } from "react-native";
 import Logo from "../Logo";
-import { styles } from "../../styles/profile/profileStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/profile/profileStyles";
 
 export default function ProfileHeader({ onToggleMenu }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.topHeader}>
       <View style={styles.topHeaderContent}>

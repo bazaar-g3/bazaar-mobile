@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { SPACING, FONT } from '../constants/theme'
 import DraggableImageList from './DraggableImageList'
 
@@ -27,6 +27,9 @@ export default function EditProductModal({
   onClose,
   onSave,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [precio, setPrecio] = useState('')
@@ -162,7 +165,7 @@ export default function EditProductModal({
 
           {loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primaryLight} />
+              <ActivityIndicator size="large" color={theme.color.accent} />
               <Text style={styles.loadingText}>
                 Cargando datos de la publicación...
               </Text>
@@ -202,7 +205,7 @@ export default function EditProductModal({
                     value={nombre}
                     onChangeText={setNombre}
                     placeholder="Nombre del producto"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={theme.color.textMuted}
                   />
                 </View>
 
@@ -213,7 +216,7 @@ export default function EditProductModal({
                     value={descripcion}
                     onChangeText={setDescripcion}
                     placeholder="Descripción del producto"
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={theme.color.textMuted}
                     multiline
                     textAlignVertical="top"
                   />
@@ -227,7 +230,7 @@ export default function EditProductModal({
                       value={precio}
                       onChangeText={setPrecio}
                       placeholder="Ej: 30000"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={theme.color.textMuted}
                       keyboardType="numeric"
                     />
                   </View>
@@ -239,7 +242,7 @@ export default function EditProductModal({
                       value={stock}
                       onChangeText={setStock}
                       placeholder="Ej: 5"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={theme.color.textMuted}
                       keyboardType="numeric"
                     />
                   </View>
@@ -287,7 +290,7 @@ export default function EditProductModal({
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.35)',
@@ -300,18 +303,17 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 760,
     maxHeight: '90%',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 18,
-    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
   },
 
   header: {
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -320,12 +322,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   closeText: {
     fontSize: 18,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     paddingHorizontal: 4,
   },
 
@@ -339,7 +341,7 @@ const styles = StyleSheet.create({
 
   loadingText: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
   },
 
@@ -348,7 +350,7 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.md,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingBottom: SPACING.md,
   },
 
@@ -364,7 +366,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT.small,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
   addImageCard: {
@@ -373,10 +375,10 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     padding: SPACING.sm,
     marginTop: SPACING.sm,
     alignSelf: 'flex-start',
@@ -386,26 +388,26 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 36,
     fontWeight: '500',
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
   },
 
   addImageText: {
     marginTop: 4,
     fontSize: FONT.small,
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '600',
     textAlign: 'center',
   },
 
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     fontSize: FONT.small,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.white,
+    color: theme.color.textPrimary,
+    backgroundColor: theme.color.surface,
     outlineStyle: 'none',
   },
 
@@ -430,25 +432,25 @@ const styles = StyleSheet.create({
 
   categoryChip: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 14,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
 
   categoryChipSelected: {
-    borderColor: COLORS.primaryLight,
-    backgroundColor: COLORS.promoLight,
+    borderColor: theme.color.accent,
+    backgroundColor: theme.color.accentTint,
   },
 
   categoryChipText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.small,
   },
 
   categoryChipTextSelected: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '600',
   },
 
@@ -459,18 +461,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
   },
 
   saveButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.color.accent,
     borderRadius: 10,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
   },
 
   saveButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
     fontSize: FONT.small,
   },

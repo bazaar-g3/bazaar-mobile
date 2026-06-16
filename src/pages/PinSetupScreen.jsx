@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { enablePinForAccount, isPinSetOnDevice, verifyPin } from '../services/pin'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import Logo from '../components/Logo'
 import PinPad from '../components/PinPad'
 
@@ -22,6 +22,7 @@ const STEP_CONFIRM = 'confirm'
 const STEP_VERIFY_EXISTING = 'verify_existing'
 
 export default function PinSetupScreen() {
+  const { theme } = useTheme()
   const router = useRouter()
   const params = useLocalSearchParams()
 
@@ -131,6 +132,8 @@ export default function PinSetupScreen() {
     }
   }
 
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const pinDots = Array.from({ length: MIN_PIN_LENGTH }).map((_, i) => i < currentPin.length)
   const isStepEnter = step === STEP_ENTER
   const isStepConfirm = step === STEP_CONFIRM
@@ -140,7 +143,7 @@ export default function PinSetupScreen() {
   if (devicePinExists === null) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color={COLORS.primaryLight} />
+        <ActivityIndicator size="large" color={theme.color.accent} />
       </View>
     )
   }
@@ -185,7 +188,7 @@ export default function PinSetupScreen() {
             disabled={!canAdvance || saving}
           >
             {saving ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={theme.color.onAccent} />
             ) : (
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>
@@ -195,7 +198,7 @@ export default function PinSetupScreen() {
                 <Ionicons
                   name={isStepEnter ? 'arrow-forward' : 'checkmark'}
                   size={18}
-                  color={COLORS.white}
+                  color={theme.color.onAccent}
                 />
               </View>
             )}
@@ -219,19 +222,19 @@ export default function PinSetupScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   loadingScreen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   scrollContent: {
     flexGrow: 1,
   },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -240,33 +243,28 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 12,
@@ -282,15 +280,15 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     backgroundColor: 'transparent',
   },
   dotFilled: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
   },
   button: {
     width: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
@@ -307,7 +305,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: 0.4,
@@ -317,7 +315,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   backButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -328,7 +326,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   skipButtonText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 13,
     textDecorationLine: 'underline',
   },
