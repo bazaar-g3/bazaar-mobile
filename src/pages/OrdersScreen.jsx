@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router'
-import { getOrders, getOrderById, confirmDelivery } from '../services/orders'
+import { getOrders, getOrderById, confirmDelivery, cancelOrder, getCancelErrorMessage } from '../services/orders'
 import { createSellerReview, createProductReview } from '../services/reviews'
 import { getPublicProfile } from '../services/user'
 import { getSessionStatus } from '../services/session'
@@ -123,6 +123,10 @@ export default function OrdersScreen() {
   const [sellerReviews, setSellerReviews] = useState({})
   const [productReviews, setProductReviews] = useState({})
   const [sellerNames, setSellerNames] = useState({})
+  const [cancelModalVisible, setCancelModalVisible] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -320,6 +324,41 @@ export default function OrdersScreen() {
     }
   }
 
+  // Refetch automático mientras el reembolso está procesándose
+  useEffect(() => {
+    if (selectedOrder?.status !== 'refund_in_progress') return
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await getOrderById(selectedOrder.id)
+        setSelectedOrder(fresh)
+        if (fresh.status !== 'refund_in_progress') {
+          setOrders((prev) => prev.map((o) => (o.id === fresh.id ? { ...o, status: fresh.status } : o)))
+        }
+      } catch (_) { /* silenciar errores de polling */ }
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [selectedOrder?.id, selectedOrder?.status])
+
+  const BUYER_CANCELLABLE = ['confirmed', 'in_preparation']
+
+  async function handleCancelOrder() {
+    if (!selectedOrder) return
+    setCancelling(true)
+    setCancelError(null)
+    try {
+      const result = await cancelOrder(selectedOrder.id, { reason: cancelReason || undefined })
+      const fresh = await getOrderById(selectedOrder.id)
+      setSelectedOrder(fresh)
+      setOrders((prev) => prev.map((o) => (o.id === fresh.id ? { ...o, status: fresh.status } : o)))
+      setCancelModalVisible(false)
+      setCancelReason('')
+    } catch (e) {
+      setCancelError(getCancelErrorMessage(e))
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   if (checkingSession) {
     return (
       <SafeAreaView style={styles.fullCenter}>
@@ -455,6 +494,51 @@ export default function OrdersScreen() {
         onRequestClose={closeDetail}
       >
         <SafeAreaView style={styles.screen}>
+          {/* MODAL DE CONFIRMACIÓN DE CANCELACIÓN — dentro del detalle para quedar encima */}
+          <Modal
+            visible={cancelModalVisible}
+            animationType="fade"
+            transparent
+            onRequestClose={() => !cancelling && setCancelModalVisible(false)}
+          >
+            <View style={styles.cancelOverlay}>
+              <View style={styles.cancelDialog}>
+                <Text style={styles.cancelDialogTitle}>¿Cancelar esta orden?</Text>
+                <Text style={styles.cancelDialogText}>
+                  Se restaurará el stock. Si tenés pago aprobado, se iniciará un reembolso automáticamente.
+                </Text>
+                <TextInput
+                  style={styles.cancelReasonInput}
+                  placeholder="Motivo (opcional)"
+                  value={cancelReason}
+                  onChangeText={setCancelReason}
+                  editable={!cancelling}
+                  maxLength={200}
+                />
+                {cancelError ? (
+                  <Text style={styles.cancelErrorText}>{cancelError}</Text>
+                ) : null}
+                <View style={styles.cancelDialogBtns}>
+                  <TouchableOpacity
+                    style={styles.cancelDialogBtnSecondary}
+                    onPress={() => setCancelModalVisible(false)}
+                    disabled={cancelling}
+                  >
+                    <Text style={styles.cancelDialogBtnSecondaryText}>Volver</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.cancelDialogBtnPrimary, cancelling && { opacity: 0.6 }]}
+                    onPress={handleCancelOrder}
+                    disabled={cancelling}
+                  >
+                    {cancelling
+                      ? <ActivityIndicator color={COLORS.white} size="small" />
+                      : <Text style={styles.cancelDialogBtnPrimaryText}>Sí, cancelar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
           <View style={styles.modalHeader}>
             <TouchableOpacity
               onPress={closeDetail}
@@ -610,6 +694,36 @@ export default function OrdersScreen() {
                   ${Number(selectedOrder.total).toFixed(2)}
                 </Text>
               </View>
+
+              {/* ESTADO DE REEMBOLSO */}
+              {selectedOrder.status === 'refund_in_progress' && (
+                <View style={[styles.detailSectionCard, { backgroundColor: '#FFF8E1', marginBottom: 8 }]}>
+                  <ActivityIndicator size="small" color={COLORS.secondary} />
+                  <Text style={[styles.detailText, { color: COLORS.secondary, fontWeight: '600' }]}>
+                    Reembolso en proceso…
+                  </Text>
+                </View>
+              )}
+              {selectedOrder.status === 'refund_processed' && (
+                <View style={[styles.detailSectionCard, { backgroundColor: '#E8F5E9', marginBottom: 8 }]}>
+                  <Ionicons name="wallet-outline" size={16} color={COLORS.success} />
+                  <Text style={[styles.detailText, { color: COLORS.success, fontWeight: '600' }]}>
+                    Reembolso acreditado
+                  </Text>
+                </View>
+              )}
+
+              {/* CANCELAR ORDEN (solo comprador, estados cancelables) */}
+              {BUYER_CANCELLABLE.includes(selectedOrder.status) && (
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => { setCancelError(null); setCancelReason(''); setCancelModalVisible(true) }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="ban-outline" size={16} color={COLORS.error} />
+                  <Text style={styles.cancelBtnText}>Cancelar orden</Text>
+                </TouchableOpacity>
+              )}
 
               {/* HISTORIAL DIVIDIDO */}
               {Array.isArray(selectedOrder.status_history) && selectedOrder.status_history.length > 0 && (
@@ -826,6 +940,93 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
+  cancelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  cancelBtnText: {
+    color: COLORS.error,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  cancelOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  cancelDialog: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    gap: 12,
+  },
+  cancelDialogTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  cancelDialogText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  cancelReasonInput: {
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  cancelErrorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cancelDialogBtns: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  cancelDialogBtnSecondary: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: COLORS.divider,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelDialogBtnSecondaryText: {
+    color: COLORS.textSecondary,
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  cancelDialogBtnPrimary: {
+    flex: 1,
+    backgroundColor: COLORS.error,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  cancelDialogBtnPrimaryText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: 15,
+  },
   screen: {
     flex: 1,
     backgroundColor: COLORS.white,
