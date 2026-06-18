@@ -67,6 +67,29 @@ jest.mock('../../src/services/pin', () => ({
   removePinAccount: (...args) => mockRemovePinAccount(...args),
 }))
 
+// Mock del ThemeContext — los screens usan theme.color.*
+jest.mock('../../src/theme/ThemeContext', () => ({
+  useTheme: () => ({
+    mode: 'light',
+    theme: {
+      color: {
+        surface: '#FFFFFF',
+        surfaceSubtle: '#F1F5F9',
+        textPrimary: '#0F172A',
+        textSecondary: '#64748B',
+        textMuted: '#94A3B8',
+        accent: '#2E9E95',
+        accentTint: '#E6F7F6',
+        error: '#C62828',
+        errorLight: '#FEE2E2',
+        border: '#E2E8F0',
+      },
+    },
+    toggle: jest.fn(),
+    setMode: jest.fn(),
+  }),
+}))
+
 // Mock del componente Logo
 jest.mock('../../src/components/Logo', () => {
   const { View } = require('react-native')
