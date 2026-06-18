@@ -68,6 +68,7 @@ jest.mock('../../src/services/pin', () => ({
 }))
 
 // Mock del ThemeContext — los screens usan theme.color.*
+// { virtual: true } permite mockear el módulo aunque el archivo no exista en disco
 jest.mock('../../src/theme/ThemeContext', () => ({
   useTheme: () => ({
     mode: 'light',
@@ -88,7 +89,8 @@ jest.mock('../../src/theme/ThemeContext', () => ({
     toggle: jest.fn(),
     setMode: jest.fn(),
   }),
-}))
+  ThemeProvider: ({ children }) => children,
+}), { virtual: true })
 
 // Mock del componente Logo
 jest.mock('../../src/components/Logo', () => {
