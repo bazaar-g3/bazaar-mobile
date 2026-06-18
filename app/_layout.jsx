@@ -43,13 +43,25 @@ export default function RootLayout() {
     ...MaterialCommunityIcons.font,
   })
 
-  // Al tocar una notificación te lleva al detalle de la orden
+  // Al tocar una notificación navega al destino correspondiente según su tipo
   useEffect(() => {
-    const navigateToOrder = (response) => {
+    const navigateFromNotification = (response) => {
       if (!response) return
       const data = response.notification.request.content.data
+
+      // Notificaciones de stock bajo o agotado → Mis publicaciones del vendedor
+      if (
+        data?.notification_type === 'LOW_STOCK' ||
+        data?.notification_type === 'OUT_OF_STOCK'
+      ) {
+        setTimeout(() => {
+          router.push('/profile?activeTab=Publicaciones')
+        }, 300)
+        return
+      }
+
+      // Notificaciones de orden → detalle de la orden
       if (data?.order_id) {
-        // Pequeño delay para asegurar que el router esté listo
         setTimeout(() => {
           router.push(`/orders?orderId=${data.order_id}`)
         }, 300)
@@ -58,10 +70,10 @@ export default function RootLayout() {
 
     if (Platform.OS !== 'web') {
       // Caso 2 y 3: app venía de background o estaba cerrada
-      Notifications.getLastNotificationResponseAsync().then(navigateToOrder)
+      Notifications.getLastNotificationResponseAsync().then(navigateFromNotification)
 
       // Caso 1 y 2: listener activo mientras la app está corriendo
-      notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateToOrder)
+      notificationListener.current = Notifications.addNotificationResponseReceivedListener(navigateFromNotification)
     }
 
     return () => {
