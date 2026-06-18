@@ -42,10 +42,28 @@ function formatDate(isoStr) {
   return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-function NotificationItem({ item }) {
+const STOCK_TYPES = new Set(['LOW_STOCK', 'OUT_OF_STOCK'])
+const ORDER_TYPES = new Set([
+  'ORDER_CONFIRMED', 'ORDER_IN_PREPARATION', 'ORDER_SHIPPED',
+  'ORDER_DELIVERED', 'ORDER_CANCELLED', 'PAYMENT_FAILED',
+])
+
+function getDestination(item) {
+  if (STOCK_TYPES.has(item.notification_type)) {
+    return '/profile?activeTab=Publicaciones'
+  }
+  if (ORDER_TYPES.has(item.notification_type) && item.data?.order_id) {
+    return `/orders?orderId=${item.data.order_id}`
+  }
+  return null
+}
+
+function NotificationItem({ item, onPress }) {
   const config = TYPE_CONFIG[item.notification_type] || DEFAULT_CONFIG
-  return (
-    <View style={[styles.item, !item.read && styles.itemUnread]}>
+  const destination = getDestination(item)
+
+  const inner = (
+    <>
       <View style={[styles.iconCircle, { backgroundColor: config.color + '20' }]}>
         <Ionicons name={config.icon} size={22} color={config.color} />
       </View>
@@ -55,12 +73,37 @@ function NotificationItem({ item }) {
         <Text style={styles.itemDate}>{formatDate(item.created_at)}</Text>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
+      {destination && (
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.chevron} />
+      )}
+    </>
+  )
+
+  if (destination) {
+    return (
+      <TouchableOpacity
+        style={[styles.item, !item.read && styles.itemUnread]}
+        onPress={() => onPress(destination)}
+        activeOpacity={0.7}
+      >
+        {inner}
+      </TouchableOpacity>
+    )
+  }
+
+  return (
+    <View style={[styles.item, !item.read && styles.itemUnread]}>
+      {inner}
     </View>
   )
 }
 
 export default function NotificationsScreen() {
   const router = useRouter()
+
+  const handleNotificationPress = (destination) => {
+    router.push(destination)
+  }
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -137,7 +180,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <NotificationItem item={item} />}
+          renderItem={({ item }) => <NotificationItem item={item} onPress={handleNotificationPress} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -236,6 +279,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     marginTop: 4,
     marginLeft: 8,
+    flexShrink: 0,
+  },
+  chevron: {
+    marginLeft: 4,
+    alignSelf: 'center',
     flexShrink: 0,
   },
   separator: {
