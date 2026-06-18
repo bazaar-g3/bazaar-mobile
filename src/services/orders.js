@@ -119,3 +119,32 @@ export async function updateOrderStatus(orderId, body, sellerCatalogId) {
   })
   return data
 }
+
+/**
+ * Cancela una orden (comprador o vendedor).
+ * El body y seller_catalog_id son opcionales según el rol del llamante.
+ * @param {string} orderId - UUID de la orden.
+ * @param {{ reason?: string }} [body] - Motivo de cancelación (opcional).
+ * @param {number|null} [sellerCatalogId] - ID del vendedor en catalog-api (solo si el llamante es vendedor).
+ * @returns {{ order_id, status, cancelled_at, cancelled_by, refund_id, refund_status }}
+ */
+export async function cancelOrder(orderId, body = {}, sellerCatalogId = null) {
+  const params = sellerCatalogId != null ? { seller_catalog_id: sellerCatalogId } : {}
+  const { data } = await ordersApi.post(`/orders/${orderId}/cancel`, body, { params })
+  return data
+}
+
+/**
+ * Retorna un mensaje de error legible para la cancelación de una orden.
+ * @param {Object} error
+ * @returns {string}
+ */
+export function getCancelErrorMessage(error) {
+  const detail = error?.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  const status = error?.response?.status
+  if (status === 409) return 'Esta orden no puede cancelarse en su estado actual.'
+  if (status === 403) return 'No tenés permiso para cancelar esta orden.'
+  if (status === 404) return 'No se encontró la orden.'
+  return error?.message || 'No se pudo cancelar la orden. Intentá nuevamente.'
+}
