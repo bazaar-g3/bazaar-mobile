@@ -28,7 +28,7 @@ import EditableStockStepper from '../EditableStockStepper'
 const FILTROS = ['activa', 'inactiva']
 const MOBILE_BREAKPOINT = 768
 
-function StateSwitch({ value, onToggle }) {
+function StateSwitch({ value, onToggle, styles }) {
   return (
     <TouchableOpacity
       onPress={onToggle}
@@ -387,6 +387,7 @@ export default function VentasTab({
             <StateSwitch
               value={pub.estado === 'activa'}
               onToggle={pub.estado === 'bloqueado_admin' ? undefined : () => handleTogglePublicacion(pub.id)}
+              styles={styles}
             />
           </View>
         </View>
@@ -477,6 +478,7 @@ export default function VentasTab({
           <StateSwitch
             value={pub.estado === 'activa'}
             onToggle={pub.estado === 'bloqueado_admin' ? undefined : () => handleTogglePublicacion(pub.id)}
+            styles={styles}
           />
         </View>
 

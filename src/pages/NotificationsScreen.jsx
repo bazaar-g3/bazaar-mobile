@@ -45,12 +45,12 @@ function getDestination(item) {
   return null
 }
 
-function NotificationItem({ item, styles, onPress, typeConfig, defaultConfig }) {
+function NotificationItem({ item, styles, onPress, typeConfig, defaultConfig, mutedColor }) {
   const config = typeConfig[item.notification_type] || defaultConfig
   const destination = getDestination(item)
 
-  return (
-    <View style={[styles.item, !item.read && styles.itemUnread]}>
+  const inner = (
+    <>
       <View style={[styles.iconCircle, { backgroundColor: config.color + '20' }]}>
         <Ionicons name={config.icon} size={22} color={config.color} />
       </View>
@@ -61,9 +61,9 @@ function NotificationItem({ item, styles, onPress, typeConfig, defaultConfig }) 
       </View>
       {!item.read && <View style={styles.unreadDot} />}
       {destination && (
-        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.chevron} />
+        <Ionicons name="chevron-forward" size={16} color={mutedColor} style={styles.chevron} />
       )}
-    </View>
+    </>
   )
 
   if (destination) {
@@ -183,7 +183,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <NotificationItem item={item} styles={styles} onPress={handleNotificationPress} typeConfig={TYPE_CONFIG} defaultConfig={DEFAULT_CONFIG} />}
+          renderItem={({ item }) => <NotificationItem item={item} styles={styles} onPress={handleNotificationPress} typeConfig={TYPE_CONFIG} defaultConfig={DEFAULT_CONFIG} mutedColor={theme.color.textMuted} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.color.accent]} />}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
