@@ -30,7 +30,7 @@ import {
 } from "../utils/authRedirect";
 import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 import { getProductReputation, formatAverageScore } from "../services/reviews";
-import { recordProductView } from "../services/browseHistory";
+import { recordProductView, recordCartAdd, recordWishlistAdd } from "../services/browseHistory";
 
 import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
 
@@ -278,6 +278,7 @@ export default function ProductDetailScreen() {
     setAddingToCart(true);
     try {
       await addItem(product.id, quantityToAdd);
+      recordCartAdd(String(product.id)).catch(() => {});
       Alert.alert(
         "Añadido",
         `${quantityToAdd} unidad(es) agregadas al carrito.`,
@@ -372,6 +373,7 @@ export default function ProductDetailScreen() {
         await removeFromWishlist(id);
       } else {
         await addToWishlist(id);
+        recordWishlistAdd(String(id)).catch(() => {});
       }
     } catch {
       setIsWishlisted(previousState);
@@ -508,6 +510,7 @@ export default function ProductDetailScreen() {
         setHandledPendingActionKey(actionKey);
         try {
           await addToWishlist(String(id));
+          recordWishlistAdd(String(id)).catch(() => {});
           setIsWishlisted(true);
           Alert.alert("Guardado", "Producto agregado a tu wishlist.", [
             { text: "OK", onPress: () => router.replace(`/product/${id}`) },
