@@ -26,10 +26,10 @@ export default function ActiveProductsSummary({
   return (
     <View style={styles.summarySection}>
       <View style={styles.summaryHeader}>
-        <Text style={styles.sectionTitle}>Publicaciones activas</Text>
+        <Text style={styles.sectionTitle} numberOfLines={1}>Publicaciones activas</Text>
 
-        <TouchableOpacity onPress={onGoToSalesTab}>
-          <Text style={styles.summaryAction}>Ver publicaciones</Text>
+        <TouchableOpacity onPress={onGoToSalesTab} style={styles.summaryActionBtn}>
+          <Text style={styles.summaryAction} numberOfLines={1}>Ver publicaciones</Text>
         </TouchableOpacity>
       </View>
 

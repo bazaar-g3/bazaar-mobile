@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/ThemeContext";
+import AnimatedButton from "../AnimatedButton";
 
 export default function ProductInfoPanel({
   product,
@@ -129,24 +130,21 @@ export default function ProductInfoPanel({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.cartButton,
-                  styles.cartButtonFlex,
-                  (isOutOfStock || cartLimitReached) && { backgroundColor: theme.color.textMuted },
-                ]}
-                onPress={onAddToCart}
-                activeOpacity={0.9}
-                disabled={isOutOfStock || !isAvailable || cartLimitReached}
-              >
-                <Text style={styles.cartButtonText}>
-                  {isOutOfStock
-                    ? "SIN STOCK"
-                    : cartLimitReached
-                    ? "MÁXIMO EN CARRITO"
-                    : "AÑADIR AL CARRITO"}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.cartButtonFlex}>
+                <AnimatedButton
+                  variant="cta"
+                  showSuccess
+                  label={
+                    isOutOfStock
+                      ? "SIN STOCK"
+                      : cartLimitReached
+                      ? "MÁXIMO EN CARRITO"
+                      : "AÑADIR AL CARRITO"
+                  }
+                  disabled={isOutOfStock || !isAvailable || cartLimitReached}
+                  onPress={onAddToCart}
+                />
+              </View>
             </View>
           </View>
         )}

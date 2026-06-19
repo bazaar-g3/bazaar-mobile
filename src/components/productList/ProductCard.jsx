@@ -10,11 +10,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme/ThemeContext";
+import AnimatedButton from "../AnimatedButton";
 import { formatPrice } from "../../utils/productList/productListHelpers";
 
 const ROW_IMG_SIZE = 88;
 const AVATAR_SIZE  = 20;
-const ADD_BTN_SIZE = 36;
 const HEART_BTN_SIZE = 32;
 
 export default function ProductCard({
@@ -119,15 +119,14 @@ export default function ProductCard({
               >
                 {heartIcon}
               </TouchableOpacity>
-              <TouchableOpacity
-                style={s.addBtn}
+              <AnimatedButton
+                compact
+                variant="cta"
+                showSuccess
+                label="Agregar al carrito"
+                icon={<Ionicons name="add" size={20} color={theme.color.onAccent} />}
                 onPress={() => onAddToCart(item.id)}
-                activeOpacity={0.8}
-                accessibilityLabel="Añadir al carrito"
-                accessibilityRole="button"
-              >
-                <Ionicons name="add" size={20} color={theme.color.accentInk} />
-              </TouchableOpacity>
+              />
             </View>
           </View>
 
@@ -180,15 +179,14 @@ export default function ProductCard({
       {/* Precio + botón + */}
       <View style={s.priceRow}>
         <Text style={s.price}>{formatPrice(item.price)}</Text>
-        <TouchableOpacity
-          style={s.addBtn}
+        <AnimatedButton
+          compact
+          variant="cta"
+          showSuccess
+          label="Agregar al carrito"
+          icon={<Ionicons name="add" size={20} color={theme.color.onAccent} />}
           onPress={() => onAddToCart(item.id)}
-          activeOpacity={0.8}
-          accessibilityLabel="Añadir al carrito"
-          accessibilityRole="button"
-        >
-          <Ionicons name="add" size={20} color={theme.color.accentInk} />
-        </TouchableOpacity>
+        />
       </View>
 
     </View>
@@ -304,16 +302,6 @@ const makeStyles = (theme) => StyleSheet.create({
     fontWeight: theme.type.price.weight,
     color: theme.color.textPrimary,
   },
-  addBtn: {
-    width: ADD_BTN_SIZE,
-    height: ADD_BTN_SIZE,
-    borderRadius: ADD_BTN_SIZE / 2,
-    backgroundColor: theme.color.accentTint,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-
   // ── Row layout ──
   cardRow: {
     flexDirection: "row",

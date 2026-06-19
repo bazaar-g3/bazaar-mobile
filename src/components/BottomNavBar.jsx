@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext'
 import { buildLoginRedirect } from '../utils/authRedirect'
-import { useCartContext } from '../context/CartContext'
+import CartBadge from './CartBadge'
 
 const TABS = [
   { label: 'Inicio', icon: 'home-outline', activeIcon: 'home', path: '/home' },
@@ -18,7 +18,6 @@ const TABS = [
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
-  const { count } = useCartContext()
   const insets = useSafeAreaInsets()
   const { theme } = useTheme()
   const styles = useMemo(() => makeStyles(theme), [theme])
@@ -57,13 +56,7 @@ export default function BottomNavBar() {
                 size={26}
                 color={isActive ? theme.color.accent : theme.color.textMuted}
               />
-              {isCart && count > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {count > 99 ? '99+' : count}
-                  </Text>
-                </View>
-              )}
+              {isCart && <CartBadge />}
             </View>
             <Text style={[styles.label, isActive && styles.labelActive]}>
               {tab.label}
@@ -99,23 +92,6 @@ const makeStyles = (theme) => StyleSheet.create({
   },
   iconWrapperActive: {
     backgroundColor: theme.color.accent,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: theme.color.notification,
-    borderRadius: 999,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: theme.color.surface,
-    fontSize: 10,
-    fontWeight: '800',
   },
   label: {
     fontSize: 11,

@@ -278,13 +278,15 @@ export default function ProductListScreen() {
           quantity: 1,
         })
       );
-      return;
+      // Rechazamos: se redirigió a login, no se agregó → el botón no debe mostrar éxito
+      throw new Error("auth-required");
     }
     try {
       await addItem(productId);
-      Alert.alert("Añadido al carrito", "El producto fue agregado correctamente.");
+      // El éxito lo confirma el morph a ✓ del AnimatedButton (sin alert redundante)
     } catch (error) {
       Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
+      throw error;
     }
   };
 
