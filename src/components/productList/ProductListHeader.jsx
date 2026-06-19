@@ -25,6 +25,7 @@ export default function ProductListHeader({
   setSearchText,
   onSearch,
   onOpenFilters,
+  onGoHome,
   activeFiltersCount = 0,
   activeSortBy,
   onSortChange,
@@ -37,6 +38,16 @@ export default function ProductListHeader({
     <View style={[s.header, { paddingTop: insets.top + theme.space.md }]}>
       {/* Título + filtros */}
       <View style={s.titleRow}>
+        {/* Botón explícito para volver al inicio (no hay header nativo en el Stack) */}
+        <TouchableOpacity
+          onPress={onGoHome}
+          style={s.backBtn}
+          activeOpacity={0.8}
+          accessibilityLabel="Volver al inicio"
+        >
+          <Ionicons name="arrow-back" size={26} color={theme.color.accent} />
+        </TouchableOpacity>
+
         <View style={s.titleBlock}>
           <Text style={s.title} numberOfLines={1}>{screenTitle}</Text>
           {screenSubtitle ? (
@@ -137,6 +148,14 @@ const makeStyles = (theme) => StyleSheet.create({
     fontWeight: theme.type.meta.weight,
     color: theme.color.textMuted,
     marginTop: 2,
+  },
+
+  // Botón "volver al inicio": flecha a la izquierda del título, área táctil 44×44 centrada
+  backBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 44,
   },
 
   filterBtn: {

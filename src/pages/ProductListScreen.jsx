@@ -311,6 +311,7 @@ export default function ProductListScreen() {
         setSearchText={setSearchText}
         onSearch={handleSearch}
         onOpenFilters={() => setFiltersVisible(true)}
+        onGoHome={() => router.push("/home")}
         activeFiltersCount={activeFiltersCount}
         activeSortBy={activeSortBy}
         onSortChange={(value) => setActiveSortBy(value)}
