@@ -283,16 +283,14 @@ export default function ProductDetailScreen() {
     try {
       await addItem(product.id, quantityToAdd);
       recordCartAdd(String(product.id)).catch(() => {});
-      Alert.alert(
-        "Añadido",
-        `${quantityToAdd} unidad(es) agregadas al carrito.`,
-        onDismiss ? [{ text: "OK", onPress: onDismiss }] : undefined
-      );
+      // El éxito lo confirma el morph a ✓ del AnimatedButton (sin alert redundante)
+      if (onDismiss) onDismiss();
     } catch (e) {
       Alert.alert(
         "Error",
         getCartErrorMessage(e, "No se pudo agregar al carrito.")
       );
+      throw e; // re-lanzamos para que el botón no muestre éxito
     } finally {
       setAddingToCart(false);
     }
@@ -315,32 +313,33 @@ export default function ProductDetailScreen() {
   }
 
   async function handleAddToCart() {
+    // Cada camino que NO agrega lanza, para que el AnimatedButton no muestre éxito.
     if (!isAvailable) {
       Alert.alert("Producto no disponible", "Este producto ya no está disponible.");
-      return;
+      throw new Error("not-available");
     }
     if (product.stock <= 0) {
       Alert.alert("Sin stock", "No hay unidades disponibles de este producto por el momento.");
-      return;
+      throw new Error("no-stock");
     }
     if (cartLimitReached) {
       Alert.alert(
         "Límite alcanzado",
         "Ya tenés el máximo disponible de este producto en tu carrito."
       );
-      return;
+      throw new Error("cart-limit");
     }
     if (quantity > maxAddable) {
       Alert.alert(
         "Cantidad no disponible",
         `Solo podés agregar ${maxAddable} unidad/es más (ya tenés ${quantityInCart} en el carrito).`
       );
-      return;
+      throw new Error("exceeds-max");
     }
 
     setPendingLoginAction("add-to-cart");
     const authenticated = await handleRequireAuthForCart();
-    if (!authenticated) return;
+    if (!authenticated) throw new Error("auth-required");
     await completeAddToCart(quantity);
   }
 

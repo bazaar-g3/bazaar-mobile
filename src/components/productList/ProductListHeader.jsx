@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../theme/ThemeContext";
+import AnimatedPressable from "../AnimatedPressable";
 
 const SORT_OPTIONS = [
   { value: "newest",     label: "Recientes"    },
@@ -100,16 +101,15 @@ export default function ProductListHeader({
         {SORT_OPTIONS.map(({ value, label }) => {
           const active = activeSortBy === value;
           return (
-            <TouchableOpacity
+            <AnimatedPressable
               key={value}
               style={[s.chip, active && s.chipActive]}
               onPress={() => onSortChange(active ? null : value)}
-              activeOpacity={0.8}
             >
               <Text style={[s.chipText, active && s.chipTextActive]}>
                 {label}
               </Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           );
         })}
       </ScrollView>

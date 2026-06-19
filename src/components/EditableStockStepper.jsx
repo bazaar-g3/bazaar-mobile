@@ -1,11 +1,13 @@
 import { useMemo } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { Animated, View, Text, StyleSheet } from 'react-native'
 import { useTheme } from '../theme/ThemeContext'
-import { SPACING, FONT } from '../constants/theme'
+import AnimatedPressable from './AnimatedPressable'
+import { usePop } from '../utils/usePop'
 
 export default function EditableStockStepper({ value, onChange, min = 0 }) {
   const { theme } = useTheme()
   const styles = useMemo(() => makeStyles(theme), [theme])
+  const valueScale = usePop(value)
 
   function handleDecrease() {
     if (value <= min) return
@@ -20,7 +22,7 @@ export default function EditableStockStepper({ value, onChange, min = 0 }) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
+      <AnimatedPressable
         style={[styles.button, disableDecrease && styles.buttonDisabled]}
         onPress={handleDecrease}
         disabled={disableDecrease}
@@ -28,13 +30,15 @@ export default function EditableStockStepper({ value, onChange, min = 0 }) {
         <Text style={[styles.buttonText, disableDecrease && styles.buttonTextDisabled]}>
           −
         </Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
 
-      <Text style={styles.value}>{value}</Text>
+      <Animated.View style={{ transform: [{ scale: valueScale }] }}>
+        <Text style={styles.value}>{value}</Text>
+      </Animated.View>
 
-      <TouchableOpacity style={styles.button} onPress={handleIncrease}>
+      <AnimatedPressable style={styles.button} onPress={handleIncrease}>
         <Text style={styles.buttonText}>+</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </View>
   )
 }

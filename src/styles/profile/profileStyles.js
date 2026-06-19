@@ -39,6 +39,7 @@ export const makeStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: -8,
+    marginTop: SPACING.sm,
     zIndex: 2,
   },
 
@@ -360,12 +361,18 @@ export const makeStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: SPACING.sm,
   },
 
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: theme.color.textPrimary,
+    flexShrink: 1,
+  },
+
+  summaryActionBtn: {
+    flexShrink: 0,
   },
 
   summaryAction: {

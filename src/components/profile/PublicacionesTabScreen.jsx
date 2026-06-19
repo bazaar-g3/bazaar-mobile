@@ -2,14 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTheme } from '../../theme/ThemeContext'
 import {
   ActivityIndicator,
+  Animated,
   ScrollView,
   View,
   Text,
   TextInput,
   TouchableOpacity,
   Image,
+  Pressable,
   useWindowDimensions,
 } from 'react-native'
+import { useReduceMotion } from '../../utils/useReduceMotion'
 
 import {
   getCatalogErrorMessage,
@@ -28,23 +31,31 @@ import EditableStockStepper from '../EditableStockStepper'
 const FILTROS = ['activa', 'inactiva']
 const MOBILE_BREAKPOINT = 768
 
+// Recorrido del thumb: ancho del track (46) - padding (2*2) - ancho del thumb (20) = 22
+const SWITCH_THUMB_TRAVEL = 22
+
 function StateSwitch({ value, onToggle, styles }) {
+  const reduceMotion = useReduceMotion()
+  const x = useRef(new Animated.Value(value ? SWITCH_THUMB_TRAVEL : 0)).current
+
+  useEffect(() => {
+    const to = value ? SWITCH_THUMB_TRAVEL : 0
+    if (reduceMotion) {
+      x.setValue(to)
+      return
+    }
+    Animated.spring(x, { toValue: to, useNativeDriver: true, speed: 20, bounciness: 8 }).start()
+  }, [value, reduceMotion, x])
+
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onToggle}
-      activeOpacity={0.85}
-      style={[
-        styles.switchTrack,
-        value ? styles.switchTrackOn : styles.switchTrackOff,
-      ]}
+      style={[styles.switchTrack, value ? styles.switchTrackOn : styles.switchTrackOff]}
     >
-      <View
-        style={[
-          styles.switchThumb,
-          value ? styles.switchThumbOn : styles.switchThumbOff,
-        ]}
+      <Animated.View
+        style={[styles.switchThumb, styles.switchThumbOff, { transform: [{ translateX: x }] }]}
       />
-    </TouchableOpacity>
+    </Pressable>
   )
 }
 

@@ -23,6 +23,7 @@ import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 import ConfirmModal from '../components/ConfirmModal'
+import AnimatedPressable from '../components/AnimatedPressable'
 
 export default function CartScreen() {
   const router = useRouter()
@@ -191,13 +192,13 @@ export default function CartScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={() => handleRemove(item.product_id, item.name)}
               style={styles.trashBtn}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="trash-outline" size={20} color={theme.color.error} />
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </View>
       </View>
@@ -256,7 +257,7 @@ export default function CartScreen() {
                 </Text>
               )}
 
-              <TouchableOpacity
+              <AnimatedPressable
                 disabled={items.length === 0 || hasUnavailable}
                 style={[
                   styles.checkoutButton,
@@ -265,7 +266,7 @@ export default function CartScreen() {
                 onPress={() => router.push('/checkout')}
               >
                 <Text style={styles.checkoutButtonText}>Finalizar compra</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </>
         )}

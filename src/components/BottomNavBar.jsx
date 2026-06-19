@@ -1,12 +1,14 @@
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
-import { useMemo } from 'react'
+import { Animated, View, Text, StyleSheet } from 'react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../theme/ThemeContext'
+import { useReduceMotion } from '../utils/useReduceMotion'
 import { buildLoginRedirect } from '../utils/authRedirect'
-import { useCartContext } from '../context/CartContext'
+import CartBadge from './CartBadge'
+import AnimatedPressable from './AnimatedPressable'
 
 const TABS = [
   { label: 'Inicio', icon: 'home-outline', activeIcon: 'home', path: '/home' },
@@ -15,13 +17,51 @@ const TABS = [
   { label: 'Perfil', icon: 'person-outline', activeIcon: 'person', path: '/profile', requiresAuth: true },
 ]
 
+// Ancho del pill (resaltado) que se desliza detrás del ícono activo
+const PILL_WIDTH = 56
+const PILL_HEIGHT = 38
+
 export default function BottomNavBar() {
   const router = useRouter()
   const pathname = usePathname()
-  const { count } = useCartContext()
   const insets = useSafeAreaInsets()
   const { theme } = useTheme()
   const styles = useMemo(() => makeStyles(theme), [theme])
+  const reduceMotion = useReduceMotion()
+
+  const activeIndex = TABS.findIndex(
+    (t) => pathname === t.path || pathname.startsWith(t.path + '/')
+  )
+
+  const [tabWidth, setTabWidth] = useState(0)
+  const pillX = useRef(new Animated.Value(0)).current
+  const iconPop = useRef(new Animated.Value(1)).current
+  const positioned = useRef(false)
+  const prevIndex = useRef(activeIndex)
+
+  // Desliza el pill al tab activo (la primera vez salta sin animar para no entrar desde el borde)
+  useEffect(() => {
+    if (tabWidth <= 0 || activeIndex < 0) return
+    const target = activeIndex * tabWidth + (tabWidth - PILL_WIDTH) / 2
+    if (!positioned.current || reduceMotion) {
+      pillX.setValue(target)
+      positioned.current = true
+    } else {
+      Animated.spring(pillX, { toValue: target, useNativeDriver: true, speed: 16, bounciness: 8 }).start()
+    }
+  }, [activeIndex, tabWidth, reduceMotion, pillX])
+
+  // Pop del ícono que pasa a estar activo
+  useEffect(() => {
+    if (activeIndex === prevIndex.current) return
+    prevIndex.current = activeIndex
+    if (reduceMotion || activeIndex < 0) return
+    iconPop.setValue(1)
+    Animated.sequence([
+      Animated.spring(iconPop, { toValue: 1.2, useNativeDriver: true, speed: 20, bounciness: 12 }),
+      Animated.spring(iconPop, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),
+    ]).start()
+  }, [activeIndex, reduceMotion, iconPop])
 
   const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password', '/checkout']
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null
@@ -37,52 +77,74 @@ export default function BottomNavBar() {
     router.push(tab.path)
   }
 
+  const pillVisible = activeIndex >= 0 && tabWidth > 0
+
   return (
     <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-      {TABS.map((tab) => {
-        const isActive = pathname === tab.path || pathname.startsWith(tab.path + '/')
-        const iconName = isActive ? tab.activeIcon : tab.icon
-        const isCart = tab.path === '/cart'
+      <View
+        style={styles.tabsRow}
+        onLayout={(e) => setTabWidth(e.nativeEvent.layout.width / TABS.length)}
+      >
+        {pillVisible && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.pill, { transform: [{ translateX: pillX }] }]}
+          />
+        )}
 
-        return (
-          <TouchableOpacity
-            key={tab.path}
-            style={styles.tab}
-            onPress={() => handlePress(tab)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconWrapper}>
-              <Ionicons
-                name={iconName}
-                size={26}
-                color={isActive ? theme.color.accent : theme.color.textMuted}
-              />
-              {isCart && count > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {count > 99 ? '99+' : count}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.label, isActive && styles.labelActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        )
-      })}
+        {TABS.map((tab, index) => {
+          const isActive = index === activeIndex
+          const iconName = isActive ? tab.activeIcon : tab.icon
+          const isCart = tab.path === '/cart'
+
+          return (
+            <AnimatedPressable
+              key={tab.path}
+              style={styles.tab}
+              onPress={() => handlePress(tab)}
+            >
+              <View style={styles.iconWrapper}>
+                <Animated.View style={isActive ? { transform: [{ scale: iconPop }] } : null}>
+                  <Ionicons
+                    name={iconName}
+                    size={26}
+                    color={isActive ? theme.color.accent : theme.color.textMuted}
+                  />
+                </Animated.View>
+                {isCart && <CartBadge />}
+              </View>
+              <Text style={[styles.label, isActive && styles.labelActive]}>
+                {tab.label}
+              </Text>
+            </AnimatedPressable>
+          )
+        })}
+      </View>
     </View>
   )
 }
 
 const makeStyles = (theme) => StyleSheet.create({
   container: {
-    flexDirection: 'row',
     backgroundColor: theme.color.surface,
     borderTopWidth: 1,
     borderTopColor: theme.color.border,
     paddingTop: 10,
     paddingHorizontal: 16,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    position: 'relative',
+  },
+  // Pill que se desliza detrás del ícono activo
+  pill: {
+    position: 'absolute',
+    left: 0,
+    top: 1,
+    width: PILL_WIDTH,
+    height: PILL_HEIGHT,
+    borderRadius: 100,
+    backgroundColor: theme.color.accentTint,
   },
   tab: {
     flex: 1,
@@ -95,27 +157,6 @@ const makeStyles = (theme) => StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 18,
     paddingVertical: 7,
-    backgroundColor: theme.color.accentSubtle,
-  },
-  iconWrapperActive: {
-    backgroundColor: theme.color.accent,
-  },
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: theme.color.notification,
-    borderRadius: 999,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: theme.color.surface,
-    fontSize: 10,
-    fontWeight: '800',
   },
   label: {
     fontSize: 11,

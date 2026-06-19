@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/productList/ProductCard";
+import AnimatedPressable from "../components/AnimatedPressable";
 import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 import { categoryPalette } from "../theme";
@@ -35,7 +36,7 @@ import { useCartContext } from "../context/CartContext";
 import { getCartErrorMessage } from "../services/cart";
 import { getNotificationsHistory } from "../services/notifications";
 import { recordCategoryBrowse } from "../services/browseHistory";
-import { getWishlist } from "../services/wishlist";
+import { getWishlist, addToWishlist, removeFromWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
 import { makeStyles } from "../styles/homeStyles";
 
@@ -140,13 +141,41 @@ export default function HomeScreen() {
           quantity: 1,
         })
       );
-      return;
+      // Rechazamos: se redirigió a login, no se agregó → el botón no debe mostrar éxito
+      throw new Error("auth-required");
     }
     try {
       await addItem(productId);
-      Alert.alert("Añadido al carrito", "El producto fue agregado correctamente.");
+      // El éxito lo confirma el morph a ✓ del AnimatedButton (sin alert redundante)
     } catch (error) {
       Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
+      throw error;
+    }
+  };
+
+  // Agrega/quita un producto de favoritos desde las cartas del home
+  const handleWishlistToggle = async (productId, newLiked) => {
+    const session = await getSessionStatus();
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({ redirectPath: `/product/${productId}`, pendingAction: "wishlist" })
+      );
+      return;
+    }
+    try {
+      if (newLiked) {
+        await addToWishlist(productId);
+        setWishlistIds((prev) => new Set([...prev, String(productId)]));
+      } else {
+        await removeFromWishlist(productId);
+        setWishlistIds((prev) => {
+          const next = new Set(prev);
+          next.delete(String(productId));
+          return next;
+        });
+      }
+    } catch {
+      // La carta ya hizo el toggle optimista; un reload futuro corrige el estado
     }
   };
 
@@ -377,17 +406,17 @@ export default function HomeScreen() {
           <View style={styles.topBarContent}>
             <View style={styles.leftPlaceholder}>
               {(isSmall || isMedium) && (
-                <TouchableOpacity style={styles.publishButtonCircle} onPress={handlePublishPress}>
+                <AnimatedPressable style={styles.publishButtonCircle} onPress={handlePublishPress}>
                   <Text style={styles.publishButtonCircleText}>+</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               )}
             </View>
 
             <View style={styles.iconsContainer}>
               {!isSmall && !isMedium && (
-                <TouchableOpacity style={styles.publishButton} onPress={handlePublishPress}>
+                <AnimatedPressable style={styles.publishButton} onPress={handlePublishPress}>
                   <Text style={styles.publishButtonText}>+ Publicar producto</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               )}
 
               {isAuthenticated ? (
@@ -560,6 +589,7 @@ export default function HomeScreen() {
                     isWishlisted={wishlistIds.has(String(product.id))}
                     onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                     onAddToCart={() => handleAddToCart(product.id)}
+                    onWishlistToggle={handleWishlistToggle}
                   />
                 ))}
               </ScrollView>
@@ -594,6 +624,7 @@ export default function HomeScreen() {
                         isWishlisted={wishlistIds.has(String(product.id))}
                         onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                         onAddToCart={() => handleAddToCart(product.id)}
+                        onWishlistToggle={handleWishlistToggle}
                       />
                     ))}
                   </ScrollView>
@@ -617,6 +648,7 @@ export default function HomeScreen() {
                         isWishlisted={wishlistIds.has(String(product.id))}
                         onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                         onAddToCart={() => handleAddToCart(product.id)}
+                        onWishlistToggle={handleWishlistToggle}
                       />
                     ))}
                   </ScrollView>
@@ -665,6 +697,7 @@ export default function HomeScreen() {
                     isWishlisted={wishlistIds.has(String(product.id))}
                     onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
                     onAddToCart={() => handleAddToCart(product.id)}
+                    onWishlistToggle={handleWishlistToggle}
                   />
                 ))}
               </ScrollView>

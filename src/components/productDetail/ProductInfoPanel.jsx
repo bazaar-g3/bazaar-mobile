@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/ThemeContext";
+import AnimatedButton from "../AnimatedButton";
+import AnimatedHeart from "../AnimatedHeart";
 
 export default function ProductInfoPanel({
   product,
@@ -114,39 +116,30 @@ export default function ProductInfoPanel({
             )}
 
             <View style={styles.ctaRow}>
-              <TouchableOpacity
+              <AnimatedHeart
+                liked={isWishlisted}
+                onToggle={() => onToggleWishlist?.()}
+                size={22}
                 style={styles.wishlistBtn}
-                onPress={onToggleWishlist}
-                disabled={wishlistLoading}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={isWishlisted ? "Quitar de favoritos" : "Guardar en favoritos"}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name={isWishlisted ? "heart" : "heart-outline"}
-                  size={22}
-                  color={isWishlisted ? theme.color.like : theme.color.textSecondary}
-                />
-              </TouchableOpacity>
+                inactiveColor={theme.color.textSecondary}
+              />
 
-              <TouchableOpacity
-                style={[
-                  styles.cartButton,
-                  styles.cartButtonFlex,
-                  (isOutOfStock || cartLimitReached) && { backgroundColor: theme.color.textMuted },
-                ]}
-                onPress={onAddToCart}
-                activeOpacity={0.9}
-                disabled={isOutOfStock || !isAvailable || cartLimitReached}
-              >
-                <Text style={styles.cartButtonText}>
-                  {isOutOfStock
-                    ? "SIN STOCK"
-                    : cartLimitReached
-                    ? "MÁXIMO EN CARRITO"
-                    : "AÑADIR AL CARRITO"}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.cartButtonFlex}>
+                <AnimatedButton
+                  variant="cta"
+                  showSuccess
+                  label={
+                    isOutOfStock
+                      ? "SIN STOCK"
+                      : cartLimitReached
+                      ? "MÁXIMO EN CARRITO"
+                      : "AÑADIR AL CARRITO"
+                  }
+                  disabled={isOutOfStock || !isAvailable || cartLimitReached}
+                  onPress={onAddToCart}
+                />
+              </View>
             </View>
           </View>
         )}
