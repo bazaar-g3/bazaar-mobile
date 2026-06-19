@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -31,6 +32,8 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { useCartContext } from "../context/CartContext";
+import { getCartErrorMessage } from "../services/cart";
 import { getNotificationsHistory } from "../services/notifications";
 import { recordCategoryBrowse } from "../services/browseHistory";
 import { getWishlist } from "../services/wishlist";
@@ -125,6 +128,28 @@ export default function HomeScreen() {
   const refreshCatalogKey = Array.isArray(refreshCatalog)
     ? refreshCatalog[0]
     : refreshCatalog;
+
+  const { addItem } = useCartContext();
+
+  const handleAddToCart = async (productId) => {
+    const session = await getSessionStatus();
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({
+          redirectPath: `/product/${productId}`,
+          pendingAction: "add-to-cart",
+          quantity: 1,
+        })
+      );
+      return;
+    }
+    try {
+      await addItem(productId);
+      Alert.alert("Añadido al carrito", "El producto fue agregado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
+    }
+  };
 
   const loadSessionData = useCallback(async () => {
     try {
@@ -539,7 +564,7 @@ export default function HomeScreen() {
                     cardStyle={{ width: 164, marginRight: 12 }}
                     isWishlisted={wishlistIds.has(String(product.id))}
                     onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
-                    onAddToCart={() => {}}
+                    onAddToCart={() => handleAddToCart(product.id)}
                   />
                 ))}
               </ScrollView>
@@ -568,10 +593,12 @@ export default function HomeScreen() {
                     {forYouProducts.map((product) => (
                       <ProductCard
                         key={product.id}
-                        product={product}
-                        variant="horizontal"
+                        item={product}
+                        layout="grid"
+                        cardStyle={{ width: 164, marginRight: 12 }}
                         isWishlisted={wishlistIds.has(String(product.id))}
-                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onAddToCart={() => handleAddToCart(product.id)}
                       />
                     ))}
                   </ScrollView>
@@ -589,10 +616,12 @@ export default function HomeScreen() {
                     {trendingProducts.map((product) => (
                       <ProductCard
                         key={product.id}
-                        product={product}
-                        variant="horizontal"
+                        item={product}
+                        layout="grid"
+                        cardStyle={{ width: 164, marginRight: 12 }}
                         isWishlisted={wishlistIds.has(String(product.id))}
-                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onAddToCart={() => handleAddToCart(product.id)}
                       />
                     ))}
                   </ScrollView>
@@ -640,7 +669,7 @@ export default function HomeScreen() {
                     cardStyle={{ width: 164, marginRight: 12 }}
                     isWishlisted={wishlistIds.has(String(product.id))}
                     onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
-                    onAddToCart={() => {}}
+                    onAddToCart={() => handleAddToCart(product.id)}
                   />
                 ))}
               </ScrollView>

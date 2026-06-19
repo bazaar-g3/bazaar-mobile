@@ -248,4 +248,12 @@ export const makeStyles = (theme) => StyleSheet.create({
     statusTextDelivered: {
     color: theme.color.textSecondary,
     },
+
+    statusBadgeCancelled: {
+    backgroundColor: '#FEE2E2',
+    },
+
+    statusTextCancelled: {
+    color: '#B91C1C',
+    },
 })

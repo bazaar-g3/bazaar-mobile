@@ -16,7 +16,6 @@ import Logo from '../components/Logo'
 import PinPad from '../components/PinPad'
 
 const MIN_PIN_LENGTH = 6
-const MAX_PIN_LENGTH = 8
 const STEP_ENTER = 'enter'
 const STEP_CONFIRM = 'confirm'
 const STEP_VERIFY_EXISTING = 'verify_existing'
@@ -52,7 +51,7 @@ export default function PinSetupScreen() {
     verifyPin_
 
   function handleDigit(d) {
-    if (currentPin.length >= MAX_PIN_LENGTH) return
+    if (currentPin.length >= MIN_PIN_LENGTH) return
     setError('')
     if (step === STEP_ENTER) setFirstPin(prev => prev + d)
     else if (step === STEP_CONFIRM) setConfirmPin(prev => prev + d)
