@@ -54,19 +54,11 @@ export const makeStyles = (theme) => StyleSheet.create({
     fontWeight: "700",
     color: theme.color.accent,
     lineHeight: 26,
-  },
-
-  // Logo centrado (absolute)
-  logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    pointerEvents: "box-none",
-  },
-  logoNoMargin: {
-    marginBottom: 0,
+    // Centra ópticamente el glifo "+" dentro del círculo: textAlign lo centra
+    // en horizontal e includeFontPadding:false elimina el padding asimétrico
+    // que Android agrega por las métricas de la fuente (lo desplazaba hacia abajo).
+    textAlign: "center",
+    includeFontPadding: false,
   },
 
   // Íconos y botones a la derecha
