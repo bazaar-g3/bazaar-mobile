@@ -22,7 +22,6 @@ import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
-import Logo from '../components/Logo'
 
 const STATUS_CONFIG = {
   pending_payment:    { label: 'Pago pendiente',      icon: 'time-outline' },
@@ -418,9 +417,6 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.topBar}>
-        <Logo size={28} textSize={22} />
-      </View>
       <View style={[styles.header, { paddingHorizontal: hPad }]}>
         <Text style={[styles.title, { fontSize: isSmall ? FONT.large : 26 }]}>
           Mis órdenes
@@ -1049,14 +1045,6 @@ const makeStyles = (theme) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: theme.color.surface,
-  },
-  topBar: {
-    backgroundColor: theme.color.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.color.border,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 12,
-    alignItems: 'center',
   },
   fullCenter: {
     flex: 1,

@@ -17,7 +17,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/productList/ProductCard";
-import Logo from "../components/Logo";
 import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 import { categoryPalette } from "../theme";
@@ -382,10 +381,6 @@ export default function HomeScreen() {
                   <Text style={styles.publishButtonCircleText}>+</Text>
                 </TouchableOpacity>
               )}
-            </View>
-
-            <View style={styles.logoCenter}>
-              <Logo size={28} textSize={24} style={styles.logoNoMargin} />
             </View>
 
             <View style={styles.iconsContainer}>

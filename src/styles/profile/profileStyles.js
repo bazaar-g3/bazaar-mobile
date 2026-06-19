@@ -50,15 +50,6 @@ export const makeStyles = (theme) => StyleSheet.create({
     marginVertical: 3,
   },
 
-  logoCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'box-none',
-  },
-
   homeButton: {
     backgroundColor: theme.color.surfaceSubtle,
     borderWidth: 1,

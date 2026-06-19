@@ -23,7 +23,6 @@ import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 import ConfirmModal from '../components/ConfirmModal'
-import Logo from '../components/Logo'
 
 export default function CartScreen() {
   const router = useRouter()
@@ -207,9 +206,6 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
-      <View style={styles.topBar}>
-        <Logo size={28} textSize={22} />
-      </View>
       <View style={containerStyle}>
         <Text style={[styles.title, { fontSize: titleFont }]}>Mi carrito</Text>
 
@@ -289,14 +285,6 @@ export default function CartScreen() {
 }
 
 const makeStyles = (theme) => StyleSheet.create({
-  topBar: {
-    backgroundColor: theme.color.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.color.border,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
   fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.surface },
   container: {
     flex: 1,

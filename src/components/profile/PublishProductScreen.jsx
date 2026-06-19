@@ -14,7 +14,6 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import Logo from '../Logo'
 import DraggableImageList from '../DraggableImageList'
 import { SPACING, FONT } from '../../constants/theme'
 import {
@@ -250,16 +249,6 @@ export default function PublishProductScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topHeader}>
-        <View style={styles.topHeaderContent}>
-          <View style={styles.headerSidePlaceholder} />
-
-          <View style={styles.logoCenter}>
-            <Logo size={30} textSize={28} />
-          </View>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -465,34 +454,6 @@ const makeStyles = (theme) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#DDEAEA',
-  },
-
-  topHeader: {
-    backgroundColor: theme.color.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.color.border,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
-  },
-
-  topHeaderContent: {
-    width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-  },
-
-  headerSidePlaceholder: {
-    flex: 1,
-  },
-
-  logoCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
   },
 
   content: {

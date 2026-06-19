@@ -40,7 +40,6 @@ import ProductInfoPanel from "../components/productDetail/ProductInfoPanel";
 import LoginPromptModal from "../components/productDetail/LoginPromptModal";
 import ShareProductModal from "../components/productDetail/ShareProductModal";
 
-import Logo from "../components/Logo";
 import { FONT, SPACING } from "../constants/theme";
 
 const PRODUCT_SHARE_BASE_URL = "http://localhost:8081";
@@ -562,9 +561,6 @@ export default function ProductDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
             <View style={headerStyles.placeholder} />
           </View>
         </View>
@@ -605,9 +601,6 @@ export default function ProductDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
             <View style={headerStyles.placeholder} />
           </View>
         </View>
@@ -637,10 +630,6 @@ export default function ProductDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
-
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
 
             <View style={headerStyles.placeholder} />
           </View>
@@ -860,14 +849,6 @@ const makeHeaderStyles = (theme) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     position: "relative",
-  },
-
-  logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    pointerEvents: "box-none",
   },
 
   headerBack: {
