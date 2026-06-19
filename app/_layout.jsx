@@ -1,16 +1,26 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Stack, useRouter } from 'expo-router'
 import { View, Platform } from 'react-native'
 import { useFonts } from 'expo-font'
 import { Ionicons, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
 import * as Notifications from 'expo-notifications'
+import * as SplashScreen from 'expo-splash-screen'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { CartProvider } from '../src/context/CartContext'
 import { ThemeProvider } from '../src/theme/ThemeContext'
 import BottomNavBar from '../src/components/BottomNavBar'
+import AppSplash from '../src/components/AppSplash'
+
+// Duración mínima de la pantalla de carga inicial (ms)
+const SPLASH_DURATION_MS = 2000
 
 WebBrowser.maybeCompleteAuthSession()
+
+// Mantiene el splash nativo en pantalla hasta que el AppSplash de JS esté pintado
+// (evita el parpadeo blanco entre el splash nativo y la primera vista de React).
+SplashScreen.preventAutoHideAsync().catch(() => {})
+SplashScreen.setOptions({ duration: 400, fade: true })
 
 // Mostrar notificaciones aunque la app esté en primer plano (no aplica en web)
 if (Platform.OS !== 'web') {
@@ -38,11 +48,19 @@ export default function RootLayout() {
   const router = useRouter()
   const notificationListener = useRef(null)
 
+  // Garantiza que la pantalla de carga inicial se vea al menos SPLASH_DURATION_MS
+  const [minDelayElapsed, setMinDelayElapsed] = useState(false)
+
   const [fontsLoaded, fontError] = useFonts({
     ...Ionicons.font,
     ...FontAwesome.font,
     ...MaterialCommunityIcons.font,
   })
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinDelayElapsed(true), SPLASH_DURATION_MS)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Al tocar una notificación navega al destino correspondiente según su tipo
   useEffect(() => {
@@ -84,16 +102,26 @@ export default function RootLayout() {
     }
   }, [router])
 
-  if (!fontsLoaded && !fontError) return null
+  // App lista cuando cargaron las fuentes y pasó la duración mínima del splash
+  const appReady = (fontsLoaded || fontError) && minDelayElapsed
+
+  // Oculta el splash nativo una vez que el AppSplash de JS ya tomó layout
+  const handleSplashLayout = useCallback(() => {
+    SplashScreen.hideAsync().catch(() => {})
+  }, [])
 
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <CartProvider>
-          <View style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false }} />
-            <BottomNavBar />
-          </View>
+          {appReady ? (
+            <View style={{ flex: 1 }}>
+              <Stack screenOptions={{ headerShown: false }} />
+              <BottomNavBar />
+            </View>
+          ) : (
+            <AppSplash onLayout={handleSplashLayout} />
+          )}
         </CartProvider>
       </ThemeProvider>
     </SafeAreaProvider>
