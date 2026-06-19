@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -16,6 +17,8 @@ import { useReduceMotion } from '../utils/useReduceMotion'
  *
  * Animaciones:
  *  - Press feedback (siempre): escala 1→0.96 + opacidad 1→0.9 al tocar, spring de vuelta.
+ *  - Loading (automático): si `onPress` devuelve una promesa, muestra un spinner y queda
+ *    no-interactivo hasta que resuelve/rechaza (idle→loading→success/idle).
  *  - Confirmación de éxito (opt-in vía `showSuccess`): si `onPress` resuelve OK, el
  *    contenido (ícono + label) hace cross-fade hacia un check ✓ con un pop de escala,
  *    se mantiene `successDurationMs` y revierte a idle. Si `onPress` rechaza, vuelve a
@@ -50,7 +53,7 @@ export default function AnimatedButton({
   const s = useMemo(() => makeStyles(theme), [theme])
   const reduceMotion = useReduceMotion()
 
-  const [state, setState] = useState('idle') // 'idle' | 'success'
+  const [state, setState] = useState('idle') // 'idle' | 'loading' | 'success'
 
   const scale = useRef(new Animated.Value(1)).current
   const opacity = useRef(new Animated.Value(1)).current
@@ -64,7 +67,8 @@ export default function AnimatedButton({
     if (successTimer.current) clearTimeout(successTimer.current)
   }, [])
 
-  const isBusy = state === 'success'
+  const isLoading = state === 'loading'
+  const isBusy = state !== 'idle' // loading o success → no-interactivo
   const isDisabled = disabled || isBusy
 
   const pressIn = () => {
@@ -117,17 +121,43 @@ export default function AnimatedButton({
     successTimer.current = setTimeout(() => exitSuccess(), successDurationMs)
   }
 
+  const enterLoading = () => {
+    setState('loading')
+    contentOpacity.setValue(0) // el spinner reemplaza al contenido
+  }
+
+  const exitLoading = () => {
+    contentOpacity.setValue(1)
+    setState('idle')
+  }
+
   const handlePress = async () => {
     if (isDisabled) return
+
+    let result
     try {
-      const result = onPress?.()
-      if (showSuccess) {
-        await Promise.resolve(result)
-        if (mounted.current) enterSuccess()
-      }
+      result = onPress?.()
     } catch {
-      // Rechazo: revertimos a idle sin success. El manejo de error existente
-      // (alert/toast) ya muestra el feedback; no lo duplicamos acá.
+      return // onPress síncrono lanzó: nada que animar (el error UI se encarga)
+    }
+
+    const isPromise = result && typeof result.then === 'function'
+
+    if (isPromise) {
+      // Acción async: mostramos spinner hasta resolver/rechazar
+      enterLoading()
+      try {
+        await result
+        if (!mounted.current) return
+        if (showSuccess) enterSuccess()
+        else exitLoading()
+      } catch {
+        // Rechazo: volvemos a idle sin success. El manejo de error existente
+        // (alert/toast) ya muestra el feedback; no lo duplicamos acá.
+        if (mounted.current) exitLoading()
+      }
+    } else if (showSuccess) {
+      enterSuccess()
     }
   }
 
@@ -175,6 +205,16 @@ export default function AnimatedButton({
         >
           <Ionicons name="checkmark" size={compact ? 20 : 22} color={textColor} />
         </Animated.View>
+
+        {isLoading ? (
+          <View
+            style={s.checkOverlay}
+            pointerEvents="none"
+            testID={testID ? `${testID}-loading` : undefined}
+          >
+            <ActivityIndicator size="small" color={textColor} />
+          </View>
+        ) : null}
       </Pressable>
     </Animated.View>
   )

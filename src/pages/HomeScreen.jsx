@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
 import ProductCard from "../components/productList/ProductCard";
+import AnimatedPressable from "../components/AnimatedPressable";
 import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
 import { categoryPalette } from "../theme";
@@ -405,17 +406,17 @@ export default function HomeScreen() {
           <View style={styles.topBarContent}>
             <View style={styles.leftPlaceholder}>
               {(isSmall || isMedium) && (
-                <TouchableOpacity style={styles.publishButtonCircle} onPress={handlePublishPress}>
+                <AnimatedPressable style={styles.publishButtonCircle} onPress={handlePublishPress}>
                   <Text style={styles.publishButtonCircleText}>+</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               )}
             </View>
 
             <View style={styles.iconsContainer}>
               {!isSmall && !isMedium && (
-                <TouchableOpacity style={styles.publishButton} onPress={handlePublishPress}>
+                <AnimatedPressable style={styles.publishButton} onPress={handlePublishPress}>
                   <Text style={styles.publishButtonText}>+ Publicar producto</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               )}
 
               {isAuthenticated ? (

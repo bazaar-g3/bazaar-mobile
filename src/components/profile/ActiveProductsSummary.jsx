@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 
 import { useTheme } from '../../theme/ThemeContext'
+import AnimatedPressable from '../AnimatedPressable'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../../services/catalog'
 import { makeStyles } from '../../styles/profile/profileStyles'
 
@@ -60,12 +61,12 @@ export default function ActiveProductsSummary({
             Publicá tu primer producto y empezará a aparecer aquí y en el inicio de Bazaar.
           </Text>
 
-          <TouchableOpacity
+          <AnimatedPressable
             style={styles.summaryPublishButton}
             onPress={onOpenPublish}
           >
             <Text style={styles.summaryPublishButtonText}>Publicar ahora</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       ) : (
         <View style={styles.summaryList}>

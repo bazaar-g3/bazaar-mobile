@@ -77,6 +77,26 @@ describe('AnimatedButton', () => {
     jest.useRealTimers()
   })
 
+  it('muestra loading mientras la promesa está pendiente', async () => {
+    mockReduceMotion = true
+    let resolveFn
+    const onPress = jest.fn(() => new Promise((res) => { resolveFn = res }))
+    const { getByTestId, queryByTestId } = renderButton({ onPress, showSuccess: true })
+
+    await act(async () => {
+      fireEvent.press(getByTestId('btn'))
+    })
+    // promesa pendiente → estado loading (spinner visible, botón ocupado)
+    expect(queryByTestId('btn-loading')).toBeTruthy()
+    expect(getByTestId('btn').props.accessibilityState.busy).toBe(true)
+
+    await act(async () => {
+      resolveFn()
+    })
+    // resuelta → ya no hay loading
+    expect(queryByTestId('btn-loading')).toBeNull()
+  })
+
   it('con promesa rechazada no muestra success', async () => {
     const onPress = jest.fn(() => Promise.reject(new Error('falló')))
     const { getByTestId } = renderButton({ onPress, showSuccess: true })

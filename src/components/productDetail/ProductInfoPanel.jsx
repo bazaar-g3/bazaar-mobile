@@ -4,6 +4,7 @@ import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/ThemeContext";
 import AnimatedButton from "../AnimatedButton";
+import AnimatedHeart from "../AnimatedHeart";
 
 export default function ProductInfoPanel({
   product,
@@ -115,20 +116,14 @@ export default function ProductInfoPanel({
             )}
 
             <View style={styles.ctaRow}>
-              <TouchableOpacity
+              <AnimatedHeart
+                liked={isWishlisted}
+                onToggle={() => onToggleWishlist?.()}
+                size={22}
                 style={styles.wishlistBtn}
-                onPress={onToggleWishlist}
-                disabled={wishlistLoading}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={isWishlisted ? "Quitar de favoritos" : "Guardar en favoritos"}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name={isWishlisted ? "heart" : "heart-outline"}
-                  size={22}
-                  color={isWishlisted ? theme.color.like : theme.color.textSecondary}
-                />
-              </TouchableOpacity>
+                inactiveColor={theme.color.textSecondary}
+              />
 
               <View style={styles.cartButtonFlex}>
                 <AnimatedButton

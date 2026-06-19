@@ -1,16 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
-  Platform,
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme/ThemeContext";
 import AnimatedButton from "../AnimatedButton";
+import AnimatedHeart from "../AnimatedHeart";
 import { formatPrice } from "../../utils/productList/productListHelpers";
 
 const ROW_IMG_SIZE = 88;
@@ -26,33 +25,19 @@ export default function ProductCard({
   cardStyle,
   layout = "grid",
 }) {
-  const [liked, setLiked] = useState(isWishlisted);
   const { theme } = useTheme();
   const s = useMemo(() => makeStyles(theme), [theme]);
   const isRow = layout === "row";
-
-  React.useEffect(() => { setLiked(isWishlisted); }, [isWishlisted]);
 
   if (!item) return null;
 
   const goToProduct = () => onOpenProduct(item.id);
 
-  const handleLike = async () => {
-    if (Platform.OS === "ios") await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newLiked = !liked;
-    setLiked(newLiked);
-    if (onWishlistToggle) onWishlistToggle(item.id, newLiked);
+  const handleWishlist = (next) => {
+    if (onWishlistToggle) onWishlistToggle(item.id, next);
   };
 
   const sellerInitial = (item.seller || "V")[0].toUpperCase();
-
-  const heartIcon = (
-    <Ionicons
-      name={liked ? "heart" : "heart-outline"}
-      size={20}
-      color={liked ? theme.color.like : "#cbd5e1"}
-    />
-  );
 
   const sellerRow = item.seller ? (
     <View style={s.sellerRow}>
@@ -109,16 +94,13 @@ export default function ProductCard({
           <View style={s.priceRow}>
             <Text style={s.price}>{formatPrice(item.price)}</Text>
             <View style={s.rowActions}>
-              <TouchableOpacity
+              <AnimatedHeart
+                liked={isWishlisted}
+                onToggle={handleWishlist}
+                size={20}
                 style={s.heartBtnInline}
-                onPress={handleLike}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={liked ? "Quitar de favoritos" : "Agregar a favoritos"}
-                accessibilityRole="button"
-                activeOpacity={0.7}
-              >
-                {heartIcon}
-              </TouchableOpacity>
+              />
               <AnimatedButton
                 compact
                 variant="cta"
@@ -157,16 +139,13 @@ export default function ProductCard({
       </TouchableOpacity>
 
       {/* Corazón — absolute, sibling de los Touchables */}
-      <TouchableOpacity
+      <AnimatedHeart
+        liked={isWishlisted}
+        onToggle={handleWishlist}
+        size={20}
         style={s.heartBtn}
-        onPress={handleLike}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityLabel={liked ? "Quitar de favoritos" : "Agregar a favoritos"}
-        accessibilityRole="button"
-        activeOpacity={0.7}
-      >
-        {heartIcon}
-      </TouchableOpacity>
+      />
 
       {/* Texto */}
       <TouchableOpacity activeOpacity={0.7} onPress={goToProduct} accessibilityLabel={item.name}>
