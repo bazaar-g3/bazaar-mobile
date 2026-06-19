@@ -36,7 +36,7 @@ export async function removeFromWishlist(productId) {
 export async function isInWishlist(productId) {
     try {
         const items = await getWishlist()
-        return items.some(item => item.productId === String(productId))
+        return items.some(item => String(item.productId) === String(productId))
     } catch {
         return false
     }

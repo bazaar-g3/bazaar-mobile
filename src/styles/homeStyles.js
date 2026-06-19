@@ -1,27 +1,26 @@
 import { StyleSheet } from "react-native";
-import { COLORS } from "../constants/colors";
-import { SPACING, FONT } from "../constants/theme";
 
-export const styles = StyleSheet.create({
+export const makeStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
 
+  // ── Top bar (logo + íconos) ──────────────────────────────────────
   header: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.color.border,
   },
 
   topBar: {
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
+    backgroundColor: theme.color.surface,
+    paddingHorizontal: theme.space.lg,
+    paddingVertical: theme.space.md,
   },
 
   topBarSmall: {
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.space.sm,
   },
 
   topBarContent: {
@@ -30,46 +29,39 @@ export const styles = StyleSheet.create({
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 44,
+    minHeight: theme.button.minHeight,
   },
 
   leftPlaceholder: {
     flex: 1,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
 
+  // Botón circular "+" (mobile)
   publishButtonCircle: {
     width: 38,
     height: 38,
-    borderRadius: 19,
+    borderRadius: theme.radius.pill,
     borderWidth: 1,
-    borderColor: "#B9D8D4",
-    backgroundColor: "#F2FBFA",
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  publishButtonCircleText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.primary,
-    lineHeight: 26,
-  },
-
-  logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
+    borderColor: theme.color.accentBorder,
+    backgroundColor: theme.color.accentSubtle,
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: "box-none",
+  },
+  publishButtonCircleText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: theme.color.accent,
+    lineHeight: 26,
+    // Centra ópticamente el glifo "+" dentro del círculo: textAlign lo centra
+    // en horizontal e includeFontPadding:false elimina el padding asimétrico
+    // que Android agrega por las métricas de la fuente (lo desplazaba hacia abajo).
+    textAlign: "center",
+    includeFontPadding: false,
   },
 
-  logoNoMargin: {
-    marginBottom: 0,
-  },
-
+  // Íconos y botones a la derecha
   iconsContainer: {
     flex: 1,
     flexDirection: "row",
@@ -78,331 +70,302 @@ export const styles = StyleSheet.create({
     zIndex: 2,
   },
 
+  // Botón "+ Publicar producto" (desktop)
   publishButton: {
     borderWidth: 1,
-    borderColor: "#B9D8D4",
-    backgroundColor: "#F2FBFA",
-    borderRadius: 999,
+    borderColor: theme.color.accentBorder,
+    backgroundColor: theme.color.accentSubtle,
+    borderRadius: theme.radius.pill,
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginRight: 4,
+    paddingHorizontal: theme.space.lg,
+    marginRight: theme.space.xs,
     flexShrink: 1,
   },
-
   publishButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "700",
-    fontSize: FONT.small,
+    fontSize: theme.type.label.size,
   },
 
+  // Botón de login (no autenticado)
   loginButton: {
     borderWidth: 1.5,
-    borderColor: "#B9D8D4",
-    backgroundColor: "#F2FBFA",
-    borderRadius: 999,
+    borderColor: theme.color.accentBorder,
+    backgroundColor: theme.color.accentSubtle,
+    borderRadius: theme.radius.pill,
     width: 38,
     height: 38,
-    marginLeft: 8,
-    marginRight: 4,
+    marginLeft: theme.space.sm,
+    marginRight: theme.space.xs,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  loginButtonText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-    fontSize: FONT.small,
-  },
-
   iconButton: {
-    marginLeft: 12,
+    marginLeft: theme.space.md,
     padding: 3,
     justifyContent: "center",
     alignItems: "center",
   },
-
   icon: {
     fontSize: 22,
   },
 
+  // Badge de notificaciones
   notifBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -5,
     right: -6,
-    backgroundColor: '#F44336',
-    borderRadius: 999,
+    backgroundColor: theme.color.error,
+    borderRadius: theme.radius.pill,
     minWidth: 16,
     height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 3,
   },
-
   notifBadgeText: {
-    color: '#fff',
+    color: theme.color.onAccent,
     fontSize: 9,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
+  // Avatar de perfil
   profileAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#D9F4F0",
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.accentTint,
     borderWidth: 1.5,
-    borderColor: "#BDEAE4",
+    borderColor: theme.color.accentBorder,
   },
-
   profileAvatarFallback: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F2FBFA",
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.accentSubtle,
     borderWidth: 1.5,
-    borderColor: "#B9D8D4",
+    borderColor: theme.color.accentBorder,
     justifyContent: "center",
     alignItems: "center",
   },
 
+  // ── Search + filtros ─────────────────────────────────────────────
   searchContainer: {
-    backgroundColor: COLORS.dark,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    backgroundColor: theme.color.surface,
+    paddingHorizontal: theme.space.lg,
+    paddingVertical: theme.space.md,
   },
-
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: theme.space.sm,
   },
-
   searchBarWrapper: {
     flex: 1,
-  },
-
-  customSearchBar: {
-    marginBottom: 0,
   },
 
   filterButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: theme.space.xs,
+    paddingHorizontal: theme.space.md,
+    paddingVertical: theme.space.sm,
+    borderRadius: theme.radius.md,
     borderWidth: 1.5,
-    borderColor: COLORS.primaryLight,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    height: 46,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceSubtle,
+    height: theme.button.minHeight + 2,
     flexShrink: 0,
-    minWidth: 80,
+    minWidth: 44,
   },
-
   filterButtonActive: {
-    borderColor: COLORS.secondary,
-    backgroundColor: "rgba(255,152,0,0.15)",
+    borderColor: theme.color.accent,
+    backgroundColor: theme.color.accentTint,
   },
-
   filterBadge: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 10,
+    backgroundColor: theme.color.like,
+    borderRadius: theme.radius.pill,
     minWidth: 18,
     height: 18,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
   },
-
   filterBadgeText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 10,
     fontWeight: "900",
   },
 
+  // ── Contenido principal ──────────────────────────────────────────
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
+  // ── Barra de categorías ──────────────────────────────────────────
   categoriesBar: {
-    backgroundColor: COLORS.primaryLight,
-    paddingVertical: 15,
+    backgroundColor: theme.color.surface,
+    paddingVertical: theme.space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.color.border,
   },
-
   categoriesStatus: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: theme.space.lg,
+    gap: theme.space.sm,
   },
-
   categoriesStatusText: {
-    color: COLORS.white,
-    fontSize: 13,
+    color: theme.color.textSecondary,
+    fontSize: theme.type.label.size,
     fontWeight: "600",
   },
-
   categoriesErrorText: {
-    color: COLORS.white,
-    fontSize: 13,
+    color: theme.color.error,
+    fontSize: theme.type.label.size,
     fontWeight: "700",
   },
-
   categoryItem: {
     alignItems: "center",
-    marginHorizontal: 15,
+    marginHorizontal: theme.space.md,
   },
-
   categoryCircle: {
     width: 62,
     height: 62,
-    borderRadius: 31,
-    // backgroundColor es inyectado dinámicamente por HomeScreen (uno por categoría)
+    borderRadius: theme.radius.pill,
+    // backgroundColor inyectado dinámicamente por HomeScreen (uno por categoría)
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: theme.space.xs,
   },
-
   categoryLabel: {
-    color: COLORS.white,
+    color: theme.color.textSecondary,
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
 
+  // ── Secciones de productos ───────────────────────────────────────
   content: {
-    padding: 16,
-    paddingTop: 8,
+    padding: theme.space.lg,
+    paddingTop: theme.space.sm,
   },
-
   section: {
-    marginBottom: 28,
+    marginBottom: theme.space.xxl + 4,
     width: "100%",
   },
-
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 16,
-    color: COLORS.sectionTitle,
+    fontSize: theme.type.subtitle.size,
+    fontWeight: theme.type.subtitle.weight,
+    textAlign: "left",
+    marginTop: theme.space.sm,
+    marginBottom: theme.space.lg,
+    color: theme.color.sectionTitle,
   },
-
   sectionAccent: {
-    color: COLORS.third,
+    color: theme.color.accent,
   },
-
   recommendedList: {
-    paddingBottom: 10,
+    paddingBottom: theme.space.sm,
     flexDirection: "row",
   },
-
   recentList: {
-    paddingBottom: 10,
+    paddingBottom: theme.space.sm,
     flexDirection: "row",
   },
 
+  // Estado de sección (loading / error / vacío)
   sectionStatusCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderWidth: 1,
-    borderColor: "#DCE7EA",
-    borderRadius: 18,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.lg,
+    paddingVertical: theme.space.xl,
+    paddingHorizontal: theme.space.lg,
     alignItems: "center",
-    gap: 10,
+    gap: theme.space.sm,
   },
-
   sectionStatusText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: theme.color.textSecondary,
+    fontSize: theme.type.body.size,
     textAlign: "center",
   },
-
   sectionErrorText: {
-    color: COLORS.error,
-    fontSize: 14,
+    color: theme.color.error,
+    fontSize: theme.type.body.size,
     textAlign: "center",
   },
-
   sectionRetryText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: theme.type.body.size,
   },
 
+  // ── Dropdown de perfil ───────────────────────────────────────────
   dropdownOverlay: {
     flex: 1,
   },
-
   dropdownMenu: {
     position: "absolute",
     width: 220,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: SPACING.md,
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.space.md,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    shadowColor: COLORS.shadow,
+    borderColor: theme.color.border,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 18,
     elevation: 6,
   },
-
   dropdownArrow: {
     position: "absolute",
     top: -8,
     right: 18,
     width: 16,
     height: 16,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderLeftWidth: 1,
     borderTopWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
     transform: [{ rotate: "45deg" }],
   },
-
   modalTitle: {
-    fontSize: FONT.large,
+    fontSize: theme.type.subtitle.size,
     fontWeight: "800",
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: "center",
-    marginBottom: SPACING.md,
+    marginBottom: theme.space.md,
   },
-
   modalPrimaryButton: {
-    backgroundColor: COLORS.logoA2,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    backgroundColor: theme.color.accent,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.space.md,
+    paddingHorizontal: theme.space.xl,
     alignItems: "center",
-    marginBottom: SPACING.sm,
+    marginBottom: theme.space.sm,
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
-
   modalPrimaryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: "800",
-    fontSize: FONT.regular,
+    fontSize: theme.type.body.size,
   },
-
   modalSecondaryButton: {
-    backgroundColor: COLORS.lightPink,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.space.md,
+    paddingHorizontal: theme.space.xl,
     alignItems: "center",
+    minHeight: theme.button.minHeight,
+    justifyContent: "center",
   },
-
   modalSecondaryButtonText: {
-    color: COLORS.primary,
+    color: theme.color.textPrimary,
     fontWeight: "700",
-    fontSize: FONT.regular,
+    fontSize: theme.type.body.size,
   },
 });

@@ -1,11 +1,13 @@
 import { View, TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { Ionicons, FontAwesome } from '@expo/vector-icons'
 import * as Google from 'expo-auth-session/providers/google'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { loginWithOAuth } from '../services/auth'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 export default function OAuthButtons({ onSuccess, onError }) {
+    const { theme } = useTheme()
+    const styles = useMemo(() => makeStyles(theme), [theme])
     const [loadingProvider, setLoadingProvider] = useState(null)
 
     // Si no hay Google client ID configurado (ej: build de preview sin variables de entorno),
@@ -96,7 +98,7 @@ export default function OAuthButtons({ onSuccess, onError }) {
                 disabled={!!loadingProvider}
             >
                 {loadingProvider === 'GOOGLE'
-                    ? <ActivityIndicator size="small" color={COLORS.textPrimary} />
+                    ? <ActivityIndicator size="small" color={theme.color.textPrimary} />
                     : <>
                         <FontAwesome name="google" size={18} color="#EA4335" />
                         <Text style={styles.oauthButtonText}>Continuar con Google</Text>
@@ -107,7 +109,7 @@ export default function OAuthButtons({ onSuccess, onError }) {
     )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
     container: { marginTop: 4 },
     dividerRow: {
         flexDirection: 'row',
@@ -118,10 +120,10 @@ const styles = StyleSheet.create({
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: COLORS.border,
+        backgroundColor: theme.color.border,
     },
     dividerText: {
-        color: COLORS.textMuted,
+        color: theme.color.textMuted,
         fontSize: 13,
     },
     oauthButton: {
@@ -131,14 +133,14 @@ const styles = StyleSheet.create({
         gap: 10,
         height: 52,
         borderWidth: 1.5,
-        borderColor: COLORS.border,
+        borderColor: theme.color.border,
         borderRadius: 12,
         marginBottom: 12,
-        backgroundColor: COLORS.white,
+        backgroundColor: theme.color.surface,
     },
     oauthButtonText: {
         fontSize: 15,
         fontWeight: '700',
-        color: COLORS.textPrimary,
+        color: theme.color.textPrimary,
     },
 })

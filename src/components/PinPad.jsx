@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { useMemo } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 const ROWS = [
   ['1', '2', '3'],
@@ -17,6 +18,9 @@ const ROWS = [
  * @param {boolean} [disabled] - Deshabilita todos los botones cuando es true.
  */
 export default function PinPad({ onDigit, onDelete, disabled = false }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <View style={styles.container}>
       {ROWS.map((row, rowIndex) => (
@@ -34,7 +38,7 @@ export default function PinPad({ onDigit, onDelete, disabled = false }) {
                 activeOpacity={0.7}
               >
                 {isDel ? (
-                  <Ionicons name="backspace-outline" size={26} color={disabled ? COLORS.textMuted : COLORS.primary} />
+                  <Ionicons name="backspace-outline" size={26} color={disabled ? theme.color.textMuted : theme.color.accent} />
                 ) : (
                   <Text style={[styles.digit, disabled && styles.digitDisabled]}>{key}</Text>
                 )}
@@ -47,7 +51,7 @@ export default function PinPad({ onDigit, onDelete, disabled = false }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     width: '100%',
     alignItems: 'center',
@@ -63,16 +67,11 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: theme.color.border,
   },
   buttonDisabled: {
     opacity: 0.45,
@@ -84,9 +83,9 @@ const styles = StyleSheet.create({
   digit: {
     fontSize: 26,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
   digitDisabled: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
 })

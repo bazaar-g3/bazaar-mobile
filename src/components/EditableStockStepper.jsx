@@ -1,8 +1,12 @@
+import { useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { SPACING, FONT } from '../constants/theme'
 
 export default function EditableStockStepper({ value, onChange, min = 0 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   function handleDecrease() {
     if (value <= min) return
     onChange?.(value - 1)
@@ -35,7 +39,7 @@ export default function EditableStockStepper({ value, onChange, min = 0 }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -48,34 +52,34 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: COLORS.secondary,
-    backgroundColor: COLORS.white,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surface,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 0,
   },
 
   buttonDisabled: {
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.background,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   buttonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.secondary,
+    color: theme.color.textSecondary,
     lineHeight: 12,
   },
 
   buttonTextDisabled: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
 
   value: {
     minWidth: 28,
     textAlign: 'center',
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '600',
   },
 })

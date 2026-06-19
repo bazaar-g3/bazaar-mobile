@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 export default function ForgotPasswordScreen() {
   const router = useRouter()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -78,13 +80,13 @@ export default function ForgotPasswordScreen() {
             <Ionicons
               name="mail-outline"
               size={20}
-              color={COLORS.textMuted}
+              color={theme.color.textMuted}
               style={styles.leftIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Correo electrónico"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -98,11 +100,11 @@ export default function ForgotPasswordScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={theme.color.onAccent} />
             ) : (
               <View style={styles.buttonContent}>
                 <Text style={styles.buttonText}>ENVIAR CÓDIGO</Text>
-                <Ionicons name="paper-plane-outline" size={18} color={COLORS.white} />
+                <Ionicons name="paper-plane-outline" size={18} color={theme.color.onAccent} />
               </View>
             )}
           </TouchableOpacity>
@@ -116,13 +118,13 @@ export default function ForgotPasswordScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -131,26 +133,21 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 10,
   },
   description: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginBottom: 22,
     textAlign: 'center',
     lineHeight: 20,
@@ -158,9 +155,9 @@ const styles = StyleSheet.create({
   inputWrapper: {
     height: 52,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 14,
@@ -171,23 +168,18 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: 15,
     paddingVertical: 0,
   },
   button: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 18,
     marginBottom: 18,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
   },
   buttonDisabled: {
     opacity: 0.75,
@@ -198,26 +190,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   buttonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 15,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   link: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
   error: {
-    color: COLORS.error,
+    color: theme.color.error,
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,
   },
   success: {
-    color: COLORS.success,
+    color: theme.color.success,
     textAlign: 'center',
     marginBottom: 14,
     fontSize: 14,

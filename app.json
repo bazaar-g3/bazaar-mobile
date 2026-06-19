@@ -43,6 +43,15 @@
           "color": "#0B3A46"
         }
       ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "backgroundColor": "#0F172A"
+          }
+        }
+      ],
       "expo-font",
       "expo-web-browser",
       [

@@ -40,6 +40,31 @@ jest.mock('../../src/services/pin', () => ({
   verifyPin: jest.fn(async () => false),
 }))
 
+// Mock del ThemeContext — los screens usan theme.color.*
+// { virtual: true } permite mockear el módulo aunque el archivo no exista en disco
+jest.mock('../../src/theme/ThemeContext', () => ({
+  useTheme: () => ({
+    mode: 'light',
+    theme: {
+      color: {
+        surface: '#FFFFFF',
+        surfaceSubtle: '#F1F5F9',
+        textPrimary: '#0F172A',
+        textSecondary: '#64748B',
+        textMuted: '#94A3B8',
+        accent: '#2E9E95',
+        accentTint: '#E6F7F6',
+        error: '#C62828',
+        errorLight: '#FEE2E2',
+        border: '#E2E8F0',
+      },
+    },
+    toggle: jest.fn(),
+    setMode: jest.fn(),
+  }),
+  ThemeProvider: ({ children }) => children,
+}), { virtual: true })
+
 // Mock de componentes nativos/expo que no necesitamos renderizar realmente
 jest.mock('../../src/components/Logo', () => {
   const { View } = require('react-native')

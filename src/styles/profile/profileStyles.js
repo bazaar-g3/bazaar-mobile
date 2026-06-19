@@ -1,24 +1,23 @@
 import { StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
 import { SPACING, FONT } from "../../constants/theme";
 
-export const styles = StyleSheet.create({
+export const makeStyles = (theme) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   loaderContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   topHeader: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: SPACING.lg,
     paddingVertical: 14,
   },
@@ -47,23 +46,14 @@ export const styles = StyleSheet.create({
     width: 20,
     height: 2,
     borderRadius: 999,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     marginVertical: 3,
   },
 
-  logoCenter: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    pointerEvents: 'box-none',
-  },
-
   homeButton: {
-    backgroundColor: '#F4F7F8',
+    backgroundColor: theme.color.surfaceSubtle,
     borderWidth: 1,
-    borderColor: '#E4EBEE',
+    borderColor: theme.color.border,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 999,
@@ -71,7 +61,7 @@ export const styles = StyleSheet.create({
   },
 
   homeButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: FONT.small,
     fontWeight: '700',
   },
@@ -96,11 +86,11 @@ export const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     width: 200,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     paddingTop: SPACING.lg,
     paddingHorizontal: SPACING.md,
     borderRightWidth: 1,
-    borderRightColor: '#E6ECEC',
+    borderRightColor: theme.color.border,
     zIndex: 11,
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 0 },
@@ -112,7 +102,7 @@ export const styles = StyleSheet.create({
   sidebarTitle: {
     fontSize: FONT.medium,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: SPACING.md,
   },
 
@@ -127,9 +117,9 @@ export const styles = StyleSheet.create({
   },
 
   sidebarItemActive: {
-    backgroundColor: '#E7F6F4',
+    backgroundColor: theme.color.accentTint,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primaryLight,
+    borderLeftColor: theme.color.accentBorder,
   },
 
   sidebarEmoji: {
@@ -138,11 +128,11 @@ export const styles = StyleSheet.create({
 
   sidebarText: {
     fontSize: FONT.regular,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   sidebarTextActive: {
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '700',
   },
 
@@ -162,15 +152,10 @@ export const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 22,
     padding: 22,
     width: '100%',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
   },
 
   cardHeader: {
@@ -183,11 +168,11 @@ export const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   editText: {
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '700',
     fontSize: FONT.regular,
     textAlign: 'right',
@@ -210,9 +195,9 @@ export const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: '#D9F4F0',
+    backgroundColor: theme.color.accentTint,
     borderWidth: 3,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accentBorder,
   },
 
   changePhotoOverlay: {
@@ -220,38 +205,38 @@ export const styles = StyleSheet.create({
     bottom: -6,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 5,
     borderRadius: 999,
     alignItems: 'center',
   },
 
   changePhotoText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 11,
     fontWeight: '600',
   },
 
   profileInfoText: {
     flex: 1,
-    minWidth: 200, 
+    minWidth: 200,
   },
 
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 4,
   },
 
   userEmail: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
 
   separator: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     marginVertical: SPACING.md,
   },
 
@@ -262,39 +247,39 @@ export const styles = StyleSheet.create({
 
   label: {
     fontSize: FONT.small,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 6,
     fontWeight: '500',
   },
 
   readonlyField: {
     borderWidth: 1.5,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accentBorder,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#F4FBFA',
+    backgroundColor: theme.color.accentSubtle,
   },
 
   valueText: {
     fontSize: FONT.regular,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FCFC',
+    backgroundColor: theme.color.surfaceSubtle,
     fontSize: FONT.regular,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     width: '100%',
   },
 
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
   },
 
   textArea: {
@@ -305,24 +290,24 @@ export const styles = StyleSheet.create({
   charCount: {
     textAlign: 'right',
     marginTop: 4,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 12,
   },
 
   fieldErrorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: 12,
     marginTop: 4,
   },
 
   successText: {
-    color: COLORS.success,
+    color: theme.color.success,
     marginBottom: SPACING.sm,
     fontWeight: '600',
   },
 
   errorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     marginBottom: SPACING.sm,
     fontWeight: '600',
   },
@@ -334,7 +319,7 @@ export const styles = StyleSheet.create({
   },
 
   btnSave: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 10,
@@ -345,25 +330,25 @@ export const styles = StyleSheet.create({
   },
 
   btnCancel: {
-    backgroundColor: '#EDF5F4',
+    backgroundColor: theme.color.accentTint,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 10,
   },
 
   btnTextWhite: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
   },
 
   btnTextCancel: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '700',
   },
 
   summarySeparator: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     marginVertical: SPACING.lg,
   },
 
@@ -380,11 +365,11 @@ export const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   summaryAction: {
-    color: '#C9941A',
+    color: theme.color.warning,
     fontWeight: '700',
   },
 
@@ -395,11 +380,11 @@ export const styles = StyleSheet.create({
   },
 
   summaryStatusText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
 
   summaryMessageCard: {
-    backgroundColor: '#F0F8F7',
+    backgroundColor: theme.color.accentSubtle,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -413,13 +398,13 @@ export const styles = StyleSheet.create({
   summaryEmptyTitle: {
     fontSize: FONT.medium,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 6,
     textAlign: 'center',
   },
 
   summaryEmptyText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.regular,
     marginBottom: 16,
     textAlign: 'center',
@@ -428,14 +413,14 @@ export const styles = StyleSheet.create({
 
   summaryPublishButton: {
     alignSelf: 'center',
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
   },
 
   summaryPublishButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
     textTransform: 'uppercase',
     fontSize: 13,
@@ -443,12 +428,12 @@ export const styles = StyleSheet.create({
   },
 
   summaryErrorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     marginBottom: 8,
   },
 
   summaryRetryText: {
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '700',
   },
 
@@ -462,14 +447,14 @@ export const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#F7FAFA',
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   summaryImage: {
     width: 56,
     height: 56,
     borderRadius: 10,
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   summaryContent: {
@@ -479,18 +464,18 @@ export const styles = StyleSheet.create({
   summaryProductName: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 4,
   },
 
   summaryMeta: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
 
   emptyText: {
     textAlign: 'center',
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.medium,
     marginTop: 60,
   },

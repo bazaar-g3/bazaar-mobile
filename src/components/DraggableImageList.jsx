@@ -2,7 +2,7 @@
 Componente para poder mover las imagenes al cargar un producto y cambairlas de orden
 */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Image,
   PanResponder,
@@ -11,13 +11,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 const MAX_ITEM_W = 100
 const GAP = 10
 const ITEM_H = 100
 
 export default function DraggableImageList({ images, onReorder, onRemove }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [containerWidth, setContainerWidth] = useState(0)
 
@@ -46,7 +48,18 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
   //PanResponder
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      // Reclamar desde el inicio para que Android (dentro de Modal) no intercepte el gesto.
+      // onStartShouldSetPanResponderCapture: false garantiza que los hijos (botón ✕)
+      // tengan prioridad en la fase de burbuja y sigan funcionando.
+      onStartShouldSetPanResponder: (event) => {
+        const { locationX } = event.nativeEvent
+        const idx = Math.min(
+          imagesRef.current.length - 1,
+          Math.max(0, Math.floor(locationX / slotRef.current))
+        )
+        touchedIdxRef.current = idx
+        return true
+      },
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dx) > 5,
       onMoveShouldSetPanResponderCapture: (_, gs) => Math.abs(gs.dx) > 5,
@@ -57,11 +70,12 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
         isDraggingRef.current = true
         activeDragRef.current = idx
         placeholderRef.current = idx
-        setDrag({ active: idx, placeholder: idx, ghostLeft: idx * slotRef.current })
+        // No llamar setDrag aquí: esperar movimiento real para evitar parpadeo en taps
       },
 
       onPanResponderMove: (_, gs) => {
-        if (!isDraggingRef.current) return
+        if (!isDraggingRef.current || activeDragRef.current < 0) return
+        if (Math.abs(gs.dx) < 5) return
         const startLeft = activeDragRef.current * slotRef.current
         const maxLeft = (imagesRef.current.length - 1) * slotRef.current
         const newLeft = Math.max(0, Math.min(startLeft + gs.dx, maxLeft))
@@ -132,10 +146,6 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
         {images.map((image, idx) => (
           <View
             key={`img-${idx}-${image.uri}`}
-            onStartShouldSetResponder={() => {
-              touchedIdxRef.current = idx
-              return false
-            }}
             style={[
               styles.card,
               { left: getDisplayLeft(idx), width: itemW, height: ITEM_H },
@@ -184,7 +194,7 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   card: {
     position: 'absolute',
     top: 0,
@@ -208,8 +218,8 @@ const styles = StyleSheet.create({
   img: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.imagePlaceholder,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceSubtle,
     resizeMode: 'cover',
   },
 
@@ -251,7 +261,7 @@ const styles = StyleSheet.create({
   hint: {
     marginTop: 8,
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     textAlign: 'center',
   },
 })

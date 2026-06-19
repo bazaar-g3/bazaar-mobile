@@ -1,6 +1,7 @@
+import { useMemo } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 const REQUIREMENTS = [
   { key: 'length',    label: 'Al menos 8 caracteres',    test: (p) => p.length >= 8 },
@@ -23,6 +24,8 @@ const STRENGTH_CONFIG = [
 ]
 
 export default function PasswordStrengthMeter({ password }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const strength = getStrength(password)
   const config = password.length > 0 ? STRENGTH_CONFIG[strength] : null
 
@@ -57,7 +60,7 @@ export default function PasswordStrengthMeter({ password }) {
               <Ionicons
                 name={met ? 'checkmark-circle' : 'ellipse-outline'}
                 size={14}
-                color={met ? COLORS.success : COLORS.textMuted}
+                color={met ? theme.color.success : theme.color.textMuted}
                 style={styles.requirementIcon}
               />
               <Text
@@ -76,7 +79,7 @@ export default function PasswordStrengthMeter({ password }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     marginTop: 6,
     marginBottom: 4,
@@ -115,9 +118,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   requirementMet: {
-    color: COLORS.success,
+    color: theme.color.success,
   },
   requirementPending: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
 })

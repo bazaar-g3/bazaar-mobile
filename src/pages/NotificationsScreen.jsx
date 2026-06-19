@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -11,21 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { getNotificationsHistory, markAllNotificationsRead } from '../services/notifications'
-
-const TYPE_CONFIG = {
-  ORDER_CONFIRMED:      { icon: 'checkmark-circle',   color: COLORS.success },
-  ORDER_IN_PREPARATION: { icon: 'construct',           color: '#F59E0B' },
-  ORDER_SHIPPED:        { icon: 'car',                 color: '#3B82F6' },
-  ORDER_DELIVERED:      { icon: 'home',                color: COLORS.success },
-  ORDER_CANCELLED:      { icon: 'close-circle',        color: COLORS.error },
-  PAYMENT_FAILED:       { icon: 'card',                color: COLORS.error },
-  LOW_STOCK:            { icon: 'alert-circle',        color: '#F59E0B' },
-  OUT_OF_STOCK:         { icon: 'warning',             color: COLORS.error },
-  NEW_COUPON:           { icon: 'pricetag',            color: COLORS.primaryLight },
-}
-const DEFAULT_CONFIG = { icon: 'notifications', color: COLORS.primaryLight }
 
 function formatDate(isoStr) {
   if (!isoStr) return ''
@@ -42,10 +29,28 @@ function formatDate(isoStr) {
   return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-function NotificationItem({ item }) {
-  const config = TYPE_CONFIG[item.notification_type] || DEFAULT_CONFIG
-  return (
-    <View style={[styles.item, !item.read && styles.itemUnread]}>
+const STOCK_TYPES = new Set(['LOW_STOCK', 'OUT_OF_STOCK'])
+const ORDER_TYPES = new Set([
+  'ORDER_CONFIRMED', 'ORDER_IN_PREPARATION', 'ORDER_SHIPPED',
+  'ORDER_DELIVERED', 'ORDER_CANCELLED', 'PAYMENT_FAILED',
+])
+
+function getDestination(item) {
+  if (STOCK_TYPES.has(item.notification_type)) {
+    return '/profile?activeTab=Publicaciones'
+  }
+  if (ORDER_TYPES.has(item.notification_type) && item.data?.order_id) {
+    return `/orders?orderId=${item.data.order_id}`
+  }
+  return null
+}
+
+function NotificationItem({ item, styles, onPress, typeConfig, defaultConfig, mutedColor }) {
+  const config = typeConfig[item.notification_type] || defaultConfig
+  const destination = getDestination(item)
+
+  const inner = (
+    <>
       <View style={[styles.iconCircle, { backgroundColor: config.color + '20' }]}>
         <Ionicons name={config.icon} size={22} color={config.color} />
       </View>
@@ -55,12 +60,53 @@ function NotificationItem({ item }) {
         <Text style={styles.itemDate}>{formatDate(item.created_at)}</Text>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
+      {destination && (
+        <Ionicons name="chevron-forward" size={16} color={mutedColor} style={styles.chevron} />
+      )}
+    </>
+  )
+
+  if (destination) {
+    return (
+      <TouchableOpacity
+        style={[styles.item, !item.read && styles.itemUnread]}
+        onPress={() => onPress(destination)}
+        activeOpacity={0.7}
+      >
+        {inner}
+      </TouchableOpacity>
+    )
+  }
+
+  return (
+    <View style={[styles.item, !item.read && styles.itemUnread]}>
+      {inner}
     </View>
   )
 }
 
 export default function NotificationsScreen() {
   const router = useRouter()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
+  const TYPE_CONFIG = {
+    ORDER_CONFIRMED:      { icon: 'checkmark-circle',   color: theme.color.success },
+    ORDER_IN_PREPARATION: { icon: 'construct',           color: '#F59E0B' },
+    ORDER_SHIPPED:        { icon: 'car',                 color: '#3B82F6' },
+    ORDER_DELIVERED:      { icon: 'home',                color: theme.color.success },
+    ORDER_CANCELLED:      { icon: 'close-circle',        color: theme.color.error },
+    PAYMENT_FAILED:       { icon: 'card',                color: theme.color.error },
+    LOW_STOCK:            { icon: 'alert-circle',        color: '#F59E0B' },
+    OUT_OF_STOCK:         { icon: 'warning',             color: theme.color.error },
+    NEW_COUPON:           { icon: 'pricetag',            color: theme.color.accent },
+  }
+  const DEFAULT_CONFIG = { icon: 'notifications', color: theme.color.accent }
+
+
+  const handleNotificationPress = (destination) => {
+    router.push(destination)
+  }
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -101,7 +147,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={theme.color.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notificaciones</Text>
         <TouchableOpacity
@@ -117,11 +163,11 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={theme.color.accent} />
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
+          <Ionicons name="cloud-offline-outline" size={48} color={theme.color.textMuted} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={load}>
             <Text style={styles.retryText}>Reintentar</Text>
@@ -129,7 +175,7 @@ export default function NotificationsScreen() {
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.centered}>
-          <Ionicons name="notifications-off-outline" size={56} color={COLORS.textMuted} />
+          <Ionicons name="notifications-off-outline" size={56} color={theme.color.textMuted} />
           <Text style={styles.emptyTitle}>Sin notificaciones</Text>
           <Text style={styles.emptySubtitle}>Tus notificaciones aparecerán acá</Text>
         </View>
@@ -137,8 +183,8 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <NotificationItem item={item} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          renderItem={({ item }) => <NotificationItem item={item} styles={styles} onPress={handleNotificationPress} typeConfig={TYPE_CONFIG} defaultConfig={DEFAULT_CONFIG} mutedColor={theme.color.textMuted} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.color.accent]} />}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
@@ -147,19 +193,19 @@ export default function NotificationsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   backButton: {
     padding: 4,
@@ -168,14 +214,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginLeft: 12,
   },
   markAllButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: COLORS.primary + '15',
+    backgroundColor: theme.color.accent + '15',
   },
   markAllButtonDisabled: {
     backgroundColor: 'transparent',
@@ -183,10 +229,10 @@ const styles = StyleSheet.create({
   markAllText: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
   markAllTextDisabled: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   list: {
     paddingVertical: 8,
@@ -196,10 +242,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   itemUnread: {
-    backgroundColor: COLORS.primary + '08',
+    backgroundColor: theme.color.accent + '08',
   },
   iconCircle: {
     width: 44,
@@ -216,31 +262,36 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 3,
   },
   itemBody: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     lineHeight: 18,
     marginBottom: 5,
   },
   itemDate: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     marginTop: 4,
     marginLeft: 8,
     flexShrink: 0,
   },
+  chevron: {
+    marginLeft: 4,
+    alignSelf: 'center',
+    flexShrink: 0,
+  },
   separator: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     marginLeft: 72,
   },
   centered: {
@@ -252,28 +303,28 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
   },
   retryButton: {
     paddingHorizontal: 24,
     paddingVertical: 10,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 20,
   },
   retryText: {
-    color: COLORS.white,
+    color: theme.color.surface,
     fontWeight: '700',
     fontSize: 14,
   },
   emptyTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     textAlign: 'center',
   },
 })

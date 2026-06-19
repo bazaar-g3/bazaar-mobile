@@ -1,52 +1,50 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
-const COLORS = {
-  white: "#FFFFFF",
-  coral: "#FF6B3D",
-  text: "#1F1F1F",
-};
+import { useTheme } from "../theme/ThemeContext";
 
 export default function SearchBar({ value, onChangeText, onSearch, style }) {
+  const { theme } = useTheme();
+  const s = useMemo(() => makeStyles(theme), [theme]);
+
   return (
-    <View style={[styles.searchWrapper, style]}>
+    <View style={[s.wrapper, style]}>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder="Buscar productos..."
-        placeholderTextColor="#8E8E93"
-        style={styles.searchInput}
+        placeholderTextColor={theme.color.textMuted}
+        style={s.input}
         onSubmitEditing={onSearch}
         returnKeyType="search"
       />
-      <TouchableOpacity style={styles.searchButton} onPress={onSearch} accessibilityLabel="Buscar">
-        <Ionicons name="search" size={20} color={COLORS.white} />
+      <TouchableOpacity style={s.button} onPress={onSearch} accessibilityLabel="Buscar">
+        <Ionicons name="search" size={20} color={theme.color.onAccent} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  searchWrapper: {
+const makeStyles = (theme) => StyleSheet.create({
+  wrapper: {
     flexDirection: "row",
-    backgroundColor: COLORS.white,
-    borderRadius: 18,
+    backgroundColor: theme.color.surface,
+    borderRadius: theme.radius.lg,
     padding: 6,
     alignItems: "center",
   },
-  searchInput: {
+  input: {
     flex: 1,
-    height: 48,
-    paddingHorizontal: 14,
-    color: COLORS.text,
-    fontSize: 15,
+    height: 44,
+    paddingHorizontal: theme.space.lg,
+    color: theme.color.textPrimary,
+    fontSize: theme.type.body.size,
   },
-  searchButton: {
-    backgroundColor: COLORS.coral,
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  button: {
+    backgroundColor: theme.color.accent,
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
     justifyContent: "center",
     alignItems: "center",
   },

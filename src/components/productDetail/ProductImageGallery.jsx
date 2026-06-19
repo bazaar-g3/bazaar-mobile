@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Image, TouchableOpacity, ScrollView } from "react-native";
-import { styles } from "../../styles/productDetail/productDetailStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 
 export default function ProductImageGallery({
   images,
@@ -8,6 +9,8 @@ export default function ProductImageGallery({
   selectedImageIndex,
   onSelectImage,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <View style={styles.leftColumn}>
       <View style={styles.imageWrapper}>

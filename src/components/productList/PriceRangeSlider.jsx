@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
+import { useTheme } from "../../theme/ThemeContext";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../../constants/filters";
 
 /**
@@ -20,6 +20,8 @@ export default function PriceRangeSlider({
   maxLimit = PRICE_MAX_LIMIT,
   onChange,
 }) {
+  const { theme } = useTheme();
+  const priceStyles = useMemo(() => makeStyles(theme), [theme]);
   const [minText, setMinText] = useState(minValue > minLimit ? String(minValue) : "");
   const [maxText, setMaxText] = useState(maxValue < maxLimit ? String(maxValue) : "");
 
@@ -73,7 +75,7 @@ export default function PriceRangeSlider({
               onSubmitEditing={handleMinSubmit}
               keyboardType="numeric"
               placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               returnKeyType="done"
             />
           </View>
@@ -96,7 +98,7 @@ export default function PriceRangeSlider({
               onSubmitEditing={handleMaxSubmit}
               keyboardType="numeric"
               placeholder="sin límite"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               returnKeyType="done"
             />
           </View>
@@ -140,19 +142,19 @@ export default function PriceRangeSlider({
   );
 }
 
-const priceStyles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     gap: 12,
   },
   activeRange: {
-    backgroundColor: COLORS.promoLight,
+    backgroundColor: theme.color.accentTint,
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 12,
     alignSelf: "flex-start",
   },
   activeRangeText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "800",
     fontSize: 13,
   },
@@ -166,7 +168,7 @@ const priceStyles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 11,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: "600",
     marginBottom: 6,
   },
@@ -174,22 +176,22 @@ const priceStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
     borderRadius: 10,
     paddingHorizontal: 10,
     height: 44,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   currency: {
     fontSize: 15,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginRight: 2,
     fontWeight: "600",
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: COLORS.dark,
+    color: theme.color.textPrimary,
     fontWeight: "700",
     height: "100%",
   },
@@ -197,7 +199,7 @@ const priceStyles = StyleSheet.create({
     paddingTop: 22,
   },
   separatorText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -211,20 +213,20 @@ const priceStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.white,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surface,
   },
   quickChipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.promoLight,
+    borderColor: theme.color.accent,
+    backgroundColor: theme.color.accentTint,
   },
   quickChipText: {
     fontSize: 11,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: "600",
   },
   quickChipTextActive: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "800",
   },
 });

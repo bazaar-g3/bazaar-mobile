@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { styles } from "../../styles/productDetail/productDetailStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 
 export default function LoginPromptModal({
   visible,
   onClose,
   onLogin,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   if (!visible) return null;
 
   return (

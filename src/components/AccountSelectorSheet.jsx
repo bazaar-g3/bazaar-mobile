@@ -7,8 +7,9 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native'
+import { useMemo } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 /**
  * Modal que aparece cuando hay más de una cuenta vinculada al PIN o la biometría
@@ -20,6 +21,9 @@ import { COLORS } from '../constants/colors'
  * @param {Function} onCancel
  */
 export default function AccountSelectorSheet({ visible, accounts = [], onSelect, onCancel }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={styles.overlay}>
@@ -44,14 +48,14 @@ export default function AccountSelectorSheet({ visible, accounts = [], onSelect,
                     <Image source={{ uri: account.avatarUrl }} style={styles.avatar} />
                   ) : (
                     <View style={[styles.avatar, styles.avatarFallback]}>
-                      <Ionicons name="person" size={20} color={COLORS.white} />
+                      <Ionicons name="person" size={20} color={theme.color.onAccent} />
                     </View>
                   )}
                   <View style={styles.accountInfo}>
                     <Text style={styles.accountName} numberOfLines={1}>{account.name}</Text>
                     <Text style={styles.accountEmail} numberOfLines={1}>{account.email}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                  <Ionicons name="chevron-forward" size={18} color={theme.color.textMuted} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -66,7 +70,7 @@ export default function AccountSelectorSheet({ visible, accounts = [], onSelect,
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -77,28 +81,23 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 8,
     maxHeight: '80%',
   },
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 4,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -110,7 +109,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.divider ?? '#EAEAEA',
+    backgroundColor: theme.color.border,
     marginHorizontal: 4,
   },
   accountRow: {
@@ -125,7 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
   },
   avatarFallback: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -135,12 +134,12 @@ const styles = StyleSheet.create({
   accountName: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 2,
   },
   accountEmail: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   cancelButton: {
     width: '100%',
@@ -149,10 +148,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider ?? '#EAEAEA',
+    borderTopColor: theme.color.border,
   },
   cancelButtonText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },

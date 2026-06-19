@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -20,10 +20,10 @@ import CouponsTab from '../components/profile/ProfileCouponsTab'
 import ProfileSidebar, {
   PROFILE_MENU_ITEMS,
 } from '../components/profile/ProfileSidebar'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import PublicacionesTab from '../components/profile/PublicacionesTabScreen'
 import SellerSalesScreen from '../components/profile/SellerSalesScreen'
-import { styles } from '../styles/profile/profileStyles'
+import { makeStyles } from '../styles/profile/profileStyles'
 import {
   getCatalogErrorMessage,
   listSellerProducts,
@@ -41,6 +41,9 @@ import DisablePinModal from '../components/DisablePinModal'
 import DisableBiometricModal from '../components/DisableBiometricModal'
 
 export default function ProfileScreen() {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+  const securityStyles = useMemo(() => makeSecurityStyles(theme), [theme])
   const router = useRouter()
   const {
     activeTab: requestedActiveTab,
@@ -514,7 +517,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="keypad-outline"
                 size={22}
-                color={COLORS.primary}
+                color={theme.color.accent}
                 style={securityStyles.rowIcon}
               />
               <View style={securityStyles.rowTextBlock}>
@@ -579,7 +582,7 @@ export default function ProfileScreen() {
                 <Ionicons
                   name="finger-print"
                   size={22}
-                  color={COLORS.primary}
+                  color={theme.color.accent}
                   style={securityStyles.rowIcon}
                 />
                 <View style={securityStyles.rowTextBlock}>
@@ -657,7 +660,7 @@ export default function ProfileScreen() {
   if (checkingSession || loadingProfile) {
     return (
       <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={COLORS.primaryLight} />
+        <ActivityIndicator size="large" color={theme.color.accentLight} />
       </View>
     )
   }
@@ -721,24 +724,19 @@ export default function ProfileScreen() {
   )
 }
 
-const securityStyles = StyleSheet.create({
+const makeSecurityStyles = (theme) => StyleSheet.create({
   card: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 18,
     marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 14,
   },
   row: {
@@ -774,11 +772,11 @@ const securityStyles = StyleSheet.create({
   rowLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   rowSubLabel: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     marginTop: 3,
   },
   badge: {
@@ -800,7 +798,7 @@ const securityStyles = StyleSheet.create({
     color: '#15803d',
   },
   badgeTextInactive: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   actionButton: {
     paddingHorizontal: 12,
@@ -810,11 +808,11 @@ const securityStyles = StyleSheet.create({
     marginTop: 2,
   },
   actionButtonPrimary: {
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     backgroundColor: 'transparent',
   },
   actionButtonDanger: {
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
     backgroundColor: 'transparent',
   },
   actionButtonDisabled: {
@@ -825,9 +823,9 @@ const securityStyles = StyleSheet.create({
     fontWeight: '700',
   },
   actionButtonTextPrimary: {
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
   actionButtonTextDanger: {
-    color: COLORS.error,
+    color: theme.color.error,
   },
 })

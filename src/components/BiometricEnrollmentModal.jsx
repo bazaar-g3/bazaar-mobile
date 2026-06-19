@@ -1,6 +1,7 @@
+import { useMemo } from 'react'
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 /**
  * Modal que aparece tras un login exitoso con email/contraseña para invitar al usuario
@@ -11,11 +12,14 @@ import { COLORS } from '../constants/colors'
  * @param {Function} onSkip - Callback cuando el usuario elige no activarla ahora.
  */
 export default function BiometricEnrollmentModal({ visible, onEnable, onSkip }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <Ionicons name="finger-print" size={52} color={COLORS.primary} style={styles.icon} />
+          <Ionicons name="finger-print" size={52} color={theme.color.accent} style={styles.icon} />
           <Text style={styles.title}>Activar login biométrico</Text>
           <Text style={styles.description}>
             ¿Querés habilitar el acceso rápido con huella dactilar o reconocimiento facial para la próxima vez?
@@ -32,7 +36,7 @@ export default function BiometricEnrollmentModal({ visible, onEnable, onSkip }) 
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -43,16 +47,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 32,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 8,
   },
   icon: {
     marginBottom: 16,
@@ -60,20 +59,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 28,
   },
   primaryButton: {
     width: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     borderRadius: 12,
     height: 48,
     justifyContent: 'center',
@@ -81,7 +80,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 15,
     fontWeight: '800',
   },
@@ -92,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryButtonText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 14,
     fontWeight: '600',
   },

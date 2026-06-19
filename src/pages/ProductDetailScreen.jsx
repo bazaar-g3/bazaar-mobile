@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   View,
@@ -30,22 +30,26 @@ import {
 } from "../utils/authRedirect";
 import { addToWishlist, removeFromWishlist, isInWishlist } from "../services/wishlist";
 import { getProductReputation, formatAverageScore } from "../services/reviews";
-import { recordProductView } from "../services/browseHistory";
+import { recordProductView, recordCartAdd, recordWishlistAdd } from "../services/browseHistory";
 
-import { styles as sharedStyles } from "../styles/productDetail/productDetailStyles";
+import { makeStyles as makeSharedStyles } from "../styles/productDetail/productDetailStyles";
+import { useTheme } from "../theme/ThemeContext";
 
 import ProductImageGallery from "../components/productDetail/ProductImageGallery";
 import ProductInfoPanel from "../components/productDetail/ProductInfoPanel";
 import LoginPromptModal from "../components/productDetail/LoginPromptModal";
 import ShareProductModal from "../components/productDetail/ShareProductModal";
 
-import Logo from "../components/Logo";
-import { COLORS } from "../constants/colors";
 import { FONT, SPACING } from "../constants/theme";
 
 const PRODUCT_SHARE_BASE_URL = "http://localhost:8081";
 
 export default function ProductDetailScreen() {
+  const { theme } = useTheme();
+  const sharedStyles = useMemo(() => makeSharedStyles(theme), [theme]);
+  const reviewStyles = useMemo(() => makeReviewStyles(theme), [theme]);
+  const headerStyles = useMemo(() => makeHeaderStyles(theme), [theme]);
+
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -278,6 +282,7 @@ export default function ProductDetailScreen() {
     setAddingToCart(true);
     try {
       await addItem(product.id, quantityToAdd);
+      recordCartAdd(String(product.id)).catch(() => {});
       Alert.alert(
         "Añadido",
         `${quantityToAdd} unidad(es) agregadas al carrito.`,
@@ -372,6 +377,7 @@ export default function ProductDetailScreen() {
         await removeFromWishlist(id);
       } else {
         await addToWishlist(id);
+        recordWishlistAdd(String(id)).catch(() => {});
       }
     } catch {
       setIsWishlisted(previousState);
@@ -508,6 +514,7 @@ export default function ProductDetailScreen() {
         setHandledPendingActionKey(actionKey);
         try {
           await addToWishlist(String(id));
+          recordWishlistAdd(String(id)).catch(() => {});
           setIsWishlisted(true);
           Alert.alert("Guardado", "Producto agregado a tu wishlist.", [
             { text: "OK", onPress: () => router.replace(`/product/${id}`) },
@@ -537,7 +544,7 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={sharedStyles.safeArea}>
         <View style={sharedStyles.notFoundContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={theme.color.accent} />
           <Text style={sharedStyles.notFoundText}>
             Cargando información del producto...
           </Text>
@@ -554,9 +561,6 @@ export default function ProductDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
             <View style={headerStyles.placeholder} />
           </View>
         </View>
@@ -597,9 +601,6 @@ export default function ProductDetailScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
             <View style={headerStyles.placeholder} />
           </View>
         </View>
@@ -630,27 +631,7 @@ export default function ProductDetailScreen() {
               <Text style={headerStyles.headerBack}>← Volver</Text>
             </TouchableOpacity>
 
-            <View style={headerStyles.logoCenter}>
-              <Logo size={32} textSize={30} />
-            </View>
-
-            {!isOwnProduct && (
-              <TouchableOpacity
-                onPress={handleToggleWishlist}
-                disabled={wishlistLoading}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={[
-                  headerStyles.wishlistIcon,
-                  isWishlisted && headerStyles.wishlistIconActive,
-                  wishlistLoading && headerStyles.wishlistIconLoading,
-                ]}>
-                  {isWishlisted ? "♥" : "♡"}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {isOwnProduct && <View style={headerStyles.placeholder} />}
+            <View style={headerStyles.placeholder} />
           </View>
         </View>
 
@@ -679,6 +660,8 @@ export default function ProductDetailScreen() {
               isAvailable={isAvailable}
               maxAddable={maxAddable}
               cartLimitReached={cartLimitReached}
+              isWishlisted={isWishlisted}
+              wishlistLoading={wishlistLoading}
               onSellerPress={() => router.push(`/user/${product.sellerId}`)}
               onDecreaseQuantity={() => setQuantity(Math.max(1, quantity - 1))}
               onIncreaseQuantity={() => {
@@ -689,6 +672,8 @@ export default function ProductDetailScreen() {
               onManagePublication={handleManagePublication}
               onAddToCart={handleAddToCart}
               onShareProduct={handleOpenShareModal}
+              onToggleWishlist={handleToggleWishlist}
+              reputation={reputation}
             />
           </View>
 
@@ -696,7 +681,7 @@ export default function ProductDetailScreen() {
           <Text style={reviewStyles.sectionTitle}>Calificaciones del producto</Text>
 
           {loadingReputation ? (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 8 }} />
+            <ActivityIndicator size="small" color={theme.color.accent} style={{ marginTop: 8 }} />
           ) : reputation && reputation.review_count > 0 ? (
             <View style={reviewStyles.reputationCard}>
               <View style={reviewStyles.reputationSummary}>
@@ -723,7 +708,7 @@ export default function ProductDetailScreen() {
                           key={star}
                           style={[
                             reviewStyles.reviewStar,
-                            { color: star <= review.score ? COLORS.secondary : COLORS.divider },
+                            { color: star <= review.score ? theme.color.like : theme.color.border },
                           ]}
                         >
                           ★
@@ -766,25 +751,21 @@ export default function ProductDetailScreen() {
   );
 }
 
-const reviewStyles = StyleSheet.create({
+const makeReviewStyles = (theme) => StyleSheet.create({
   sectionTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
     paddingHorizontal: SPACING.xs,
   },
   reputationCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
     padding: SPACING.md,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
     marginBottom: SPACING.lg,
+    // no shadow — Social/P2P direction
   },
   reputationSummary: {
     flexDirection: 'row',
@@ -800,27 +781,27 @@ const reviewStyles = StyleSheet.create({
   reputationScoreValue: {
     fontSize: FONT.title,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     lineHeight: 34,
   },
   reputationStarIcon: {
     fontSize: FONT.large,
-    color: COLORS.secondary,
+    color: theme.color.like,
   },
   reputationCount: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '500',
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     marginBottom: SPACING.sm,
   },
   reviewItem: {
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -837,28 +818,28 @@ const reviewStyles = StyleSheet.create({
   },
   reviewDate: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   reviewComment: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     lineHeight: 19,
     marginTop: SPACING.xs,
   },
   emptyText: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     marginTop: SPACING.xs,
     marginBottom: SPACING.lg,
   },
 });
 
-const headerStyles = StyleSheet.create({
+const makeHeaderStyles = (theme) => StyleSheet.create({
   topHeader: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: 16,
     paddingVertical: 25,
   },
@@ -870,18 +851,10 @@ const headerStyles = StyleSheet.create({
     position: "relative",
   },
 
-  logoCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    pointerEvents: "box-none",
-  },
-
   headerBack: {
     fontSize: FONT.medium,
     fontWeight: "700",
-    color: COLORS.primary,
+    color: theme.color.accent,
     zIndex: 2,
   },
 
@@ -891,12 +864,12 @@ const headerStyles = StyleSheet.create({
 
   wishlistIcon: {
     fontSize: 26,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     zIndex: 2,
   },
 
   wishlistIconActive: {
-    color: COLORS.error,
+    color: theme.color.like,
   },
 
   wishlistIconLoading: {

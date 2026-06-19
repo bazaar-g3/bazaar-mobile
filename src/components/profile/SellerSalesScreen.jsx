@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -8,10 +9,12 @@ import {
   View,
 } from 'react-native'
 
-import { COLORS } from '../../constants/colors'
-import { getSellerSales, updateOrderStatus } from '../../services/orders'
+import { useTheme } from '../../theme/ThemeContext'
+import { getSellerSales, updateOrderStatus, cancelOrder, getCancelErrorMessage } from '../../services/orders'
 import { getPublicProfile } from '../../services/user'
-import { styles } from '../../styles/sellerSales/sellerSalesStyles'
+import { makeStyles } from '../../styles/sellerSales/sellerSalesStyles'
+
+const CANCELLED_STATUSES = ['cancelled', 'refund_in_progress', 'refund_processed']
 
 const STATUS_FILTERS = [
   { label: 'Todas', value: 'all' },
@@ -19,6 +22,7 @@ const STATUS_FILTERS = [
   { label: 'En preparación', value: 'in_preparation' },
   { label: 'Enviadas', value: 'shipped' },
   { label: 'Entregadas', value: 'delivered' },
+  { label: 'Canceladas', value: 'cancelled' },
 ]
 
 const SELLER_STATUS_LABELS = {
@@ -26,6 +30,9 @@ const SELLER_STATUS_LABELS = {
   in_preparation: 'En preparación',
   shipped: 'Enviada',
   delivered: 'Entregada',
+  cancelled: 'Cancelada',
+  refund_in_progress: 'Reembolso en proceso',
+  refund_processed: 'Reembolsada',
 }
 
 const SELLER_NEXT_STATUS = {
@@ -34,6 +41,9 @@ const SELLER_NEXT_STATUS = {
 }
 
 export default function SellerSalesScreen({ sellerId }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const [sales, setSales] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -44,6 +54,10 @@ export default function SellerSalesScreen({ sellerId }) {
   const [trackingOrderId, setTrackingOrderId] = useState(null)
   const [trackingInput, setTrackingInput] = useState('')
   const [updateError, setUpdateError] = useState('')
+  const [cancelTargetId, setCancelTargetId] = useState(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
 
   const loadSales = useCallback(async () => {
     if (!sellerId) return
@@ -59,6 +73,8 @@ export default function SellerSalesScreen({ sellerId }) {
       const filtered =
         statusFilter === 'all'
           ? data
+          : statusFilter === 'cancelled'
+          ? data.filter((sale) => CANCELLED_STATUSES.includes(sale.status))
           : data.filter((sale) => sale.status === statusFilter)
 
       setSales(filtered)
@@ -149,8 +165,66 @@ export default function SellerSalesScreen({ sellerId }) {
     }
   }
 
+  async function handleCancelSale() {
+    if (!cancelTargetId) return
+    setCancelling(true)
+    setCancelError('')
+    try {
+      await cancelOrder(cancelTargetId, { reason: cancelReason || undefined }, sellerId)
+      await loadSales()
+      setCancelTargetId(null)
+      setCancelReason('')
+    } catch (e) {
+      setCancelError(getCancelErrorMessage(e))
+    } finally {
+      setCancelling(false)
+    }
+  }
+
   return (
     <View style={styles.screen}>
+      <Modal
+        visible={cancelTargetId !== null}
+        animationType="fade"
+        transparent
+        onRequestClose={() => !cancelling && setCancelTargetId(null)}
+      >
+        <View style={{ flex:1, backgroundColor:'rgba(0,0,0,0.45)', justifyContent:'center', alignItems:'center', padding:24 }}>
+          <View style={{ backgroundColor:'#fff', borderRadius:16, padding:24, width:'100%', maxWidth:400, gap:12 }}>
+            <Text style={{ fontSize:18, fontWeight:'800', color:'#1a1a1a' }}>¿Cancelar esta venta?</Text>
+            <Text style={{ fontSize:14, color:'#666', lineHeight:20 }}>
+              Se restaurará el stock. Si el comprador realizó un pago aprobado, se iniciará un reembolso.
+            </Text>
+            <TextInput
+              style={{ borderWidth:1, borderColor:'#e0e0e0', borderRadius:8, padding:10, fontSize:14 }}
+              placeholder="Motivo (opcional)"
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              editable={!cancelling}
+              maxLength={200}
+            />
+            {cancelError ? <Text style={{ color:'#e53935', fontSize:13, fontWeight:'600' }}>{cancelError}</Text> : null}
+            <View style={{ flexDirection:'row', gap:10, marginTop:4 }}>
+              <TouchableOpacity
+                style={{ flex:1, borderWidth:1.5, borderColor:'#e0e0e0', borderRadius:10, paddingVertical:12, alignItems:'center' }}
+                onPress={() => setCancelTargetId(null)}
+                disabled={cancelling}
+              >
+                <Text style={{ color:'#666', fontWeight:'700', fontSize:15 }}>Volver</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex:1, backgroundColor:'#e53935', borderRadius:10, paddingVertical:12, alignItems:'center', justifyContent:'center', minHeight:44, opacity: cancelling ? 0.6 : 1 }}
+                onPress={handleCancelSale}
+                disabled={cancelling}
+              >
+                {cancelling
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={{ color:'#fff', fontWeight:'700', fontSize:15 }}>Sí, cancelar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <Text style={styles.title}>Historial de ventas</Text>
       <Text style={styles.subtitle}>Pedidos recibidos</Text>
 
@@ -182,7 +256,7 @@ export default function SellerSalesScreen({ sellerId }) {
 
       {loading ? (
         <View style={styles.centerState}>
-          <ActivityIndicator color={COLORS.primaryLight} />
+          <ActivityIndicator color={theme.color.accent} />
           <Text style={styles.stateText}>Cargando ventas...</Text>
         </View>
       ) : error ? (
@@ -227,6 +301,7 @@ export default function SellerSalesScreen({ sellerId }) {
                 onConfirmTracking={() =>
                   doUpdateStatus(sale.order_id, 'shipped', trackingInput)
                 }
+                onRequestCancel={(orderId) => { setCancelError(''); setCancelReason(''); setCancelTargetId(orderId) }}
               />
             )
           })}
@@ -248,7 +323,11 @@ function SaleCard({
   onCancelTracking,
   onAdvanceStatus,
   onConfirmTracking,
+  onRequestCancel,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -256,12 +335,14 @@ function SaleCard({
           style={[
             styles.statusBadge,
             sale.status === 'delivered' && styles.statusBadgeDelivered,
+            (sale.status === 'cancelled' || sale.status === 'refund_in_progress' || sale.status === 'refund_processed') && styles.statusBadgeCancelled,
           ]}
         >
           <Text
             style={[
               styles.statusText,
               sale.status === 'delivered' && styles.statusTextDelivered,
+              (sale.status === 'cancelled' || sale.status === 'refund_in_progress' || sale.status === 'refund_processed') && styles.statusTextCancelled,
             ]}
           >
             {SELLER_STATUS_LABELS[sale.status] || sale.status}
@@ -322,12 +403,22 @@ function SaleCard({
           onPress={() => onAdvanceStatus(sale.order_id, nextStatus)}
         >
           {isUpdating ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
+            <ActivityIndicator size="small" color={theme.color.onAccent} />
           ) : (
             <Text style={styles.primaryButtonText}>
               Pasar a {SELLER_STATUS_LABELS[nextStatus]}
             </Text>
           )}
+        </TouchableOpacity>
+      )}
+
+      {sale.status === 'confirmed' && !isAwaitingTracking && (
+        <TouchableOpacity
+          style={{ flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6, borderWidth:1.5, borderColor:'#e53935', borderRadius:10, paddingVertical:12, marginTop:8 }}
+          onPress={() => onRequestCancel(sale.order_id)}
+          activeOpacity={0.8}
+        >
+          <Text style={{ color:'#e53935', fontWeight:'700', fontSize:14 }}>Cancelar venta</Text>
         </TouchableOpacity>
       )}
 
@@ -340,7 +431,7 @@ function SaleCard({
           <TextInput
             style={styles.trackingInput}
             placeholder="Ej: AR123456789"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={theme.color.textMuted}
             value={trackingInput}
             onChangeText={onTrackingInputChange}
             maxLength={100}
@@ -354,7 +445,7 @@ function SaleCard({
               disabled={isUpdating}
             >
               {isUpdating ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator size="small" color={theme.color.onAccent} />
               ) : (
                 <Text style={styles.primaryButtonText}>Confirmar envío</Text>
               )}
