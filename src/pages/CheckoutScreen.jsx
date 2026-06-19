@@ -8,7 +8,7 @@
  *   'failed'     → Pago rechazado (orden en estado 'payment_rejected')
  *   'pending'    → Pago todavía en proceso (volver a verificar más tarde)
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -30,10 +30,9 @@ import { checkout, getOrderById, getCheckoutErrorMessage, previewCart } from '..
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 
-// Genera un UUID v4 sin dependencias externas.
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
@@ -42,9 +41,7 @@ function generateUUID() {
   })
 }
 
-// Cuántos ms esperar antes del primer poll de estado (el webhook puede tardar un poco)
 const POLL_DELAY_MS = 1500
-// Cuántas veces reintentar el poll si la orden sigue en pending_payment
 const MAX_POLL_RETRIES = 4
 const POLL_INTERVAL_MS = 2000
 
@@ -52,6 +49,8 @@ export default function CheckoutScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
   const { items, total, clearLocal } = useCartContext()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [checkingSession, setCheckingSession] = useState(true)
   const [address, setAddress] = useState({
@@ -65,17 +64,15 @@ export default function CheckoutScreen() {
   const [idempotencyKey, setIdempotencyKey] = useState(generateUUID)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState(null)
-  const [screen, setScreen] = useState('form') // 'form' | 'processing' | 'success' | 'failed' | 'pending'
+  const [screen, setScreen] = useState('form')
   const [orderResult, setOrderResult] = useState(null)
   const pollTimerRef = useRef(null)
 
-  // Estado del cupón
   const [couponInput, setCouponInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState(null) // { code, discount_amount, total }
+  const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponError, setCouponError] = useState(null)
   const [loadingCoupon, setLoadingCoupon] = useState(false)
 
-  // Auth gate
   useEffect(() => {
     let cancelled = false
     async function checkAuth() {
@@ -90,14 +87,12 @@ export default function CheckoutScreen() {
     return () => { cancelled = true }
   }, [router])
 
-  // Limpiar timers al desmontar
   useEffect(() => {
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
   }, [])
 
-  // Validación por campo
   function validateAddressFields(addr) {
     const errors = {}
     if (!addr.calle?.trim() || addr.calle.trim().length < 2)
@@ -114,7 +109,6 @@ export default function CheckoutScreen() {
 
   function setField(field, value) {
     setAddress((prev) => ({ ...prev, [field]: value }))
-    // Revalidar el campo tocado en tiempo real solo si ya había error
     setAddressErrors((prev) => {
       if (!prev[field]) return prev
       const newErrors = validateAddressFields({ ...address, [field]: value })
@@ -122,10 +116,6 @@ export default function CheckoutScreen() {
     })
   }
 
-  /**
-   * Polling de estado de la orden.
-   * Reintenta hasta MAX_POLL_RETRIES veces si sigue en pending_payment.
-   */
   async function pollOrderStatus(orderId, retries = 0) {
     try {
       const order = await getOrderById(orderId)
@@ -138,18 +128,15 @@ export default function CheckoutScreen() {
         setScreen('failed')
         return
       }
-      // Todavía pending_payment → reintentar
       if (retries < MAX_POLL_RETRIES) {
         pollTimerRef.current = setTimeout(
           () => pollOrderStatus(orderId, retries + 1),
           POLL_INTERVAL_MS,
         )
       } else {
-        // Demasiado tiempo sin respuesta → mostrar estado pendiente
         setScreen('pending')
       }
     } catch {
-      // Error de red → mostrar pendiente para que el usuario verifique en Mis órdenes
       setScreen('pending')
     }
   }
@@ -177,14 +164,12 @@ export default function CheckoutScreen() {
       const result = await checkout(deliveryAddress, idempotencyKey, couponCode)
       setOrderResult(result)
 
-      // Abrir MercadoPago Checkout Pro en el browser nativo / pestaña web
       await WebBrowser.openBrowserAsync(result.init_point, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
         showTitle: false,
-        controlsColor: COLORS.primary,
+        controlsColor: theme.color.accent,
       })
 
-      // El usuario volvió del browser → esperar un poco y consultar estado
       setSubmitting(false)
       setScreen('processing')
       pollTimerRef.current = setTimeout(
@@ -193,7 +178,6 @@ export default function CheckoutScreen() {
       )
     } catch (e) {
       setSubmitting(false)
-      // Si el cupón fue invalidado entre el preview y el checkout (carrera de usos)
       if (e?.response?.status === 422 && appliedCoupon) {
         const detail = e?.response?.data?.detail
         const msg = typeof detail === 'object' ? detail.message : (detail || 'El cupón ya no está disponible.')
@@ -239,7 +223,6 @@ export default function CheckoutScreen() {
   }
 
   function handleRetry() {
-    // Generar nueva idempotency key para el reintento
     setIdempotencyKey(generateUUID())
     setApiError(null)
     setAddressErrors({})
@@ -254,11 +237,10 @@ export default function CheckoutScreen() {
     router.back()
   }
 
-  // ── Loading auth ──────────────────────────────────────────────────────────
   if (checkingSession) {
     return (
       <SafeAreaView style={styles.fullCenter}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.color.accent} />
       </SafeAreaView>
     )
   }
@@ -269,12 +251,11 @@ export default function CheckoutScreen() {
     isTablet && styles.containerTablet,
   ]
 
-  // ── Procesando (esperando webhook) ────────────────────────────────────────
   if (screen === 'processing') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
         <View style={[styles.fullCenter, { padding: SPACING.lg }]}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={theme.color.accent} />
           <Text style={styles.processingTitle}>Procesando tu pago…</Text>
           <Text style={styles.processingSubtitle}>
             Estamos verificando el resultado con MercadoPago. Esto tarda solo unos segundos.
@@ -284,13 +265,12 @@ export default function CheckoutScreen() {
     )
   }
 
-  // ── Éxito ─────────────────────────────────────────────────────────────────
   if (screen === 'success') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
         <View style={[styles.fullCenter, { padding: SPACING.lg }]}>
           <View style={styles.resultIconCircle}>
-            <Ionicons name="checkmark" size={48} color={COLORS.white} />
+            <Ionicons name="checkmark" size={48} color={theme.color.onAccent} />
           </View>
           <Text style={styles.resultTitle}>¡Pago exitoso!</Text>
           <Text style={styles.resultSubtitle}>
@@ -310,13 +290,12 @@ export default function CheckoutScreen() {
     )
   }
 
-  // ── Fallo ─────────────────────────────────────────────────────────────────
   if (screen === 'failed') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
         <View style={[styles.fullCenter, { padding: SPACING.lg }]}>
-          <View style={[styles.resultIconCircle, { backgroundColor: COLORS.error }]}>
-            <Ionicons name="close" size={48} color={COLORS.white} />
+          <View style={[styles.resultIconCircle, { backgroundColor: theme.color.error }]}>
+            <Ionicons name="close" size={48} color={theme.color.onAccent} />
           </View>
           <Text style={styles.resultTitle}>Pago rechazado</Text>
           <Text style={styles.resultSubtitle}>
@@ -333,13 +312,12 @@ export default function CheckoutScreen() {
     )
   }
 
-  // ── Pendiente (sin respuesta después del polling) ─────────────────────────
   if (screen === 'pending') {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
         <View style={[styles.fullCenter, { padding: SPACING.lg }]}>
-          <View style={[styles.resultIconCircle, { backgroundColor: COLORS.secondary }]}>
-            <Ionicons name="time" size={48} color={COLORS.white} />
+          <View style={[styles.resultIconCircle, { backgroundColor: theme.color.like }]}>
+            <Ionicons name="time" size={48} color={theme.color.onAccent} />
           </View>
           <Text style={styles.resultTitle}>Pago en proceso</Text>
           <Text style={styles.resultSubtitle}>
@@ -354,9 +332,8 @@ export default function CheckoutScreen() {
     )
   }
 
-  // ── Formulario ────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -373,7 +350,7 @@ export default function CheckoutScreen() {
               onPress={goToCart}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+              <Ionicons name="arrow-back" size={24} color={theme.color.textPrimary} />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, { fontSize: isSmall ? FONT.large : 26 }]}>
               Confirmar compra
@@ -423,11 +400,11 @@ export default function CheckoutScreen() {
           {appliedCoupon ? (
             <View style={styles.couponAppliedRow}>
               <View style={styles.couponAppliedBadge}>
-                <Ionicons name="pricetag" size={14} color={COLORS.success ?? '#22c55e'} />
+                <Ionicons name="pricetag" size={14} color={theme.color.success} />
                 <Text style={styles.couponAppliedText}>{appliedCoupon.code} aplicado</Text>
               </View>
               <TouchableOpacity onPress={handleRemoveCoupon} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={20} color={COLORS.textMuted} />
+                <Ionicons name="close-circle" size={20} color={theme.color.textMuted} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -435,7 +412,7 @@ export default function CheckoutScreen() {
               <TextInput
                 style={[styles.input, styles.couponInput, { fontSize: isSmall ? FONT.small : FONT.regular }]}
                 placeholder="Código de cupón"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={theme.color.textMuted}
                 value={couponInput}
                 onChangeText={(v) => {
                   setCouponInput(v.toUpperCase())
@@ -452,7 +429,7 @@ export default function CheckoutScreen() {
                 disabled={!couponInput.trim() || loadingCoupon}
               >
                 {loadingCoupon
-                  ? <ActivityIndicator size="small" color={COLORS.white} />
+                  ? <ActivityIndicator size="small" color={theme.color.onAccent} />
                   : <Text style={styles.couponApplyText}>Aplicar</Text>
                 }
               </TouchableOpacity>
@@ -464,103 +441,98 @@ export default function CheckoutScreen() {
 
           {/* Dirección de entrega */}
           <Text style={styles.sectionLabel}>Dirección de entrega</Text>
+          <View style={styles.addressCard}>
+            <View style={styles.addressRow}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    addressErrors.calle && styles.inputError,
+                    { fontSize: isSmall ? FONT.small : FONT.regular },
+                  ]}
+                  placeholder="Calle / Avenida *"
+                  placeholderTextColor={theme.color.textMuted}
+                  value={address.calle}
+                  onChangeText={(v) => setField('calle', v)}
+                  onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+                  returnKeyType="next"
+                  maxLength={100}
+                />
+                {addressErrors.calle ? <Text style={styles.errorText}>{addressErrors.calle}</Text> : null}
+              </View>
+              <View style={{ width: 90 }}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    addressErrors.altura && styles.inputError,
+                    { fontSize: isSmall ? FONT.small : FONT.regular },
+                  ]}
+                  placeholder="Altura *"
+                  placeholderTextColor={theme.color.textMuted}
+                  value={address.altura}
+                  onChangeText={(v) => setField('altura', v)}
+                  onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+                  returnKeyType="next"
+                  keyboardType="default"
+                  maxLength={10}
+                />
+                {addressErrors.altura ? <Text style={styles.errorText}>{addressErrors.altura}</Text> : null}
+              </View>
+            </View>
 
-          {/* Calle + Altura en la misma fila */}
-          <View style={styles.addressRow}>
-            <View style={{ flex: 1 }}>
-              <TextInput
-                style={[
-                  styles.input,
-                  addressErrors.calle && styles.inputError,
-                  { fontSize: isSmall ? FONT.small : FONT.regular },
-                ]}
-                placeholder="Calle / Avenida *"
-                placeholderTextColor={COLORS.textMuted}
-                value={address.calle}
-                onChangeText={(v) => setField('calle', v)}
-                onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
-                returnKeyType="next"
-                maxLength={100}
-              />
-              {addressErrors.calle ? <Text style={styles.errorText}>{addressErrors.calle}</Text> : null}
-            </View>
-            <View style={{ width: 90 }}>
-              <TextInput
-                style={[
-                  styles.input,
-                  addressErrors.altura && styles.inputError,
-                  { fontSize: isSmall ? FONT.small : FONT.regular },
-                ]}
-                placeholder="Altura *"
-                placeholderTextColor={COLORS.textMuted}
-                value={address.altura}
-                onChangeText={(v) => setField('altura', v)}
-                onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
-                returnKeyType="next"
-                keyboardType="default"
-                maxLength={10}
-              />
-              {addressErrors.altura ? <Text style={styles.errorText}>{addressErrors.altura}</Text> : null}
-            </View>
+            <TextInput
+              style={[
+                styles.input,
+                { fontSize: isSmall ? FONT.small : FONT.regular },
+              ]}
+              placeholder="Departamento / Piso (opcional)"
+              placeholderTextColor={theme.color.textMuted}
+              value={address.departamento}
+              onChangeText={(v) => setField('departamento', v)}
+              returnKeyType="next"
+              maxLength={20}
+            />
+
+            <TextInput
+              style={[
+                styles.input,
+                { fontSize: isSmall ? FONT.small : FONT.regular },
+              ]}
+              placeholder="Barrio (opcional)"
+              placeholderTextColor={theme.color.textMuted}
+              value={address.zona}
+              onChangeText={(v) => setField('zona', v)}
+              returnKeyType="next"
+              maxLength={100}
+            />
+
+            <TextInput
+              style={[
+                styles.input,
+                addressErrors.codigo_postal && styles.inputError,
+                { fontSize: isSmall ? FONT.small : FONT.regular },
+              ]}
+              placeholder="Código Postal *"
+              placeholderTextColor={theme.color.textMuted}
+              value={address.codigo_postal}
+              onChangeText={(v) => setField('codigo_postal', v)}
+              onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
+              returnKeyType="done"
+              keyboardType="default"
+              maxLength={8}
+            />
+            {addressErrors.codigo_postal ? (
+              <Text style={styles.errorText}>{addressErrors.codigo_postal}</Text>
+            ) : null}
           </View>
 
-          {/* Departamento (opcional) */}
-          <TextInput
-            style={[
-              styles.input,
-              { fontSize: isSmall ? FONT.small : FONT.regular },
-            ]}
-            placeholder="Departamento / Piso (opcional)"
-            placeholderTextColor={COLORS.textMuted}
-            value={address.departamento}
-            onChangeText={(v) => setField('departamento', v)}
-            returnKeyType="next"
-            maxLength={20}
-          />
-
-          {/* Zona / Barrio (opcional) */}
-          <TextInput
-            style={[
-              styles.input,
-              { fontSize: isSmall ? FONT.small : FONT.regular },
-            ]}
-            placeholder="Barrio (opcional)"
-            placeholderTextColor={COLORS.textMuted}
-            value={address.zona}
-            onChangeText={(v) => setField('zona', v)}
-            returnKeyType="next"
-            maxLength={100}
-          />
-
-          {/* Código Postal */}
-          <TextInput
-            style={[
-              styles.input,
-              addressErrors.codigo_postal && styles.inputError,
-              { fontSize: isSmall ? FONT.small : FONT.regular },
-            ]}
-            placeholder="Código Postal *"
-            placeholderTextColor={COLORS.textMuted}
-            value={address.codigo_postal}
-            onChangeText={(v) => setField('codigo_postal', v)}
-            onBlur={() => setAddressErrors((e) => ({ ...e, ...validateAddressFields(address) }))}
-            returnKeyType="done"
-            keyboardType="default"
-            maxLength={8}
-          />
-          {addressErrors.codigo_postal ? (
-            <Text style={styles.errorText}>{addressErrors.codigo_postal}</Text>
-          ) : null}
-
-          {/* Error de API */}
           {apiError ? (
             <View style={styles.apiErrorBox}>
-              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+              <Ionicons name="alert-circle" size={18} color={theme.color.error} />
               <Text style={styles.apiErrorText}>{apiError}</Text>
             </View>
           ) : null}
 
-          {/* Botón de pago */}
           <TouchableOpacity
             style={[
               styles.payButton,
@@ -571,17 +543,17 @@ export default function CheckoutScreen() {
             activeOpacity={0.85}
           >
             {submitting ? (
-              <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={theme.color.onAccent} />
             ) : (
               <View style={styles.payButtonContent}>
-                <Ionicons name="card-outline" size={20} color={COLORS.white} />
+                <Ionicons name="card-outline" size={20} color={theme.color.onAccent} />
                 <Text style={styles.payButtonText}>Pagar con MercadoPago</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <Text style={styles.secureNote}>
-            <Ionicons name="lock-closed-outline" size={12} color={COLORS.textMuted} />
+            <Ionicons name="lock-closed-outline" size={12} color={theme.color.textMuted} />
             {' '}Pago procesado de forma segura por MercadoPago
           </Text>
         </ScrollView>
@@ -590,16 +562,16 @@ export default function CheckoutScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   fullCenter: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   container: {
     flexGrow: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.xl,
     gap: SPACING.sm,
@@ -610,7 +582,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -620,24 +591,22 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
-  // Sección labels
   sectionLabel: {
     fontSize: FONT.small,
     fontWeight: '800',
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
   },
 
-  // Resumen
   summaryCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
     padding: SPACING.md,
     gap: SPACING.xs,
   },
@@ -651,7 +620,7 @@ const styles = StyleSheet.create({
   summaryItemName: {
     flex: 1,
     fontSize: FONT.regular,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontWeight: '600',
   },
   summaryItemRight: {
@@ -661,7 +630,7 @@ const styles = StyleSheet.create({
   },
   summaryQty: {
     fontSize: FONT.small,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontWeight: '600',
     minWidth: 28,
     textAlign: 'right',
@@ -669,13 +638,13 @@ const styles = StyleSheet.create({
   summarySubtotal: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     minWidth: 72,
     textAlign: 'right',
   },
   totalDivider: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     marginVertical: SPACING.xs,
   },
   totalRow: {
@@ -686,15 +655,20 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: FONT.medium,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
   totalAmount: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
 
-  // Dirección
+  addressCard: {
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
   addressRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -702,52 +676,50 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    borderRadius: 12,
+    borderColor: theme.color.border,
+    borderRadius: theme.radius.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: Platform.OS === 'ios' ? 14 : 12,
-    color: COLORS.textPrimary,
-    backgroundColor: COLORS.white,
+    color: theme.color.textPrimary,
+    backgroundColor: theme.color.surface,
   },
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
   },
   errorText: {
     fontSize: FONT.small,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
     marginTop: -SPACING.xs,
   },
 
-  // API error
   apiErrorBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.xs,
-    backgroundColor: '#fff0f0',
+    backgroundColor: theme.color.accentSubtle,
     borderRadius: 10,
     padding: SPACING.sm,
   },
   apiErrorText: {
     flex: 1,
     fontSize: FONT.small,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
     lineHeight: 18,
   },
 
-  // Botón de pago
   payButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: SPACING.md,
-    minHeight: 54,
+    minHeight: theme.button.minHeight + 10,
   },
   payButtonDisabled: {
-    backgroundColor: COLORS.textMuted,
+    backgroundColor: theme.color.textMuted,
   },
   payButtonContent: {
     flexDirection: 'row',
@@ -755,7 +727,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   payButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: FONT.medium,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -763,11 +735,10 @@ const styles = StyleSheet.create({
   secureNote: {
     textAlign: 'center',
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     marginTop: SPACING.xs,
   },
 
-  // Cupón
   couponRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -777,17 +748,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   couponApplyButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: SPACING.md,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 80,
-    minHeight: 48,
+    minHeight: theme.button.minHeight,
   },
   couponApplyText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '700',
     fontSize: FONT.small,
   },
@@ -795,8 +766,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: 12,
   },
@@ -808,27 +779,26 @@ const styles = StyleSheet.create({
   couponAppliedText: {
     fontSize: FONT.small,
     fontWeight: '700',
-    color: COLORS.success ?? '#22c55e',
+    color: theme.color.success,
   },
   couponErrorText: {
     fontSize: FONT.small,
-    color: COLORS.error,
+    color: theme.color.error,
     fontWeight: '600',
     marginTop: -SPACING.xs,
   },
   discountLabel: {
-    color: COLORS.success ?? '#22c55e',
+    color: theme.color.success,
   },
   discountAmount: {
-    color: COLORS.success ?? '#22c55e',
+    color: theme.color.success,
   },
 
-  // Pantallas de resultado
   resultIconCircle: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: COLORS.success,
+    backgroundColor: theme.color.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,
@@ -836,13 +806,13 @@ const styles = StyleSheet.create({
   resultTitle: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   resultSubtitle: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.xl,
@@ -851,29 +821,31 @@ const styles = StyleSheet.create({
   processingTitle: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
     textAlign: 'center',
   },
   processingSubtitle: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: SPACING.md,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 14,
     paddingHorizontal: SPACING.xl,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   primaryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: FONT.medium,
     fontWeight: '800',
   },
@@ -881,15 +853,17 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     paddingVertical: 14,
     paddingHorizontal: SPACING.xl,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
+    borderColor: theme.color.border,
     width: '100%',
     maxWidth: 320,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   ghostButtonText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.medium,
     fontWeight: '700',
   },

@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
-
-const COLORS = {
-  text: "#1F1F1F",
-};
+import { useTheme } from "../theme/ThemeContext";
 
 export default function CategoryCard({ category, onPress }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <TouchableOpacity
       style={[styles.categoryCard, { backgroundColor: category.color }]}
@@ -18,7 +18,7 @@ export default function CategoryCard({ category, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   categoryCard: {
     width: 110,
     height: 110,
@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 15,
     fontWeight: "700",
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 });

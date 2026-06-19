@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   Modal,
@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { COLORS } from '../../constants/colors'
+
+import { useTheme } from '../../theme/ThemeContext'
 import { getSellerSales, updateOrderStatus, cancelOrder, getCancelErrorMessage } from '../../services/orders'
 import { getPublicProfile } from '../../services/user'
-import { styles } from '../../styles/sellerSales/sellerSalesStyles'
+import { makeStyles } from '../../styles/sellerSales/sellerSalesStyles'
 
 const CANCELLED_STATUSES = ['cancelled', 'refund_in_progress', 'refund_processed']
 
@@ -40,6 +41,9 @@ const SELLER_NEXT_STATUS = {
 }
 
 export default function SellerSalesScreen({ sellerId }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   const [sales, setSales] = useState([])
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -252,7 +256,7 @@ export default function SellerSalesScreen({ sellerId }) {
 
       {loading ? (
         <View style={styles.centerState}>
-          <ActivityIndicator color={COLORS.primaryLight} />
+          <ActivityIndicator color={theme.color.accent} />
           <Text style={styles.stateText}>Cargando ventas...</Text>
         </View>
       ) : error ? (
@@ -321,6 +325,9 @@ function SaleCard({
   onConfirmTracking,
   onRequestCancel,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -396,7 +403,7 @@ function SaleCard({
           onPress={() => onAdvanceStatus(sale.order_id, nextStatus)}
         >
           {isUpdating ? (
-            <ActivityIndicator size="small" color={COLORS.white} />
+            <ActivityIndicator size="small" color={theme.color.onAccent} />
           ) : (
             <Text style={styles.primaryButtonText}>
               Pasar a {SELLER_STATUS_LABELS[nextStatus]}
@@ -424,7 +431,7 @@ function SaleCard({
           <TextInput
             style={styles.trackingInput}
             placeholder="Ej: AR123456789"
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={theme.color.textMuted}
             value={trackingInput}
             onChangeText={onTrackingInputChange}
             maxLength={100}
@@ -438,7 +445,7 @@ function SaleCard({
               disabled={isUpdating}
             >
               {isUpdating ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator size="small" color={theme.color.onAccent} />
               ) : (
                 <Text style={styles.primaryButtonText}>Confirmar envío</Text>
               )}

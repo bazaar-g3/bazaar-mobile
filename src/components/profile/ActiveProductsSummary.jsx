@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -8,9 +8,9 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
-import { COLORS } from '../../constants/colors'
+import { useTheme } from '../../theme/ThemeContext'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../../services/catalog'
-import { styles } from '../../styles/profile/profileStyles'
+import { makeStyles } from '../../styles/profile/profileStyles'
 
 export default function ActiveProductsSummary({
   products,
@@ -20,6 +20,9 @@ export default function ActiveProductsSummary({
   onOpenPublish,
   onGoToSalesTab,
 }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
+
   return (
     <View style={styles.summarySection}>
       <View style={styles.summaryHeader}>
@@ -32,7 +35,7 @@ export default function ActiveProductsSummary({
 
       {loading ? (
         <View style={styles.summaryStatus}>
-          <ActivityIndicator size="small" color={COLORS.primaryLight} />
+          <ActivityIndicator size="small" color={theme.color.accent} />
           <Text style={styles.summaryStatusText}>Cargando resumen...</Text>
         </View>
       ) : error ? (
@@ -46,7 +49,7 @@ export default function ActiveProductsSummary({
       ) : products.length === 0 ? (
         <View style={styles.summaryMessageCard}>
           <View style={styles.summaryEmptyIcon}>
-            <Ionicons name="storefront-outline" size={48} color={COLORS.primaryLight} />
+            <Ionicons name="storefront-outline" size={48} color={theme.color.accent} />
           </View>
 
           <Text style={styles.summaryEmptyTitle}>

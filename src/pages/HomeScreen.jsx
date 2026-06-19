@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -15,11 +16,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import SearchBar from "../components/SearchBar";
-import ProductCard from "../components/ProductCard";
+import ProductCard from "../components/productList/ProductCard";
 import Logo from "../components/Logo";
 import ProductFiltersModal from "../components/productList/ProductFiltersModal";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../constants/filters";
-import { COLORS } from "../constants/colors";
+import { categoryPalette } from "../theme";
+import { useTheme } from "../theme/ThemeContext";
 import {
   getCatalogErrorMessage,
   listRecentProducts,
@@ -30,26 +32,30 @@ import {
 } from "../services/catalog";
 import { buildLoginRedirect } from "../utils/authRedirect";
 import { getSessionStatus } from "../services/session";
+import { useCartContext } from "../context/CartContext";
+import { getCartErrorMessage } from "../services/cart";
 import { getNotificationsHistory } from "../services/notifications";
 import { recordCategoryBrowse } from "../services/browseHistory";
 import { getWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
-import { styles } from "../styles/homeStyles";
+import { makeStyles } from "../styles/homeStyles";
 
 // Configuración visual por slug de categoría: ícono Ionicons + colores del círculo
 const CATEGORY_CONFIG = {
-  tecnologia:     { icon: "laptop-outline",          circleColor: "#E0E7FF", iconColor: "#4338CA" },
-  hogar:          { icon: "home-outline",             circleColor: "#FEF3C7", iconColor: "#D97706" },
-  moda:           { icon: "shirt-outline",            circleColor: "#FCE7F3", iconColor: "#BE185D" },
-  deportes:       { icon: "football-outline",         circleColor: "#D1FAE5", iconColor: "#065F46" },
-  libros:         { icon: "book-outline",             circleColor: "#FEF9C3", iconColor: "#A16207" },
-  juguetes:       { icon: "game-controller-outline",  circleColor: "#EDE9FE", iconColor: "#5B21B6" },
-  coleccionables: { icon: "star-outline",             circleColor: "#FEE2E2", iconColor: "#991B1B" },
-  herramientas:   { icon: "build-outline",            circleColor: "#F1F5F9", iconColor: "#334155" },
+  tecnologia:     { icon: "laptop-outline",          circleColor: categoryPalette.tecnologia.circle,     iconColor: categoryPalette.tecnologia.icon },
+  hogar:          { icon: "home-outline",             circleColor: categoryPalette.hogar.circle,          iconColor: categoryPalette.hogar.icon },
+  moda:           { icon: "shirt-outline",            circleColor: categoryPalette.moda.circle,           iconColor: categoryPalette.moda.icon },
+  deportes:       { icon: "football-outline",         circleColor: categoryPalette.deportes.circle,       iconColor: categoryPalette.deportes.icon },
+  libros:         { icon: "book-outline",             circleColor: categoryPalette.libros.circle,         iconColor: categoryPalette.libros.icon },
+  juguetes:       { icon: "game-controller-outline",  circleColor: categoryPalette.juguetes.circle,       iconColor: categoryPalette.juguetes.icon },
+  coleccionables: { icon: "star-outline",             circleColor: categoryPalette.coleccionables.circle, iconColor: categoryPalette.coleccionables.icon },
+  herramientas:   { icon: "build-outline",            circleColor: categoryPalette.herramientas.circle,   iconColor: categoryPalette.herramientas.icon },
 };
-const DEFAULT_CATEGORY_CONFIG = { icon: "grid-outline", circleColor: "#F3F4F6", iconColor: "#374151" };
+const DEFAULT_CATEGORY_CONFIG = { icon: "grid-outline", circleColor: categoryPalette._default.circle, iconColor: categoryPalette._default.icon };
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const router = useRouter();
   const { isSmall, isMedium } = useResponsive();
   const { refreshCatalog } = useLocalSearchParams();
@@ -122,6 +128,28 @@ export default function HomeScreen() {
   const refreshCatalogKey = Array.isArray(refreshCatalog)
     ? refreshCatalog[0]
     : refreshCatalog;
+
+  const { addItem } = useCartContext();
+
+  const handleAddToCart = async (productId) => {
+    const session = await getSessionStatus();
+    if (!session.isAuthenticated) {
+      router.push(
+        buildLoginRedirect({
+          redirectPath: `/product/${productId}`,
+          pendingAction: "add-to-cart",
+          quantity: 1,
+        })
+      );
+      return;
+    }
+    try {
+      await addItem(productId);
+      Alert.alert("Añadido al carrito", "El producto fue agregado correctamente.");
+    } catch (error) {
+      Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
+    }
+  };
 
   const loadSessionData = useCallback(async () => {
     try {
@@ -389,7 +417,7 @@ export default function HomeScreen() {
                   style={styles.loginButton}
                   onPress={() => router.push('/login')}
                 >
-                  <Ionicons name="person-outline" size={20} color="#2E9E95" />
+                  <Ionicons name="person-outline" size={20} color={theme.color.accent} />
                 </TouchableOpacity>
               )}
 
@@ -405,7 +433,7 @@ export default function HomeScreen() {
                 }}
               >
                 <View style={{ position: 'relative' }}>
-                  <Ionicons name="notifications-outline" size={26} color={COLORS.primary} />
+                  <Ionicons name="notifications-outline" size={26} color={theme.color.accent} />
                   {unreadNotifications > 0 && (
                     <View style={styles.notifBadge}>
                       <Text style={styles.notifBadgeText}>
@@ -441,7 +469,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="funnel-outline"
                 size={20}
-                color={activeFiltersCount > 0 ? COLORS.secondary : COLORS.white}
+                color={activeFiltersCount > 0 ? theme.color.like : theme.color.textPrimary}
               />
               {activeFiltersCount > 0 && (
                 <View style={styles.filterBadge}>
@@ -459,7 +487,7 @@ export default function HomeScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {loadingCategories ? (
               <View style={styles.categoriesStatus}>
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator size="small" color={theme.color.accent} />
                 <Text style={styles.categoriesStatusText}>
                   Cargando categorías...
                 </Text>
@@ -499,7 +527,7 @@ export default function HomeScreen() {
 
             {loadingPopularProducts ? (
               <View style={styles.sectionStatusCard}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={theme.color.accent} />
                 <Text style={styles.sectionStatusText}>
                   Cargando productos populares...
                 </Text>
@@ -531,10 +559,12 @@ export default function HomeScreen() {
                 {popularForMain.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={product}
-                    variant="horizontal"
+                    item={product}
+                    layout="grid"
+                    cardStyle={{ width: 164, marginRight: 12 }}
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                    onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                    onAddToCart={() => handleAddToCart(product.id)}
                   />
                 ))}
               </ScrollView>
@@ -545,7 +575,7 @@ export default function HomeScreen() {
             <View style={styles.section}>
               {loadingForYou ? (
                 <View style={styles.sectionStatusCard}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <ActivityIndicator size="small" color={theme.color.accent} />
                   <Text style={styles.sectionStatusText}>
                     Cargando recomendaciones...
                   </Text>
@@ -563,10 +593,12 @@ export default function HomeScreen() {
                     {forYouProducts.map((product) => (
                       <ProductCard
                         key={product.id}
-                        product={product}
-                        variant="horizontal"
+                        item={product}
+                        layout="grid"
+                        cardStyle={{ width: 164, marginRight: 12 }}
                         isWishlisted={wishlistIds.has(String(product.id))}
-                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onAddToCart={() => handleAddToCart(product.id)}
                       />
                     ))}
                   </ScrollView>
@@ -584,10 +616,12 @@ export default function HomeScreen() {
                     {trendingProducts.map((product) => (
                       <ProductCard
                         key={product.id}
-                        product={product}
-                        variant="horizontal"
+                        item={product}
+                        layout="grid"
+                        cardStyle={{ width: 164, marginRight: 12 }}
                         isWishlisted={wishlistIds.has(String(product.id))}
-                        onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                        onAddToCart={() => handleAddToCart(product.id)}
                       />
                     ))}
                   </ScrollView>
@@ -603,7 +637,7 @@ export default function HomeScreen() {
 
             {loadingRecentProducts ? (
               <View style={styles.sectionStatusCard}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={theme.color.accent} />
                 <Text style={styles.sectionStatusText}>
                   Cargando publicaciones recientes...
                 </Text>
@@ -630,10 +664,12 @@ export default function HomeScreen() {
                 {recentProducts.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={product}
-                    variant="horizontal"
+                    item={product}
+                    layout="grid"
+                    cardStyle={{ width: 164, marginRight: 12 }}
                     isWishlisted={wishlistIds.has(String(product.id))}
-                    onPress={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                    onOpenProduct={() => router.push(`/product/${product.id}${product.sellerId ? `?sellerId=${product.sellerId}` : ''}`)}
+                    onAddToCart={() => handleAddToCart(product.id)}
                   />
                 ))}
               </ScrollView>

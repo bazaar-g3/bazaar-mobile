@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Modal, View, Text, TouchableOpacity } from "react-native";
-import { styles } from "../../styles/productDetail/productDetailStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 
 export default function ShareProductModal({
   visible,
@@ -8,6 +9,8 @@ export default function ShareProductModal({
   onCopyLink,
   onShareLink,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   return (
     <Modal
       visible={visible}

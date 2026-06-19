@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { getCartErrorMessage } from '../services/cart'
 import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
 import { PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 import ConfirmModal from '../components/ConfirmModal'
@@ -28,6 +28,8 @@ import Logo from '../components/Logo'
 export default function CartScreen() {
   const router = useRouter()
   const { isSmall, isTablet } = useResponsive()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const {
     items,
@@ -48,7 +50,6 @@ export default function CartScreen() {
     productName: null,
   })
 
-  // Auth gate (igual al original)
   useEffect(() => {
     let cancelled = false
     async function ensureAuthenticatedUser() {
@@ -63,7 +64,6 @@ export default function CartScreen() {
     return () => { cancelled = true }
   }, [router])
 
-  // CA4: refresh con datos vivos cada vez que se entra
   useFocusEffect(
     useCallback(() => {
       if (!checkingSession) refresh()
@@ -104,12 +104,11 @@ export default function CartScreen() {
   if (checkingSession) {
     return (
       <SafeAreaView style={styles.fullCenter}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.color.accent} />
       </SafeAreaView>
     )
   }
 
-  // Estilos responsive
   const containerStyle = [
     styles.container,
     { paddingHorizontal: isSmall ? SPACING.md : SPACING.lg },
@@ -135,15 +134,12 @@ export default function CartScreen() {
           isSmall ? styles.itemCardSmall : styles.itemCardWide,
         ]}
       >
-        <Image
-          source={{ uri: item.image || PRODUCT_IMAGE_PLACEHOLDER }}
-          style={{
-            width: imgSize,
-            height: imgSize,
-            borderRadius: 8,
-            backgroundColor: COLORS.divider,
-          }}
-        />
+        <View style={[styles.itemImage, { width: imgSize, height: imgSize }]}>
+          <Image
+            source={{ uri: item.image || PRODUCT_IMAGE_PLACEHOLDER }}
+            style={styles.itemImageInner}
+          />
+        </View>
 
         <View style={styles.itemBody}>
           <Text
@@ -162,7 +158,7 @@ export default function CartScreen() {
 
           {disabled && (
             <View style={styles.unavailableTag}>
-              <Ionicons name="alert-circle" size={14} color={COLORS.white} />
+              <Ionicons name="alert-circle" size={14} color={theme.color.onAccent} />
               <Text style={styles.unavailableTagText}>
                 {reason === 'disabled' ? 'No disponible' : 'Sin stock suficiente'}
               </Text>
@@ -201,7 +197,7 @@ export default function CartScreen() {
               style={styles.trashBtn}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="trash-outline" size={20} color={COLORS.error} />
+              <Ionicons name="trash-outline" size={20} color={theme.color.error} />
             </TouchableOpacity>
           </View>
         </View>
@@ -210,7 +206,7 @@ export default function CartScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.color.surface }}>
       <View style={styles.topBar}>
         <Logo size={28} textSize={22} />
       </View>
@@ -218,10 +214,10 @@ export default function CartScreen() {
         <Text style={[styles.title, { fontSize: titleFont }]}>Mi carrito</Text>
 
         {loading && items.length === 0 ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.xl }} />
+          <ActivityIndicator size="large" color={theme.color.accent} style={{ marginTop: SPACING.xl }} />
         ) : error && items.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="cloud-offline-outline" size={48} color={COLORS.textMuted} />
+            <Ionicons name="cloud-offline-outline" size={48} color={theme.color.textMuted} />
             <Text style={styles.emptyText}>
               No pudimos cargar tu carrito. Probá de nuevo.
             </Text>
@@ -231,7 +227,7 @@ export default function CartScreen() {
           </View>
         ) : items.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="cart-outline" size={48} color={COLORS.textMuted} />
+            <Ionicons name="cart-outline" size={48} color={theme.color.textMuted} />
             <Text style={styles.emptyText}>Tu carrito está vacío</Text>
             <TouchableOpacity
               style={styles.shopButton}
@@ -292,19 +288,19 @@ export default function CartScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   topBar: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: SPACING.lg,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
+  fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.color.surface },
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.md,
   },
@@ -315,7 +311,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: SPACING.lg,
     marginTop: SPACING.sm,
   },
@@ -323,8 +319,8 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
   },
   itemCard: {
-    backgroundColor: COLORS.background,
-    borderRadius: 14,
+    backgroundColor: theme.color.surfaceSubtle,
+    borderRadius: theme.radius.md,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
@@ -342,7 +338,7 @@ const styles = StyleSheet.create({
   },
   itemCardDisabled: {
     opacity: 0.7,
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
   },
   itemBody: {
     flex: 1,
@@ -351,36 +347,36 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: FONT.medium,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 2,
   },
   strikethrough: {
     textDecorationLine: 'line-through',
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
   itemDetail: {
     fontSize: FONT.small,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
   subtotal: {
     fontSize: FONT.regular,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginTop: 2,
   },
   unavailableTag: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.third,
+    backgroundColor: theme.color.error,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: theme.radius.pill,
     marginTop: 6,
     gap: 4,
   },
   unavailableTagText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -393,16 +389,15 @@ const styles = StyleSheet.create({
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    overflow: 'hidden',
+    borderColor: theme.color.border,
   },
   stepperBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
   stepperBtnDisabled: {
     opacity: 0.4,
@@ -410,7 +405,7 @@ const styles = StyleSheet.create({
   stepperText: {
     fontSize: FONT.large,
     fontWeight: '800',
-    color: COLORS.primary,
+    color: theme.color.textSecondary,
     lineHeight: FONT.large + 2,
   },
   qtyValue: {
@@ -418,14 +413,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: FONT.medium,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   trashBtn: {
     padding: 8,
   },
   summary: {
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.sm,
   },
@@ -437,31 +432,33 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: FONT.medium,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '600',
   },
   totalAmount: {
     fontSize: FONT.large,
     fontWeight: '900',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
   },
   warnText: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: FONT.small,
     marginBottom: SPACING.sm,
     fontWeight: '600',
   },
   checkoutButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   checkoutDisabled: {
-    backgroundColor: COLORS.textMuted,
+    backgroundColor: theme.color.textMuted,
   },
   checkoutButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: FONT.medium,
     fontWeight: '800',
     letterSpacing: 0.4,
@@ -474,18 +471,30 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: FONT.regular,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
   },
   shopButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: SPACING.lg,
-    borderRadius: 12,
+    borderRadius: theme.radius.md,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   shopButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: FONT.regular,
+  },
+  itemImage: {
+    borderRadius: theme.radius.image,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  itemImageInner: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.color.surfaceSubtle,
   },
 })

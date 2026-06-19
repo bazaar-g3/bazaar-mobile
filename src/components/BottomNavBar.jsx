@@ -1,9 +1,10 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
+import { useMemo } from 'react'
 import { usePathname, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useCartContext } from '../context/CartContext'
 
@@ -19,6 +20,8 @@ export default function BottomNavBar() {
   const pathname = usePathname()
   const { count } = useCartContext()
   const insets = useSafeAreaInsets()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const HIDDEN_ON = ['/login', '/register', '/forgot-password', '/reset-password', '/checkout']
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null
@@ -52,7 +55,7 @@ export default function BottomNavBar() {
               <Ionicons
                 name={iconName}
                 size={26}
-                color={isActive ? COLORS.primary : COLORS.textMuted}
+                color={isActive ? theme.color.accent : theme.color.textMuted}
               />
               {isCart && count > 0 && (
                 <View style={styles.badge}>
@@ -72,12 +75,12 @@ export default function BottomNavBar() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
     paddingTop: 10,
     paddingHorizontal: 16,
   },
@@ -92,16 +95,16 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     paddingHorizontal: 18,
     paddingVertical: 7,
-    backgroundColor: '#EEF5F4',
+    backgroundColor: theme.color.accentSubtle,
   },
   iconWrapperActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
   },
   badge: {
     position: 'absolute',
     top: -4,
     right: -8,
-    backgroundColor: COLORS.third,
+    backgroundColor: theme.color.notification,
     borderRadius: 999,
     minWidth: 16,
     height: 16,
@@ -110,17 +113,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: {
-    color: COLORS.white,
+    color: theme.color.surface,
     fontSize: 10,
     fontWeight: '800',
   },
   label: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   labelActive: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '800',
   },
 })

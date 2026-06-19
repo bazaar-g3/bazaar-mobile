@@ -1,9 +1,8 @@
 import { StyleSheet } from 'react-native'
 
-import { COLORS } from '../../constants/colors'
 import { FONT, SPACING } from '../../constants/theme'
 
-export const styles = StyleSheet.create({
+export const makeStyles = (theme) => StyleSheet.create({
   screen: {
     width: '100%',
     gap: SPACING.md,
@@ -12,11 +11,11 @@ export const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   subtitle: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.regular,
     marginTop: -8,
   },
@@ -32,24 +31,24 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderWidth: 1,
-    borderColor: '#BDEAE4',
+    borderColor: theme.color.accentBorder,
   },
 
   filterChipActive: {
-    backgroundColor: '#DDF5F1',
-    borderColor: COLORS.primaryLight,
+    backgroundColor: theme.color.accentTint,
+    borderColor: theme.color.accent,
   },
 
   filterText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '700',
     fontSize: FONT.small,
   },
 
   filterTextActive: {
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
 
   centerState: {
@@ -59,11 +58,11 @@ export const styles = StyleSheet.create({
   },
 
   stateText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
   },
 
   messageCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 18,
     padding: 18,
   },
@@ -71,22 +70,22 @@ export const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: FONT.medium,
     fontWeight: '800',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginBottom: 6,
   },
 
   emptyText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     lineHeight: 20,
   },
 
   errorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     marginBottom: 8,
   },
 
   retryText: {
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '700',
   },
 
@@ -95,14 +94,9 @@ export const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 20,
     padding: 16,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 3,
   },
 
   cardHeader: {
@@ -112,14 +106,14 @@ export const styles = StyleSheet.create({
   },
 
   statusBadge: {
-    backgroundColor: '#E8F6F2',
+    backgroundColor: theme.color.accentTint,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
   },
 
   statusText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '800',
     fontSize: 12,
     textTransform: 'uppercase',
@@ -128,18 +122,18 @@ export const styles = StyleSheet.create({
   total: {
     fontSize: 18,
     fontWeight: '800',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
 
   productName: {
     fontSize: 17,
     fontWeight: '800',
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     marginTop: 14,
   },
 
   productMeta: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     marginTop: 4,
     fontSize: FONT.regular,
   },
@@ -149,7 +143,7 @@ export const styles = StyleSheet.create({
   },
 
   infoLabel: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -157,28 +151,29 @@ export const styles = StyleSheet.create({
   },
 
   infoValue: {
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     fontSize: FONT.regular,
   },
 
   date: {
     marginTop: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: FONT.small,
   },
 
   primaryButton: {
     marginTop: 14,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: theme.button.minHeight,
     },
 
     primaryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: FONT.regular,
     },
@@ -188,7 +183,7 @@ export const styles = StyleSheet.create({
     },
 
     secondaryButton: {
-    backgroundColor: '#EEF5F5',
+    backgroundColor: theme.color.accentTint,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -197,34 +192,34 @@ export const styles = StyleSheet.create({
     },
 
     secondaryButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '800',
     fontSize: FONT.regular,
     },
 
     trackingContainer: {
     marginTop: 14,
-    backgroundColor: '#F7FAFA',
+    backgroundColor: theme.color.surfaceSubtle,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E3EEEE',
+    borderColor: theme.color.border,
     },
 
     trackingLabel: {
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     fontWeight: '700',
     marginBottom: 8,
     },
 
     trackingInput: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    color: COLORS.text,
+    color: theme.color.textPrimary,
     fontSize: FONT.regular,
     },
 
@@ -240,18 +235,18 @@ export const styles = StyleSheet.create({
     },
 
     updateErrorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     marginTop: 8,
     fontSize: FONT.small,
     fontWeight: '600',
     },
 
     statusBadgeDelivered: {
-    backgroundColor: '#EEF2F4',
+    backgroundColor: theme.color.surfaceSubtle,
     },
 
     statusTextDelivered: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     },
 
     statusBadgeCancelled: {

@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS } from "../../constants/colors";
-import { styles } from "../../styles/profile/profileStyles";
+import { useTheme } from "../../theme/ThemeContext";
+import { makeStyles } from "../../styles/profile/profileStyles";
 
 export const PROFILE_MENU_ITEMS = [
   { key: "Perfil",        icon: "person-outline",      activeIcon: "person",       color: "#4A90D9" }, // azul
@@ -16,6 +16,9 @@ export default function ProfileSidebar({
   activeTab,
   onSelectTab,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <View style={styles.sidebar}>
       <Text style={styles.sidebarTitle}>Mi cuenta</Text>
@@ -34,7 +37,7 @@ export default function ProfileSidebar({
             <Ionicons
               name={isActive ? activeIcon : icon}
               size={20}
-              color={isActive ? color : COLORS.textMuted}
+              color={isActive ? color : theme.color.textMuted}
             />
 
             <Text

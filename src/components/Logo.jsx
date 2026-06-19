@@ -1,7 +1,8 @@
 import { TouchableOpacity, View, StyleSheet, Text } from 'react-native'
 import Svg, { Polygon, Path, Ellipse, Line } from 'react-native-svg'
 import { useRouter } from 'expo-router'
-import { COLORS } from '../constants/colors'
+import { useMemo } from 'react'
+import { useTheme } from '../theme/ThemeContext'
 
 function BoxIcon({ size = 34 }) {
   return (
@@ -46,14 +47,16 @@ export default function Logo({
   style,
 }) {
   const router = useRouter()
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const content = (
     <>
       <BoxIcon size={size} />
       {showText && (
         <Text style={[styles.text, { fontSize: textSize, marginLeft: spacing }]}>
-          <Text style={{ color: COLORS.primaryLight }}>B</Text>
-          <Text style={{ color: COLORS.primary }}>AZAAR</Text>
+          <Text style={{ color: theme.color.accent }}>B</Text>
+          <Text style={{ color: theme.color.accent }}>AZAAR</Text>
         </Text>
       )}
     </>
@@ -74,7 +77,7 @@ export default function Logo({
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

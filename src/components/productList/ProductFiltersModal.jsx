@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Modal,
   View,
@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native"
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS } from "../../constants/colors";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from "../../theme/ThemeContext";
 import PriceRangeSlider from "./PriceRangeSlider";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../../constants/filters";
 
@@ -30,6 +30,10 @@ export default function ProductFiltersModal({
   // Limpiar
   onClearFilters,
 }) {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const modalStyles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <Modal
       visible={visible}
@@ -44,8 +48,8 @@ export default function ProductFiltersModal({
         onPress={onClose}
       />
 
-      {/* Panel de filtros */}
-      <SafeAreaView style={modalStyles.panel}>
+      {/* Panel de filtros — paddingBottom manual para respetar home indicator */}
+      <View style={[modalStyles.panel, { paddingBottom: insets.bottom || 8 }]}>
         {/* Handle decorativo */}
         <View style={modalStyles.handleBar} />
 
@@ -64,11 +68,11 @@ export default function ProductFiltersModal({
         >
           {/* ── CATEGORÍAS ── */}
           <View style={modalStyles.section}>
-            <Text style={modalStyles.sectionTitle}>CATEGORÍAS</Text>
+            <Text style={modalStyles.sectionTitle}>Categorías</Text>
 
             {loadingCategories ? (
               <View style={modalStyles.loadingRow}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={theme.color.accent} />
                 <Text style={modalStyles.loadingText}>Cargando...</Text>
               </View>
             ) : categoriesError ? (
@@ -99,7 +103,7 @@ export default function ProductFiltersModal({
 
           {/* ── PRECIO ── */}
           <View style={modalStyles.section}>
-            <Text style={modalStyles.sectionTitle}>PRECIO</Text>
+            <Text style={modalStyles.sectionTitle}>Precio</Text>
             <PriceRangeSlider
               minValue={minPrice}
               maxValue={maxPrice}
@@ -120,18 +124,18 @@ export default function ProductFiltersModal({
             <Text style={modalStyles.applyBtnText}>Ver resultados</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
-const modalStyles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   panel: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     height: "80%",
@@ -140,7 +144,7 @@ const modalStyles = StyleSheet.create({
   handleBar: {
     width: 40,
     height: 4,
-    backgroundColor: COLORS.divider,
+    backgroundColor: theme.color.border,
     borderRadius: 2,
     alignSelf: "center",
     marginTop: 12,
@@ -153,16 +157,16 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: "900",
-    color: COLORS.dark,
+    color: theme.color.textPrimary,
   },
   closeButton: {
     fontSize: 18,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: "600",
   },
   scrollArea: {
@@ -179,7 +183,7 @@ const modalStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: "900",
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     letterSpacing: 1,
     marginBottom: 14,
   },
@@ -189,11 +193,11 @@ const modalStyles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: 14,
   },
   errorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: 14,
   },
   // Chips de categoría (layout en wrap)
@@ -207,20 +211,20 @@ const modalStyles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.white,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surface,
   },
   chipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.promoLight,
+    borderColor: theme.color.accent,
+    backgroundColor: theme.color.accentTint,
   },
   chipText: {
     fontSize: 13,
-    color: COLORS.dark,
+    color: theme.color.textPrimary,
     fontWeight: "600",
   },
   chipTextActive: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "800",
   },
   // Footer con botones
@@ -230,18 +234,18 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: theme.color.border,
   },
   clearBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
+    borderColor: theme.color.accent,
     alignItems: "center",
   },
   clearBtnText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: "800",
     fontSize: 15,
   },
@@ -249,11 +253,11 @@ const modalStyles = StyleSheet.create({
     flex: 2,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     alignItems: "center",
   },
   applyBtnText: {
-    color: COLORS.white,
+    color: theme.color.surface,
     fontWeight: "800",
     fontSize: 15,
   },

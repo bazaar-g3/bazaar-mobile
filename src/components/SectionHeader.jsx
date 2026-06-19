@@ -1,12 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-
-const COLORS = {
-  text: "#1F1F1F",
-  purple: "#6C3BFF",
-};
+import { useTheme } from "../theme/ThemeContext";
 
 export default function SectionHeader({ title, actionText, onPressAction }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -20,7 +19,7 @@ export default function SectionHeader({ title, actionText, onPressAction }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -30,11 +29,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 21,
     fontWeight: "800",
-    color: COLORS.text,
+    color: theme.color.textPrimary,
   },
   sectionAction: {
     fontSize: 14,
     fontWeight: "700",
-    color: COLORS.purple,
+    color: theme.color.accent,
   },
 });

@@ -2,7 +2,7 @@
 Componente para poder mover las imagenes al cargar un producto y cambairlas de orden
 */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Image,
   PanResponder,
@@ -11,13 +11,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
 
 const MAX_ITEM_W = 100
 const GAP = 10
 const ITEM_H = 100
 
 export default function DraggableImageList({ images, onReorder, onRemove }) {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
 
   const [containerWidth, setContainerWidth] = useState(0)
 
@@ -192,7 +194,7 @@ export default function DraggableImageList({ images, onReorder, onRemove }) {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   card: {
     position: 'absolute',
     top: 0,
@@ -216,8 +218,8 @@ const styles = StyleSheet.create({
   img: {
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.imagePlaceholder,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceSubtle,
     resizeMode: 'cover',
   },
 
@@ -259,7 +261,7 @@ const styles = StyleSheet.create({
   hint: {
     marginTop: 8,
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     textAlign: 'center',
   },
 })

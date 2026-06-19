@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import {
   View,
   Text,
@@ -11,11 +11,14 @@ import {
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import api from '../api/api'
-import { COLORS } from '../constants/colors'
+import { useTheme } from '../theme/ThemeContext'
+import ProductCard from '../components/productList/ProductCard'
 import { listSellerProducts, PRODUCT_IMAGE_PLACEHOLDER } from '../services/catalog'
 import { getSellerReputation, formatAverageScore } from '../services/reviews'
 
 export default function PublicProfileScreen() {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const { userId } = useLocalSearchParams()
   const router = useRouter()
 
@@ -83,7 +86,7 @@ export default function PublicProfileScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primaryLight} />
+        <ActivityIndicator size="large" color={theme.color.accent} />
       </SafeAreaView>
     )
   }
@@ -113,8 +116,11 @@ export default function PublicProfileScreen() {
   }
 
   const fullName = profile?.fullName ?? 'Usuario'
-  const description = profile?.description ?? 'Sin descripción'
+  const description = profile?.description ?? null
   const avatarUrl = profile?.avatarUrl ?? null
+  const nameInitial = fullName[0]?.toUpperCase() ?? '?'
+
+  const hasReputation = reputation && reputation.review_count > 0
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -123,113 +129,117 @@ export default function PublicProfileScreen() {
           <Text style={styles.backButton}>← Volver</Text>
         </TouchableOpacity>
 
+        {/* ── Header: avatar + nombre + rating inline ── */}
         <View style={styles.card}>
-          <View style={styles.avatarContainer}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarEmoji}>👤</Text>
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.fullName}>{fullName}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
-
-        {/* ── Sección de Reputación ─────────────────────────────────────── */}
-        <Text style={styles.sectionTitle}>Reputación del vendedor</Text>
-
-        {loadingReputation ? (
-          <ActivityIndicator size="small" color={COLORS.primaryLight} style={styles.reputationLoader} />
-        ) : reputation && reputation.review_count > 0 ? (
-          <View style={styles.reputationCard}>
-            <View style={styles.reputationSummary}>
-              <View style={styles.reputationScore}>
-                <Text style={styles.reputationScoreValue}>
-                  {formatAverageScore(reputation.average_score)}
-                </Text>
-                <Text style={styles.reputationStarIcon}>★</Text>
-              </View>
-              <Text style={styles.reputationCount}>
-                {reputation.review_count} {reputation.review_count === 1 ? 'calificación' : 'calificaciones'}
-              </Text>
+          <View style={styles.profileRow}>
+            <View style={styles.avatarContainer}>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitial}>{nameInitial}</Text>
+                </View>
+              )}
             </View>
 
-            <View style={styles.reviewsDivider} />
+            <View style={styles.profileInfo}>
+              <Text style={styles.fullName} numberOfLines={2}>{fullName}</Text>
 
-            {reputation.reviews.map((review) => (
-              <View key={String(review.id)} style={styles.reviewItem}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewStars}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Text
-                        key={star}
-                        style={[
-                          styles.reviewStar,
-                          { color: star <= review.score ? COLORS.secondary : COLORS.textMuted },
-                        ]}
-                      >
-                        ★
-                      </Text>
-                    ))}
-                  </View>
-                  <Text style={styles.reviewDate}>
-                    {new Date(review.created_at).toLocaleDateString('es-AR', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+              {loadingReputation ? (
+                <ActivityIndicator size="small" color={theme.color.accent} style={styles.ratingLoader} />
+              ) : hasReputation ? (
+                <View style={styles.ratingRow}>
+                  <Text style={styles.ratingStar}>★</Text>
+                  <Text style={styles.ratingValue}>{formatAverageScore(reputation.average_score)}</Text>
+                  <Text style={styles.ratingCount}>
+                    · {reputation.review_count} {reputation.review_count === 1 ? 'reseña' : 'reseñas'}
                   </Text>
                 </View>
-                {review.comment ? (
-                  <Text style={styles.reviewComment}>{review.comment}</Text>
-                ) : null}
-              </View>
-            ))}
+              ) : (
+                <Text style={styles.noRating}>Sin calificaciones aún</Text>
+              )}
+            </View>
           </View>
-        ) : (
-          <Text style={styles.emptyText}>Este vendedor aún no tiene calificaciones</Text>
-        )}
 
-        {/* ── Publicaciones activas ─────────────────────────────────────── */}
+          {description ? (
+            <Text style={styles.description}>{description}</Text>
+          ) : null}
+        </View>
+
+        {/* ── Reseñas del vendedor ── */}
+        {hasReputation ? (
+          <>
+            <Text style={styles.sectionTitle}>Calificaciones</Text>
+            <View style={styles.reputationCard}>
+              {reputation.reviews.map((review) => (
+                <View key={String(review.id)} style={styles.reviewItem}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewStars}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Text
+                          key={star}
+                          style={[
+                            styles.reviewStar,
+                            { color: star <= review.score ? theme.color.like : theme.color.textMuted },
+                          ]}
+                        >
+                          ★
+                        </Text>
+                      ))}
+                    </View>
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.created_at).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                  {review.comment ? (
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {/* ── Publicaciones activas: grilla 2 columnas ── */}
         <Text style={styles.sectionTitle}>Publicaciones activas</Text>
 
         {loadingProducts ? (
-          <ActivityIndicator size="small" color={COLORS.primaryLight} />
+          <ActivityIndicator size="small" color={theme.color.accent} />
         ) : products.length === 0 ? (
           <Text style={styles.emptyText}>Este vendedor no tiene publicaciones activas</Text>
         ) : (
-          products.map((product) => (
-            <TouchableOpacity
-              key={String(product.id)}
-              style={styles.productCard}
-              onPress={() => router.push(`/product/${product.id}`)}
-              activeOpacity={0.85}
-            >
-              <Image
-                source={{ uri: product.images?.[0] ?? PRODUCT_IMAGE_PLACEHOLDER }}
-                style={styles.productImage}
+          <View style={styles.productGrid}>
+            {products.map((product) => (
+              <ProductCard
+                key={String(product.id)}
+                layout="grid"
+                cardStyle={{ width: '48%' }}
+                item={{
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  image: product.images?.[0] ?? PRODUCT_IMAGE_PLACEHOLDER,
+                  seller: fullName,
+                }}
+                onOpenProduct={(id) => router.push(`/product/${id}`)}
+                onAddToCart={() => {}}
               />
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productPrice}>
-                  ${Number(product.price).toLocaleString('es-AR')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
   },
   container: {
     flex: 1,
@@ -242,7 +252,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: theme.color.surfaceSubtle,
     padding: 24,
   },
   errorEmoji: {
@@ -252,136 +262,132 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginBottom: 24,
     textAlign: 'center',
   },
   actionButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: theme.color.accent,
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: 12,
+    minHeight: theme.button.minHeight,
+    justifyContent: 'center',
   },
   actionButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: 15,
   },
   backButton: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: theme.color.accent,
     marginBottom: 20,
   },
+
+  // ── Profile header card ──────────────────────────────────────────
   card: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 20,
-    padding: 28,
+    padding: 20,
+  },
+  profileRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 4,
+    gap: 16,
   },
   avatarContainer: {
-    marginBottom: 20,
+    flexShrink: 0,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: COLORS.primaryLight,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2.5,
+    borderColor: theme.color.accentBorder,
   },
   avatarFallback: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.background,
-    borderWidth: 3,
-    borderColor: COLORS.primaryLight,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: theme.color.accentTint,
+    borderWidth: 2.5,
+    borderColor: theme.color.accentBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarEmoji: {
-    fontSize: 48,
+  avatarInitial: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: theme.color.accent,
+  },
+  profileInfo: {
+    flex: 1,
   },
   fullName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-    textAlign: 'center',
+    color: theme.color.textPrimary,
+    marginBottom: 6,
+  },
+  ratingLoader: {
+    alignSelf: 'flex-start',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingStar: {
+    fontSize: 14,
+    color: theme.color.like,
+  },
+  ratingValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.color.textPrimary,
+  },
+  ratingCount: {
+    fontSize: 13,
+    color: theme.color.textSecondary,
+  },
+  noRating: {
+    fontSize: 13,
+    color: theme.color.textMuted,
   },
   description: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 21,
+    color: theme.color.textSecondary,
+    marginTop: 14,
   },
+
+  // ── Section header ───────────────────────────────────────────────
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     marginTop: 28,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     textAlign: 'center',
     marginTop: 8,
   },
-  // ── Reputación ──────────────────────────────────────────────────────────
-  reputationLoader: {
-    marginTop: 8,
-  },
+
+  // ── Reviews ──────────────────────────────────────────────────────
   reputationCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 16,
-    padding: 20,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  reputationSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  reputationScore: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  reputationScoreValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-    lineHeight: 36,
-  },
-  reputationStarIcon: {
-    fontSize: 22,
-    color: COLORS.secondary,
-  },
-  reputationCount: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-  reviewsDivider: {
-    height: 1,
-    backgroundColor: COLORS.divider,
-    marginBottom: 12,
+    padding: 16,
   },
   reviewItem: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -394,50 +400,23 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   reviewStar: {
-    fontSize: 16,
+    fontSize: 14,
   },
   reviewDate: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
   },
   reviewComment: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     lineHeight: 20,
     marginTop: 4,
   },
-  // ── Productos ───────────────────────────────────────────────────────────
-  productCard: {
+
+  // ── Product grid (2 columnas) ────────────────────────────────────
+  productGrid: {
     flexDirection: 'row',
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    marginBottom: 12,
-    overflow: 'hidden',
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  productImage: {
-    width: 90,
-    height: 90,
-    resizeMode: 'cover',
-  },
-  productInfo: {
-    flex: 1,
-    padding: 12,
-    justifyContent: 'center',
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 6,
-  },
-  productPrice: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.secondary,
+    flexWrap: 'wrap',
+    gap: 12,
   },
 })

@@ -1,24 +1,32 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { styles } from "../../styles/productDetail/productDetailStyles";
+import { makeStyles } from "../../styles/productDetail/productDetailStyles";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../theme/ThemeContext";
 
 export default function ProductInfoPanel({
   product,
   quantity,
   isOwnProduct,
   isAvailable,
-  maxAddable = product?.stock ?? 0,        
-  cartLimitReached = false,  
+  maxAddable = product?.stock ?? 0,
+  cartLimitReached = false,
+  isWishlisted = false,
+  wishlistLoading = false,
   onSellerPress,
   onDecreaseQuantity,
   onIncreaseQuantity,
   onManagePublication,
   onAddToCart,
   onShareProduct,
+  onToggleWishlist,
+  reputation = null,
 }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const isOutOfStock = product.stock === 0;
+  const sellerInitial = (product.seller || "V")[0].toUpperCase();
 
   return (
     <View style={styles.rightColumn}>
@@ -28,20 +36,33 @@ export default function ProductInfoPanel({
         <Text style={styles.currentPrice}>${product.price}</Text>
       </View>
 
-      <TouchableOpacity onPress={onSellerPress}>
-        <Text style={[styles.sellerText, { textDecorationLine: "underline" }]}>
-          Vendido por {product.seller}
-        </Text>
+      <TouchableOpacity style={styles.sellerCard} onPress={onSellerPress} activeOpacity={0.8}>
+        <View style={styles.sellerAvatar}>
+          <Text style={styles.sellerAvatarText}>{sellerInitial}</Text>
+        </View>
+        <View style={styles.sellerInfo}>
+          <Text style={styles.sellerLabel}>Vendido por</Text>
+          <Text style={styles.sellerName} numberOfLines={1}>{product.seller}</Text>
+          {reputation && reputation.review_count > 0 ? (
+            <Text style={styles.sellerRating}>
+              {'★ '}{Number(reputation.average_score).toFixed(1)}{' · '}{reputation.review_count}{reputation.review_count === 1 ? ' reseña' : ' reseñas'}
+            </Text>
+          ) : null}
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.color.textMuted} />
       </TouchableOpacity>
 
-      <Text style={styles.descriptionText}>{product.description}</Text>
+      <View style={styles.descriptionBlock}>
+        <Text style={styles.descriptionLabel}>DESCRIPCIÓN</Text>
+        <Text style={styles.descriptionText}>{product.description}</Text>
+      </View>
 
       <TouchableOpacity
         onPress={onShareProduct}
         style={styles.shareInline}
         activeOpacity={0.7}
       >
-        <Ionicons name="share-outline" style={styles.shareIcon} />
+        <Ionicons name="share-outline" size={16} color={theme.color.accent} />
         <Text style={styles.shareInlineText}>Compartir</Text>
       </TouchableOpacity>
 
@@ -53,16 +74,16 @@ export default function ProductInfoPanel({
           </Text>
 
           <View style={styles.quantitySelector}>
-            <TouchableOpacity onPress={onDecreaseQuantity} style={styles.qtyBtn}>
+            <TouchableOpacity onPress={onDecreaseQuantity} style={[styles.qtyBtn, styles.qtyBtnFirst]}>
               <Text style={styles.qtyBtnText}>-</Text>
             </TouchableOpacity>
 
             <Text style={styles.qtyValue}>{quantity}</Text>
 
-            <TouchableOpacity 
-              onPress={onIncreaseQuantity} 
-              style={styles.qtyBtn}
-              disabled={quantity >= maxAddable} 
+            <TouchableOpacity
+              onPress={onIncreaseQuantity}
+              style={[styles.qtyBtn, styles.qtyBtnLast]}
+              disabled={quantity >= maxAddable}
             >
               <Text style={styles.qtyBtnText}>+</Text>
             </TouchableOpacity>
@@ -82,33 +103,51 @@ export default function ProductInfoPanel({
         ) : (
           <View>
             {isOutOfStock && (
-              <Text style={{ color: 'red', marginBottom: 10, fontWeight: 'bold' }}>
+              <Text style={{ color: theme.color.error, marginBottom: 10, fontWeight: 'bold' }}>
                 No hay stock disponible
               </Text>
             )}
             {!isOutOfStock && cartLimitReached && (
-              <Text style={{ color: 'red', marginBottom: 10, fontWeight: 'bold' }}>
+              <Text style={{ color: theme.color.error, marginBottom: 10, fontWeight: 'bold' }}>
                 Ya tenés el máximo disponible en tu carrito
               </Text>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.cartButton,
-                (isOutOfStock || cartLimitReached) && { backgroundColor: '#ccc' },
-              ]}
-              onPress={onAddToCart}
-              activeOpacity={0.9}
-              disabled={isOutOfStock || !isAvailable || cartLimitReached}
-            >
-              <Text style={styles.cartButtonText}>
-                {isOutOfStock
-                  ? "SIN STOCK"
-                  : cartLimitReached
-                  ? "MÁXIMO EN CARRITO"
-                  : "AÑADIR AL CARRITO"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.ctaRow}>
+              <TouchableOpacity
+                style={styles.wishlistBtn}
+                onPress={onToggleWishlist}
+                disabled={wishlistLoading}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={isWishlisted ? "Quitar de favoritos" : "Guardar en favoritos"}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name={isWishlisted ? "heart" : "heart-outline"}
+                  size={22}
+                  color={isWishlisted ? theme.color.like : theme.color.textSecondary}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.cartButton,
+                  styles.cartButtonFlex,
+                  (isOutOfStock || cartLimitReached) && { backgroundColor: theme.color.textMuted },
+                ]}
+                onPress={onAddToCart}
+                activeOpacity={0.9}
+                disabled={isOutOfStock || !isAvailable || cartLimitReached}
+              >
+                <Text style={styles.cartButtonText}>
+                  {isOutOfStock
+                    ? "SIN STOCK"
+                    : cartLimitReached
+                    ? "MÁXIMO EN CARRITO"
+                    : "AÑADIR AL CARRITO"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTheme } from '../../theme/ThemeContext'
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +16,6 @@ import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import Logo from '../Logo'
 import DraggableImageList from '../DraggableImageList'
-import { COLORS } from '../../constants/colors'
 import { SPACING, FONT } from '../../constants/theme'
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
@@ -74,6 +74,8 @@ function validateForm({ name, description, price, stock, categorySlug, images })
 }
 
 export default function PublishProductScreen() {
+  const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const router = useRouter()
   const { from } = useLocalSearchParams()
   const origin = normalizeRouteParam(from) === 'profile' ? 'profile' : 'home'
@@ -287,7 +289,7 @@ export default function PublishProductScreen() {
                 setFieldErrors((current) => ({ ...current, name: undefined }))
               }}
               placeholder="Ej: Teclado mecánico"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               maxLength={120}
             />
             {fieldErrors.name ? <Text style={styles.fieldError}>{fieldErrors.name}</Text> : null}
@@ -303,7 +305,7 @@ export default function PublishProductScreen() {
                 setFieldErrors((current) => ({ ...current, description: undefined }))
               }}
               placeholder="Contá el estado del producto, detalles y uso"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={theme.color.textMuted}
               multiline
               maxLength={4000}
             />
@@ -323,7 +325,7 @@ export default function PublishProductScreen() {
                   setFieldErrors((current) => ({ ...current, price: undefined }))
                 }}
                 placeholder="25000"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={theme.color.textMuted}
                 keyboardType="decimal-pad"
               />
               {fieldErrors.price ? <Text style={styles.fieldError}>{fieldErrors.price}</Text> : null}
@@ -339,7 +341,7 @@ export default function PublishProductScreen() {
                   setFieldErrors((current) => ({ ...current, stock: undefined }))
                 }}
                 placeholder="1"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={theme.color.textMuted}
                 keyboardType="number-pad"
               />
               {fieldErrors.stock ? <Text style={styles.fieldError}>{fieldErrors.stock}</Text> : null}
@@ -351,7 +353,7 @@ export default function PublishProductScreen() {
 
             {loadingCategories ? (
               <View style={styles.inlineStatus}>
-                <ActivityIndicator color={COLORS.primaryLight} size="small" />
+                <ActivityIndicator color={theme.color.accent} size="small" />
                 <Text style={styles.inlineStatusText}>Cargando categorías...</Text>
               </View>
             ) : categoriesError ? (
@@ -434,7 +436,7 @@ export default function PublishProductScreen() {
               disabled={!canSubmit}
             >
               {submitting ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
+                <ActivityIndicator color={theme.color.onAccent} size="small" />
               ) : (
                 <Text style={styles.primaryButtonText}>Publicar producto</Text>
               )}
@@ -454,7 +456,7 @@ export default function PublishProductScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#DDEAEA',
@@ -466,9 +468,9 @@ const styles = StyleSheet.create({
   },
 
   topHeader: {
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.divider,
+    borderBottomColor: theme.color.border,
     paddingHorizontal: SPACING.lg,
     paddingVertical: 14,
   },
@@ -506,21 +508,21 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontSize: FONT.medium,
     fontWeight: '700',
     marginBottom: SPACING.sm,
   },
 
   title: {
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: FONT.title,
     fontWeight: '800',
     marginBottom: SPACING.xs,
   },
 
   subtitle: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.regular,
     lineHeight: 22,
   },
@@ -528,16 +530,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 920,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
     borderRadius: 22,
     padding: 22,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 4,
+    borderColor: theme.color.border,
   },
 
   fieldGroup: {
@@ -554,26 +551,26 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     fontSize: FONT.regular,
     fontWeight: '700',
     marginBottom: SPACING.sm,
   },
 
   helperText: {
-    color: COLORS.textMuted,
+    color: theme.color.textMuted,
     fontSize: FONT.small,
     lineHeight: 18,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: FONT.regular,
-    color: COLORS.textPrimary,
+    color: theme.color.textPrimary,
     backgroundColor: '#F8FCFC',
   },
 
@@ -583,17 +580,17 @@ const styles = StyleSheet.create({
   },
 
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: theme.color.error,
   },
 
   fieldError: {
-    color: COLORS.error,
+    color: theme.color.error,
     fontSize: FONT.small,
     marginTop: SPACING.xs,
   },
 
   errorText: {
-    color: COLORS.error,
+    color: theme.color.error,
     backgroundColor: '#FFF1F2',
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -610,25 +607,25 @@ const styles = StyleSheet.create({
   },
 
   inlineStatusText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.small,
   },
 
   inlineErrorBox: {
     backgroundColor: '#FFF9E8',
     borderLeftWidth: 3,
-    borderLeftColor: COLORS.secondary,
+    borderLeftColor: theme.color.accent,
     borderRadius: 10,
     padding: SPACING.md,
   },
 
   inlineErrorText: {
-    color: COLORS.dark,
+    color: theme.color.textPrimary,
     fontSize: FONT.small,
   },
 
   inlineErrorAction: {
-    color: COLORS.primaryLight,
+    color: theme.color.accent,
     fontWeight: '700',
     marginTop: SPACING.sm,
     fontSize: FONT.small,
@@ -642,7 +639,7 @@ const styles = StyleSheet.create({
 
   categoryChip: {
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -650,18 +647,18 @@ const styles = StyleSheet.create({
   },
 
   categoryChipSelected: {
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accent,
     backgroundColor: '#E7F6F4',
   },
 
   categoryChipText: {
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontWeight: '600',
     fontSize: FONT.small,
   },
 
   categoryChipTextSelected: {
-    color: COLORS.primary,
+    color: theme.color.accent,
   },
 
   imagesHeader: {
@@ -678,15 +675,15 @@ const styles = StyleSheet.create({
 
   secondaryButton: {
     borderWidth: 1,
-    borderColor: COLORS.primaryLight,
+    borderColor: theme.color.accent,
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: COLORS.white,
+    backgroundColor: theme.color.surface,
   },
 
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '700',
     fontSize: FONT.small,
   },
@@ -696,7 +693,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: theme.color.border,
     borderRadius: 16,
     padding: 14,
     backgroundColor: '#F8FCFC',
@@ -704,7 +701,7 @@ const styles = StyleSheet.create({
 
   emptyImageText: {
     flex: 1,
-    color: COLORS.textSecondary,
+    color: theme.color.textSecondary,
     fontSize: FONT.small,
   },
 
@@ -712,7 +709,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 10,
-    backgroundColor: COLORS.imagePlaceholder,
+    backgroundColor: theme.color.surfaceSubtle,
   },
 
   previewCard: {
@@ -725,8 +722,8 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.imagePlaceholder,
+    borderColor: theme.color.border,
+    backgroundColor: theme.color.surfaceSubtle,
     resizeMode: 'cover',
   },
 
@@ -741,7 +738,7 @@ const styles = StyleSheet.create({
   },
 
   primaryBadgeText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -759,7 +756,7 @@ const styles = StyleSheet.create({
   },
 
   removeImageButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontSize: 11,
     fontWeight: '900',
     lineHeight: 14,
@@ -772,15 +769,16 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: theme.color.accent,
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 18,
     alignItems: 'center',
+    minHeight: theme.button.minHeight,
   },
 
   primaryButtonText: {
-    color: COLORS.white,
+    color: theme.color.onAccent,
     fontWeight: '800',
     fontSize: FONT.regular,
   },
@@ -794,7 +792,7 @@ const styles = StyleSheet.create({
   },
 
   cancelButtonText: {
-    color: COLORS.primary,
+    color: theme.color.accent,
     fontWeight: '700',
     fontSize: FONT.regular,
   },
