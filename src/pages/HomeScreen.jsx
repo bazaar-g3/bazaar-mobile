@@ -218,7 +218,7 @@ export default function HomeScreen() {
     setLoadingForYou(true);
 
     try {
-      const products = await listForYouProducts({ limit: 10 });
+      const products = await listForYouProducts({ limit: 8 });
       setForYouProducts(
         products.map((product) =>
           mapCatalogProductToCard(product, { tag: "PARA VOS" })

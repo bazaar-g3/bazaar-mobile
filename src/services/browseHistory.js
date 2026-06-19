@@ -31,3 +31,21 @@ export async function recordCategoryBrowse(categorySlug) {
     // Silencioso
   }
 }
+
+export async function recordCartAdd(productId) {
+  if (!productId) return
+  try {
+    await catalogApi.post(`/products/${productId}/cart-add`)
+  } catch {
+    // Silencioso
+  }
+}
+
+export async function recordWishlistAdd(productId) {
+  if (!productId) return
+  try {
+    await catalogApi.post(`/products/${productId}/wishlist-add`)
+  } catch {
+    // Silencioso
+  }
+}

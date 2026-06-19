@@ -29,8 +29,26 @@ function formatDate(isoStr) {
   return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-function NotificationItem({ item, styles, typeConfig, defaultConfig }) {
+const STOCK_TYPES = new Set(['LOW_STOCK', 'OUT_OF_STOCK'])
+const ORDER_TYPES = new Set([
+  'ORDER_CONFIRMED', 'ORDER_IN_PREPARATION', 'ORDER_SHIPPED',
+  'ORDER_DELIVERED', 'ORDER_CANCELLED', 'PAYMENT_FAILED',
+])
+
+function getDestination(item) {
+  if (STOCK_TYPES.has(item.notification_type)) {
+    return '/profile?activeTab=Publicaciones'
+  }
+  if (ORDER_TYPES.has(item.notification_type) && item.data?.order_id) {
+    return `/orders?orderId=${item.data.order_id}`
+  }
+  return null
+}
+
+function NotificationItem({ item, styles, onPress, typeConfig, defaultConfig }) {
   const config = typeConfig[item.notification_type] || defaultConfig
+  const destination = getDestination(item)
+
   return (
     <View style={[styles.item, !item.read && styles.itemUnread]}>
       <View style={[styles.iconCircle, { backgroundColor: config.color + '20' }]}>
@@ -42,6 +60,27 @@ function NotificationItem({ item, styles, typeConfig, defaultConfig }) {
         <Text style={styles.itemDate}>{formatDate(item.created_at)}</Text>
       </View>
       {!item.read && <View style={styles.unreadDot} />}
+      {destination && (
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={styles.chevron} />
+      )}
+    </View>
+  )
+
+  if (destination) {
+    return (
+      <TouchableOpacity
+        style={[styles.item, !item.read && styles.itemUnread]}
+        onPress={() => onPress(destination)}
+        activeOpacity={0.7}
+      >
+        {inner}
+      </TouchableOpacity>
+    )
+  }
+
+  return (
+    <View style={[styles.item, !item.read && styles.itemUnread]}>
+      {inner}
     </View>
   )
 }
@@ -64,6 +103,10 @@ export default function NotificationsScreen() {
   }
   const DEFAULT_CONFIG = { icon: 'notifications', color: theme.color.accent }
 
+
+  const handleNotificationPress = (destination) => {
+    router.push(destination)
+  }
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -140,7 +183,7 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => <NotificationItem item={item} styles={styles} typeConfig={TYPE_CONFIG} defaultConfig={DEFAULT_CONFIG} />}
+          renderItem={({ item }) => <NotificationItem item={item} styles={styles} onPress={handleNotificationPress} typeConfig={TYPE_CONFIG} defaultConfig={DEFAULT_CONFIG} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.color.accent]} />}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -239,6 +282,11 @@ const makeStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.color.accent,
     marginTop: 4,
     marginLeft: 8,
+    flexShrink: 0,
+  },
+  chevron: {
+    marginLeft: 4,
+    alignSelf: 'center',
     flexShrink: 0,
   },
   separator: {
