@@ -8,11 +8,20 @@ const api = axios.create({
   baseURL: API_URL,
 })
 
-// Interceptor: agrega el JWT en cada request automáticamente
+// Interceptor: agrega el JWT en cada request automáticamente (excepto endpoints de auth)
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  const url = config.url ?? ''
+  const isAuthEndpoint =
+    url.includes('/auth/login') ||
+    url.includes('/auth/register') ||
+    url.includes('/auth/oauth') ||
+    url.includes('/auth/password-recovery')
+
+  if (!isAuthEndpoint) {
+    const token = await AsyncStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
   }
   return config
 })

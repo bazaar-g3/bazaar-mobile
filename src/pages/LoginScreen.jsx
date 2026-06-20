@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import { registerForPushNotifications } from '../services/notifications'
 import { useTheme } from '../theme/ThemeContext'
@@ -95,6 +95,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true)
+    let loginData = null
     try {
       const res = await api.post('/auth/login', { email, password })
       const token = res.data.accessToken ?? res.data.access_token
@@ -104,6 +105,26 @@ export default function LoginScreen() {
         throw new Error('Missing access token')
       }
 
+      loginData = { token, refreshToken }
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setBlockedModalVisible(true)
+      } else if (err.response?.status === 401) {
+        setError('Dirección de correo electrónico o contraseña incorrectas')
+      } else if (err.response?.status === 422) {
+        setError('Ingrese una dirección de correo electrónico válida')
+      } else if (err.response?.status === 429) {
+        setError('Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.')
+      } else {
+        setError('Algo salió mal. Por favor, inténtalo de nuevo.')
+      }
+      setLoading(false)
+      return
+    }
+
+    // Login exitoso — guardar tokens y continuar con el flujo post-login
+    const { token, refreshToken } = loginData
+    try {
       await AsyncStorage.setItem('token', token)
       if (refreshToken) {
         await AsyncStorage.setItem('refreshToken', refreshToken)
@@ -144,18 +165,9 @@ export default function LoginScreen() {
           router.replace(destination)
         }
       }
-    } catch (err) {
-      if (err.response?.status === 403) {
-        setBlockedModalVisible(true)
-      } else if (err.response?.status === 401) {
-        setError('Dirección de correo electrónico o contraseña incorrectas')
-      } else if (err.response?.status === 422) {
-        setError('Ingrese una dirección de correo electrónico válida')
-      } else if (err.response?.status === 429) {
-        setError('Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentarlo.')
-      } else {
-        setError('Algo salió mal. Por favor, inténtalo de nuevo.')
-      }
+    } catch (postLoginError) {
+      console.error('Post-login flow error', postLoginError)
+      router.replace(buildPostAuthDestination(params))
     } finally {
       setLoading(false)
     }
