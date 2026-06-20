@@ -31,6 +31,7 @@ import { getSessionStatus } from '../services/session'
 import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { useTheme } from '../theme/ThemeContext'
+import AnimatedButton from '../components/AnimatedButton'
 import { FONT, SPACING } from '../constants/theme'
 
 function generateUUID() {
@@ -533,24 +534,13 @@ export default function CheckoutScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity
-            style={[
-              styles.payButton,
-              (submitting || items.length === 0) && styles.payButtonDisabled,
-            ]}
+          <AnimatedButton
+            variant="cta"
+            label="Pagar con MercadoPago"
+            icon={<Ionicons name="card-outline" size={20} color={theme.color.onAccent} />}
             onPress={handleSubmit}
             disabled={submitting || items.length === 0}
-            activeOpacity={0.85}
-          >
-            {submitting ? (
-              <ActivityIndicator color={theme.color.onAccent} />
-            ) : (
-              <View style={styles.payButtonContent}>
-                <Ionicons name="card-outline" size={20} color={theme.color.onAccent} />
-                <Text style={styles.payButtonText}>Pagar con MercadoPago</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          />
 
           <Text style={styles.secureNote}>
             <Ionicons name="lock-closed-outline" size={12} color={theme.color.textMuted} />

@@ -15,6 +15,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import DraggableImageList from '../DraggableImageList'
+import AnimatedButton from '../AnimatedButton'
 import { SPACING, FONT } from '../../constants/theme'
 import {
   PRODUCT_IMAGE_PLACEHOLDER,
@@ -419,17 +420,12 @@ export default function PublishProductScreen() {
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.primaryButton, !canSubmit && styles.disabledButton]}
+            <AnimatedButton
+              variant="cta"
+              label="Publicar producto"
               onPress={handleSubmit}
               disabled={!canSubmit}
-            >
-              {submitting ? (
-                <ActivityIndicator color={theme.color.onAccent} size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Publicar producto</Text>
-              )}
-            </TouchableOpacity>
+            />
 
             <TouchableOpacity
               style={styles.cancelButton}

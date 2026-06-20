@@ -22,6 +22,7 @@ import { buildLoginRedirect } from '../utils/authRedirect'
 import { useResponsive } from '../utils/responsive'
 import { useTheme } from '../theme/ThemeContext'
 import { FONT, SPACING } from '../constants/theme'
+import AnimatedPressable from '../components/AnimatedPressable'
 
 const STATUS_CONFIG = {
   pending_payment:    { label: 'Pago pendiente',      icon: 'time-outline' },
@@ -530,14 +531,14 @@ export default function OrdersScreen() {
                   <Text style={styles.cancelErrorText}>{cancelError}</Text>
                 ) : null}
                 <View style={styles.cancelDialogBtns}>
-                  <TouchableOpacity
+                  <AnimatedPressable
                     style={styles.cancelDialogBtnSecondary}
                     onPress={() => setCancelModalVisible(false)}
                     disabled={cancelling}
                   >
                     <Text style={styles.cancelDialogBtnSecondaryText}>Volver</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </AnimatedPressable>
+                  <AnimatedPressable
                     style={[styles.cancelDialogBtnPrimary, cancelling && { opacity: 0.6 }]}
                     onPress={handleCancelOrder}
                     disabled={cancelling}
@@ -545,7 +546,7 @@ export default function OrdersScreen() {
                     {cancelling
                       ? <ActivityIndicator color={theme.color.onAccent} size="small" />
                       : <Text style={styles.cancelDialogBtnPrimaryText}>Sí, cancelar</Text>}
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
               </View>
             </View>
