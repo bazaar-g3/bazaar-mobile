@@ -2,10 +2,11 @@ import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useTheme } from "../../theme/ThemeContext";
 import { makeStyles } from "../../styles/productList/productListStyles";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ProductListEmptyState({
   loading = false,
-  emoji,
+  icon,
   title,
   text,
   buttonText,
@@ -22,7 +23,7 @@ export default function ProductListEmptyState({
         </>
       ) : (
         <>
-          {emoji ? <Text style={styles.emptyEmoji}>{emoji}</Text> : null}
+          {icon ? (<Ionicons name={icon} size={48} color={theme.color.textSecondary} style={styles.emptyIcon}/>) : null}
           <Text style={styles.emptyTitle}>{title}</Text>
           <Text style={styles.emptyText}>{text}</Text>
 
