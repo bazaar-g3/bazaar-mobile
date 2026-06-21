@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { SPACING, FONT } from "../constants/theme";
+import { SPACING, FONT } from "../../constants/theme";
 
 export const makeStyles = (theme) => StyleSheet.create({
   container: { flex: 1 },
@@ -103,8 +103,8 @@ export const makeStyles = (theme) => StyleSheet.create({
   },
   filaAlterna: { backgroundColor: theme.color.accentSubtle },
   colTitulo: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  pubEmoji: { fontSize: 24 },
   pubImage: { width: 44, height: 44, borderRadius: 10, backgroundColor: theme.color.surfaceSubtle },
+  pubIcon: { alignItems: 'center', justifyContent: 'center'},
   pubTitulo: { fontSize: FONT.small, color: theme.color.textPrimary, flex: 1, flexShrink: 1 },
   colText: { fontSize: FONT.small, color: theme.color.textSecondary },
   precioText: { fontWeight: '700', color: theme.color.textPrimary },
@@ -117,11 +117,10 @@ export const makeStyles = (theme) => StyleSheet.create({
   estadoTextActiva: { color: theme.color.success },
   estadoTextInactiva: { color: theme.color.textSecondary },
   estadoTextBloqueado: { color: theme.color.warning },
-  bloqueadoAviso: {
-    fontSize: 12, color: theme.color.warning,
-    backgroundColor: theme.color.warningLight,
-    borderRadius: 8, padding: SPACING.sm,
-    borderLeftWidth: 3, borderLeftColor: theme.color.warning,
+  bloqueadoContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginTop: 8, backgroundColor: theme.color.warningLight, borderRadius: 8,
+    padding: SPACING.sm, borderLeftWidth: 3, borderLeftColor: theme.color.warning},
+    bloqueadoAviso: { flex: 1, fontSize: 12, color: theme.color.warning
   },
   switchCell: { alignItems: 'center', justifyContent: 'center' },
   actionsCell: { alignItems: 'center', justifyContent: 'center' },
@@ -145,7 +144,7 @@ export const makeStyles = (theme) => StyleSheet.create({
     paddingHorizontal: SPACING.lg, alignItems: 'center', borderWidth: 1,
     borderColor: theme.color.border, marginBottom: SPACING.md,
   },
-  emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyIcon: { fontSize: 52, color: theme.color.textSecondary, marginBottom: SPACING.md },
   emptyTitulo: { fontSize: 18, fontWeight: '700', color: theme.color.textPrimary, marginBottom: SPACING.xs, textAlign: 'center' },
   emptySubtitulo: { fontSize: FONT.small, color: theme.color.textSecondary, textAlign: 'center', marginBottom: SPACING.lg },
   btnCrearEmpty: {
@@ -153,6 +152,10 @@ export const makeStyles = (theme) => StyleSheet.create({
     paddingVertical: SPACING.sm, paddingHorizontal: 28, backgroundColor: theme.color.surface,
   },
   btnCrearEmptyText: { color: theme.color.accent, fontWeight: '600', fontSize: FONT.small },
+
+  warningIcon: { size: 18, color: theme.color.warning},
+
+  bloqueadoContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8},
 
   alignRight: { textAlign: 'right' },
   alignCenter: { textAlign: 'center' },
