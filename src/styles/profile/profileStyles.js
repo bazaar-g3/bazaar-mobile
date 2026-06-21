@@ -487,3 +487,109 @@ export const makeStyles = (theme) => StyleSheet.create({
     marginTop: 60,
   },
 })
+
+export const makeSecurityStyles = (theme) => StyleSheet.create({
+  card: {
+    width: '100%',
+    backgroundColor: theme.color.surface,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginTop: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.color.textPrimary,
+    marginBottom: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  rowSeparator: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    marginRight: 8,
+  },
+  rowIcon: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  rowTextBlock: {
+    flex: 1,
+  },
+  rowLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  rowLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.color.textPrimary,
+  },
+  rowSubLabel: {
+    fontSize: 12,
+    color: theme.color.textMuted,
+    marginTop: 3,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  badgeActive: {
+    backgroundColor: '#dcfce7',
+  },
+  badgeInactive: {
+    backgroundColor: '#f3f4f6',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeTextActive: {
+    color: '#15803d',
+  },
+  badgeTextInactive: {
+    color: theme.color.textMuted,
+  },
+  actionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    marginTop: 2,
+  },
+  actionButtonPrimary: {
+    borderColor: theme.color.accent,
+    backgroundColor: 'transparent',
+  },
+  actionButtonDanger: {
+    borderColor: theme.color.error,
+    backgroundColor: 'transparent',
+  },
+  actionButtonDisabled: {
+    opacity: 0.55,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  actionButtonTextPrimary: {
+    color: theme.color.accent,
+  },
+  actionButtonTextDanger: {
+    color: theme.color.error,
+  },
+})

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  StyleSheet,
   ScrollView,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -21,6 +20,7 @@ import { useCartContext } from '../context/CartContext'
 import AccountBlockedModal from '../components/AccountBlockedModal'
 import BiometricEnrollmentModal from '../components/BiometricEnrollmentModal'
 import PinEnrollmentModal from '../components/PinEnrollmentModal'
+import { makeStyles } from '../styles/loginStyles'
 import {
   isBiometricHardwareAvailable,
   getBiometricAccounts,
@@ -34,6 +34,7 @@ import AccountSelectorSheet from '../components/AccountSelectorSheet'
 
 export default function LoginScreen() {
   const { theme } = useTheme()
+  const styles = useMemo(() => makeStyles(theme), [theme])
   const router = useRouter()
   const { refresh: refreshCart } = useCartContext()
   const params = useLocalSearchParams()
@@ -336,8 +337,6 @@ export default function LoginScreen() {
     }
   }
 
-  const styles = useMemo(() => makeStyles(theme), [theme])
-
   return (
     <>
       <AccountBlockedModal
@@ -491,174 +490,3 @@ export default function LoginScreen() {
     </>
   )
 }
-
-const makeStyles = (theme) => StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: theme.color.surfaceSubtle,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 22,
-  },
-  logoText: {
-    fontSize: 30,
-    fontWeight: '900',
-    marginLeft: 8,
-    letterSpacing: 0.5,
-  },
-  logoB: { color: '#2A8C84' },
-  logoA: { color: '#E8902E' },
-  logoZ: { color: '#EB6A2C' },
-  logoA2: { color: '#D14B79' },
-  logoA3: { color: '#7C5ACB' },
-  logoR: { color: '#49A89D' },
-
-  card: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: theme.color.surface,
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: theme.color.textPrimary,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  inputWrapper: {
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: theme.color.border,
-    borderRadius: 10,
-    backgroundColor: theme.color.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    paddingHorizontal: 12,
-  },
-  leftIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    color: theme.color.textPrimary,
-    fontSize: 15,
-    paddingVertical: 0,
-  },
-  rightIconButton: {
-    paddingLeft: 8,
-    paddingVertical: 4,
-  },
-  button: {
-    backgroundColor: theme.color.accent,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.75,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    color: theme.color.onAccent,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  biometricButton: {
-    borderWidth: 1.5,
-    borderColor: theme.color.accent,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: 'transparent',
-  },
-  biometricButtonText: {
-    color: theme.color.accent,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  pinButton: {
-    borderWidth: 1.5,
-    borderColor: theme.color.accent,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: 'transparent',
-  },
-  pinButtonText: {
-    color: theme.color.accent,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  secondaryLink: {
-    textAlign: 'center',
-    color: theme.color.textMuted,
-    fontSize: 13,
-    textDecorationLine: 'underline',
-    marginTop: 2,
-  },
-  registerText: {
-    textAlign: 'center',
-    color: '#2f2f2f',
-    fontSize: 14,
-  },
-  registerLink: {
-    color: theme.color.accent,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
-  error: {
-    color: theme.color.error,
-    textAlign: 'center',
-    marginBottom: 14,
-    fontSize: 14,
-  },
-  success: {
-    color: theme.color.success,
-    textAlign: 'center',
-    marginBottom: 14,
-    fontSize: 14,
-  },
-  guestButton: {
-    borderWidth: 1.5,
-    borderColor: theme.color.accent,
-    borderRadius: 12,
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    backgroundColor: 'transparent',
-  },
-  guestButtonText: {
-    color: theme.color.accent,
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-})
