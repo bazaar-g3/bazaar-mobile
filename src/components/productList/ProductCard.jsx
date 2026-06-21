@@ -12,10 +12,6 @@ import AnimatedHeart from "../AnimatedHeart";
 import { formatPrice } from "../../utils/productList/productListHelpers";
 import { makeStyles } from "../../styles/productList/productCardStyles";
 
-const ROW_IMG_SIZE = 88;
-const AVATAR_SIZE  = 20;
-const HEART_BTN_SIZE = 32;
-
 export default function ProductCard({
   item,
   onOpenProduct,

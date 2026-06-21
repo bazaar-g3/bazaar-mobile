@@ -1,3 +1,5 @@
+import { StyleSheet } from "react-native";
+
 export const makeStyles = (theme) => StyleSheet.create({
   header: {
     backgroundColor: theme.color.surface,

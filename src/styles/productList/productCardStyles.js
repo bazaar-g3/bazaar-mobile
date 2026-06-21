@@ -1,5 +1,7 @@
 import { StyleSheet } from 'react-native'
-import { SPACING, FONT } from '../../constants/theme'
+const ROW_IMG_SIZE = 88;
+const AVATAR_SIZE  = 20;
+const HEART_BTN_SIZE = 32;
 
 export const makeStyles = (theme) => StyleSheet.create({
   // ── Card base ──

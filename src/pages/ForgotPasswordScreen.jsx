@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons'
 import api from '../api/api'
 import Logo from '../components/Logo'
 import { useTheme } from '../theme/ThemeContext'
-import { makeStyles } from '../styles/forgotPasswordstyles'
+import { makeStyles } from '../styles/forgotPasswordStyles'
 
 export default function ForgotPasswordScreen() {
   const router = useRouter()

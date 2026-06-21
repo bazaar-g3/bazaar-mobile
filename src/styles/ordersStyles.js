@@ -1,4 +1,5 @@
 import { StyleSheet, Platform } from 'react-native'
+import { SPACING, FONT } from '../constants/theme'
 
 export const makeStyles = (theme) => StyleSheet.create({
   cancelBtn: {
@@ -99,8 +100,6 @@ export const makeStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.color.surface,
     gap: SPACING.md,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
