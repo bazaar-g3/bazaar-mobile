@@ -62,7 +62,11 @@ export default function PinLoginScreen() {
 
   // Countdown cuando está bloqueado
   useEffect(() => {
-    if (!lockedOut || remainingSeconds <= 0) return
+    if (!lockedOut) return
+    if (remainingSeconds <= 0) {
+      setLockedOut(false)
+      return
+    }
     const timer = setInterval(async () => {
       const locked = await isLockedOut()
       if (!locked) {

@@ -201,6 +201,31 @@ describe('PinLoginScreen — intentos fallidos y bloqueo', () => {
     })
   })
 
+  it('vuelve a mostrar el PinPad automáticamente cuando expira el lockout', async () => {
+    jest.useFakeTimers()
+    mockIsLockedOut.mockResolvedValue(true)
+    mockGetLockoutRemainingSeconds.mockResolvedValue(2)
+
+    const { getByText, queryByText } = render(<PinLoginScreen />)
+    await waitFor(() => {
+      expect(getByText('Acceso bloqueado')).toBeTruthy()
+    })
+    expect(queryByText('1')).toBeNull()
+
+    mockIsLockedOut.mockResolvedValue(false)
+    mockGetLockoutRemainingSeconds.mockResolvedValue(0)
+
+    await act(async () => { jest.advanceTimersByTime(1000) })
+    await act(async () => { jest.advanceTimersByTime(1000) })
+
+    await waitFor(() => {
+      expect(queryByText('Acceso bloqueado')).toBeNull()
+      expect(getByText('1')).toBeTruthy()
+    })
+
+    jest.useRealTimers()
+  })
+
   it('limpiar PIN y pedir login completo si el refresh token está expirado (401)', async () => {
     mockVerifyPin.mockResolvedValue(true)
     api.post.mockRejectedValue({ response: { status: 401 } })
