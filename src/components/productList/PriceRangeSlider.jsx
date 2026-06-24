@@ -1,25 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useTheme } from "../../theme/ThemeContext";
 import { PRICE_MIN_LIMIT, PRICE_MAX_LIMIT } from "../../constants/filters";
 
-/**
- * Filtro de rango de precios con dos inputs (mínimo y máximo).
- *
- * Props:
- *   minValue   — precio mínimo seleccionado actualmente
- *   maxValue   — precio máximo seleccionado actualmente
- *   minLimit   — límite inferior del rango
- *   maxLimit   — límite superior del rango
- *   onChange   — callback(minValue, maxValue) al confirmar el valor
- */
-export default function PriceRangeSlider({
+export default forwardRef(function PriceRangeSlider({
   minValue,
   maxValue,
   minLimit = PRICE_MIN_LIMIT,
   maxLimit = PRICE_MAX_LIMIT,
   onChange,
-}) {
+}, ref) {
   const { theme } = useTheme();
   const priceStyles = useMemo(() => makeStyles(theme), [theme]);
   const [minText, setMinText] = useState(minValue > minLimit ? String(minValue) : "");
@@ -37,7 +27,12 @@ export default function PriceRangeSlider({
     const safeMin = Math.min(parsedMin, parsedMax);
     const safeMax = Math.max(parsedMin, parsedMax);
     onChange?.(safeMin, safeMax);
+    return { minPrice: safeMin, maxPrice: safeMax };
   };
+
+  useImperativeHandle(ref, () => ({
+    commit: () => commit(minText, maxText),
+  }));
 
   const handleMinBlur = () => commit(minText, maxText);
   const handleMaxBlur = () => commit(minText, maxText);
@@ -140,7 +135,7 @@ export default function PriceRangeSlider({
       </View>
     </View>
   );
-}
+});
 
 const makeStyles = (theme) => StyleSheet.create({
   container: {

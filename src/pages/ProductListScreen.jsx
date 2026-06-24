@@ -298,6 +298,14 @@ export default function ProductListScreen() {
     setMaxPrice(newMax);
   };
 
+  const handleApplyFilters = (committedPrices) => {
+    if (committedPrices) {
+      setMinPrice(committedPrices.minPrice);
+      setMaxPrice(committedPrices.maxPrice);
+    }
+    setFiltersVisible(false);
+  };
+
   // CA4: Limpiar todos los filtros
   const clearFilters = () => {
     setActiveCategory(null);
@@ -341,6 +349,7 @@ export default function ProductListScreen() {
       <ProductFiltersModal
         visible={filtersVisible}
         onClose={() => setFiltersVisible(false)}
+        onApply={handleApplyFilters}
         loadingCategories={loadingCategories}
         categoriesError={categoriesError}
         categories={categories}

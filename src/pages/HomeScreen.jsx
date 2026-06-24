@@ -95,7 +95,9 @@ export default function HomeScreen() {
     (filterSortBy ? 1 : 0) +
     (filterMinPrice > PRICE_MIN_LIMIT || filterMaxPrice < PRICE_MAX_LIMIT ? 1 : 0);
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (committedPrices) => {
+    const effectiveMinPrice = committedPrices?.minPrice ?? filterMinPrice;
+    const effectiveMaxPrice = committedPrices?.maxPrice ?? filterMaxPrice;
     setFiltersVisible(false);
     const params = {};
     if (filterCategory) {
@@ -107,8 +109,8 @@ export default function HomeScreen() {
       }
     }
     if (filterSortBy) params.sortBy = filterSortBy;
-    if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
-    if (filterMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = filterMaxPrice;
+    if (effectiveMinPrice > PRICE_MIN_LIMIT) params.minPrice = effectiveMinPrice;
+    if (effectiveMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = effectiveMaxPrice;
     router.push({ pathname: "/products", params });
   };
 

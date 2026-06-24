@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import {
   Modal,
   View,
@@ -33,6 +33,7 @@ export default function ProductFiltersModal({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const modalStyles = useMemo(() => makeStyles(theme), [theme]);
+  const priceRef = useRef(null);
 
   return (
     <Modal
@@ -105,6 +106,7 @@ export default function ProductFiltersModal({
           <View style={modalStyles.section}>
             <Text style={modalStyles.sectionTitle}>Precio</Text>
             <PriceRangeSlider
+              ref={priceRef}
               minValue={minPrice}
               maxValue={maxPrice}
               minLimit={PRICE_MIN_LIMIT}
@@ -120,7 +122,13 @@ export default function ProductFiltersModal({
           <TouchableOpacity style={modalStyles.clearBtn} onPress={onClearFilters}>
             <Text style={modalStyles.clearBtnText}>Limpiar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={modalStyles.applyBtn} onPress={onApply ?? onClose}>
+          <TouchableOpacity
+            style={modalStyles.applyBtn}
+            onPress={() => {
+              const prices = priceRef.current?.commit();
+              (onApply ?? onClose)?.(prices);
+            }}
+          >
             <Text style={modalStyles.applyBtnText}>Ver resultados</Text>
           </TouchableOpacity>
         </View>
