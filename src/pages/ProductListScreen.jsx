@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { getSessionStatus } from "../services/session";
 import { getWishlist, addToWishlist, removeFromWishlist } from "../services/wishlist";
+import { recordCartAdd, recordWishlistAdd } from "../services/browseHistory";
 import { getPublicProfile } from "../services/user";
 import { getCartErrorMessage } from "../services/cart";
 import { useCartContext } from "../context/CartContext";
@@ -231,6 +232,7 @@ export default function ProductListScreen() {
     try {
       if (newLiked) {
         await addToWishlist(productId);
+        recordWishlistAdd(String(productId)).catch(() => {});
         setWishlistedIds((prev) => new Set([...prev, String(productId)]));
       } else {
         await removeFromWishlist(productId);
@@ -283,7 +285,7 @@ export default function ProductListScreen() {
     }
     try {
       await addItem(productId);
-      // El éxito lo confirma el morph a ✓ del AnimatedButton (sin alert redundante)
+      recordCartAdd(String(productId)).catch(() => {});
     } catch (error) {
       Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
       throw error;
