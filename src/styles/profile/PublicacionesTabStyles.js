@@ -155,8 +155,6 @@ export const makeStyles = (theme) => StyleSheet.create({
 
   warningIcon: { size: 18, color: theme.color.warning},
 
-  bloqueadoContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8},
-
   alignRight: { textAlign: 'right' },
   alignCenter: { textAlign: 'center' },
   stockCell: { alignItems: 'center', justifyContent: 'center', minWidth: 54 },
