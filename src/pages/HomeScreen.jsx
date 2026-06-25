@@ -35,7 +35,7 @@ import { getSessionStatus } from "../services/session";
 import { useCartContext } from "../context/CartContext";
 import { getCartErrorMessage } from "../services/cart";
 import { getNotificationsHistory } from "../services/notifications";
-import { recordCategoryBrowse } from "../services/browseHistory";
+import { recordCategoryBrowse, recordCartAdd, recordWishlistAdd } from "../services/browseHistory";
 import { getWishlist, addToWishlist, removeFromWishlist } from "../services/wishlist";
 import { useResponsive } from "../utils/responsive";
 import { makeStyles } from "../styles/homeStyles";
@@ -95,7 +95,9 @@ export default function HomeScreen() {
     (filterSortBy ? 1 : 0) +
     (filterMinPrice > PRICE_MIN_LIMIT || filterMaxPrice < PRICE_MAX_LIMIT ? 1 : 0);
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (committedPrices) => {
+    const effectiveMinPrice = committedPrices?.minPrice ?? filterMinPrice;
+    const effectiveMaxPrice = committedPrices?.maxPrice ?? filterMaxPrice;
     setFiltersVisible(false);
     const params = {};
     if (filterCategory) {
@@ -107,8 +109,8 @@ export default function HomeScreen() {
       }
     }
     if (filterSortBy) params.sortBy = filterSortBy;
-    if (filterMinPrice > PRICE_MIN_LIMIT) params.minPrice = filterMinPrice;
-    if (filterMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = filterMaxPrice;
+    if (effectiveMinPrice > PRICE_MIN_LIMIT) params.minPrice = effectiveMinPrice;
+    if (effectiveMaxPrice < PRICE_MAX_LIMIT) params.maxPrice = effectiveMaxPrice;
     router.push({ pathname: "/products", params });
   };
 
@@ -146,7 +148,7 @@ export default function HomeScreen() {
     }
     try {
       await addItem(productId);
-      // El éxito lo confirma el morph a ✓ del AnimatedButton (sin alert redundante)
+      recordCartAdd(String(productId)).catch(() => {});
     } catch (error) {
       Alert.alert("Error", getCartErrorMessage(error, "No se pudo agregar al carrito."));
       throw error;
@@ -165,6 +167,7 @@ export default function HomeScreen() {
     try {
       if (newLiked) {
         await addToWishlist(productId);
+        recordWishlistAdd(String(productId)).catch(() => {});
         setWishlistIds((prev) => new Set([...prev, String(productId)]));
       } else {
         await removeFromWishlist(productId);
@@ -246,7 +249,7 @@ export default function HomeScreen() {
     setLoadingForYou(true);
 
     try {
-      const products = await listForYouProducts({ limit: 8 });
+      const products = await listForYouProducts({ limit: 6 });
       setForYouProducts(
         products.map((product) =>
           mapCatalogProductToCard(product, { tag: "PARA VOS" })
@@ -264,7 +267,7 @@ export default function HomeScreen() {
     setPopularProductsError("");
 
     try {
-      const products = await listPopularProducts({ limit: 25, offset: 0 });
+      const products = await listPopularProducts({ limit: 10 });
 
       setPopularProducts(
         products.map((product) =>
@@ -389,15 +392,10 @@ export default function HomeScreen() {
     router.replace("/home");
   };
 
-  // Productos para el fallback "RECOMENDACIONES PARA VOS" (autenticado sin historial).
-  // Si hay más de 20 populares: primero los 5 extra (distintos de "POPULARES EN BAZAAR"),
-  // luego los 20 primeros en orden inverso. Si no hay suficientes: solo orden inverso.
-  const popularForMain = popularProducts.slice(0, 20);
-  // Si hay > 20 populares: 5 distintos (pos 21-25) + 15 de los primeros 20 invertidos = 20 total.
-  // Si no hay suficientes: mismos 20 en orden invertido.
-  const trendingProducts = popularProducts.length > 20
-    ? [...popularProducts.slice(20, 25), ...[...popularProducts.slice(0, 15)].reverse()]
-    : [...popularProducts].reverse();
+  const trendingProducts = popularProducts.map((product) => ({
+    ...product,
+    tag: "PARA VOS",
+  }));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -580,7 +578,7 @@ export default function HomeScreen() {
                 alwaysBounceHorizontal={true}
                 directionalLockEnabled={true}
               >
-                {popularForMain.map((product) => (
+                {popularProducts.map((product) => (
                   <ProductCard
                     key={product.id}
                     item={product}

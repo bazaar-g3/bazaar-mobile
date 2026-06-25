@@ -24,14 +24,13 @@ import {
   updateSellerProductStock,
   updateSellerProduct,
 } from '../../services/catalog'
-import { makeStyles } from '../../styles/PublicacionesTabStyles'
+import { makeStyles } from '../../styles/profile/PublicacionesTabStyles'
 import EditProductModal from '../EditProductModal'
 import EditableStockStepper from '../EditableStockStepper'
+import { Ionicons } from '@expo/vector-icons'
 
 const FILTROS = ['activa', 'inactiva']
 const MOBILE_BREAKPOINT = 768
-
-// Recorrido del thumb: ancho del track (46) - padding (2*2) - ancho del thumb (20) = 22
 const SWITCH_THUMB_TRAVEL = 22
 
 function StateSwitch({ value, onToggle, styles }) {
@@ -370,9 +369,12 @@ export default function VentasTab({
         </View>
 
         {pub.estado === 'bloqueado_admin' && (
-          <Text style={styles.bloqueadoAviso}>
-            ⚠️ El administrador deshabilitó esta publicación. No podés modificarla hasta que sea rehabilitada.
-          </Text>
+          <View style={styles.bloqueadoContainer}>
+            <Ionicons name="warning-outline" style={styles.warningIcon}/>
+            <Text style={styles.bloqueadoAviso}>
+              El administrador deshabilitó esta publicación. No podés modificarla hasta que sea rehabilitada.
+            </Text>
+          </View>
         )}
 
         <View style={styles.pubCardStats}>
@@ -526,7 +528,7 @@ export default function VentasTab({
 
       <View style={styles.toolbar}>
         <View style={styles.searchWrapper}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={24} color={theme.color.textSecondary} style={styles.searchIcon} />
 
           <TextInput
             style={styles.searchInput}
@@ -589,7 +591,7 @@ export default function VentasTab({
         </View>
       ) : publicacionesFiltradas.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <Ionicons name="search-outline" style={styles.emptyIcon} />
           <Text style={styles.emptyTitulo}>
             {busqueda.length > 0
               ? 'No encontramos publicaciones con ese nombre.'
