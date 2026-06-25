@@ -57,7 +57,7 @@ export default function ProductListGrid({
         <ProductListEmptyState loading text="Cargando productos..." />
       ) : productsError ? (
         <ProductListEmptyState
-          emoji="⚠️"
+          icon="warning-outline"
           title="No pudimos cargar el listado"
           text={productsError}
           buttonText="Reintentar"
@@ -65,7 +65,7 @@ export default function ProductListGrid({
         />
       ) : products.length === 0 ? (
         <ProductListEmptyState
-          emoji="🛍️"
+          icon="bag-outline"
           title="No hay resultados"
           text="Probá con otra búsqueda o explorá otras categorías."
         />

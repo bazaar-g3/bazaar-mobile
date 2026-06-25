@@ -38,8 +38,7 @@ export const makeStyles = (theme) => StyleSheet.create({
     gap: 8,
   },
 
-  emptyEmoji: {
-    fontSize: 40,
+  emptyIcon: {
     marginBottom: 12,
   },
 
